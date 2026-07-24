@@ -113,7 +113,6 @@ describe('appendLayer0PromptConstraints', () => {
                     '<summaryception_source_budget>\nSource passage: ~8000 tokens. Compress hard.\n[NARRATIVE]: aim ~180 tokens; never exceed 270. At most 5 sentences.\nNo existing [STATE] yet — build the first snapshot.\n[STATE]: rewrite the full snapshot; aim ~180 tokens; never exceed 270. At most 7 lines.\n</summaryception_source_budget>',
             },
         );
-        expect(result).toContain('summaryception_l0_constraints');
         expect(result).toContain('This passage covers chat messages 12-34');
         expect(result).toContain('Message 34 is the latest summarized message');
         expect(result).toContain('<summaryception_source_budget>');
@@ -123,20 +122,6 @@ describe('appendLayer0PromptConstraints', () => {
             '[NARRATIVE] target: about 200 tokens; never exceed 300 tokens',
         );
         expect(result).not.toContain('Keep [STATE] near 200 tokens');
-        expect(result).toContain('Write the output mainly in English');
-        expect(result).toContain('do not write Chinese prose or Han ideographs');
-        expect(result).toContain('current_date_time');
-        expect(result).not.toContain('timeline_start');
-        expect(result).toContain('YYYY-MM-DD HH ddd');
-        expect(result).toContain('physiological or sex counters');
-        expect(result).toContain('Collapse repeated actions');
-        expect(result).toContain('Use at most one line per supported key');
-        expect(result).toContain('static character background/profile facts');
-        expect(result).toContain('short, direct sentences');
-        expect(result).toContain('run-on sentences');
-        expect(result).toContain('Prefer periods over commas and semicolons');
-        expect(result).toContain('resolved ABSOLUTE date');
-        expect(result).toContain('reference frame');
     });
 
     it('appends narrative-only constraints for promotion calls', () => {
@@ -152,22 +137,6 @@ describe('appendLayer0PromptConstraints', () => {
         expect(result).toContain('Soft target: about 400 tokens');
         expect(result).toContain('Hard maximum: 600 tokens');
         expect(result).toContain('[NARRATIVE]');
-        expect(result).toContain('Do not output a [STATE] block');
-        expect(result).toContain('Write the output mainly in English');
-        expect(result).toContain('do not write Chinese prose or Han ideographs');
-        expect(result).toContain('exactly one dense paragraph');
-        expect(result).toContain('no more than 4 to 5 sentences');
-        expect(result).toContain('macro-level durable chronology');
-        expect(result).toContain('[msgs 100-120; current 2024-12-03 09 Wed]');
-        expect(result).toContain('unknown spans');
-        expect(result).toContain('Fold any critical changes in state');
-        expect(result).toContain('Drop ages, brands, shopping routes, meals, clothing');
-        expect(result).toContain('short, direct sentences');
-        expect(result).toContain('run-on sentences');
-        expect(result).toContain('Prefer periods over commas and semicolons');
-        expect(result).toContain('treat that anchor');
-        expect(result).toContain('Bare weekday names');
-        expect(result).toContain('On July 6');
         expect(result).not.toContain('2024-07-12 Fri');
     });
 

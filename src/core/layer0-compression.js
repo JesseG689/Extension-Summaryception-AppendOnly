@@ -1,13 +1,7 @@
 import { defaultSettings } from '../foundation/constants.js';
 import {
-    ANTI_RUN_ON_RULE,
-    ENGLISH_FIRST_LANGUAGE_RULE,
-    LAYER0_DURABILITY_RULES,
-    PROMOTION_MODERATE_MACRO_RULES,
-    PROSE_DATE_FORMAT_RULE,
     STATE_SNAPSHOT_MAX_TOKENS,
     STATE_SNAPSHOT_SOFT_TARGET_TOKENS,
-    STATE_DEDUPLICATION_RULES,
 } from '../foundation/prompt-constants.js';
 import { buildRepairDiagnostics, formatRepairDiagnostics } from './repair-diagnostics.js';
 
@@ -18,7 +12,6 @@ const LAYER0_MAX_OUTPUT_RATIO = 1.5;
 const LAYER0_REPAIR_MAX_OUTPUT_RATIO = 1.65;
 const PROMOTION_TARGET_RATIO = 0.4;
 const PROMOTION_HARD_MAX_RATIO = 0.6;
-const ENGLISH_FIRST_LANGUAGE_RULE_WITH_NEWLINE = ENGLISH_FIRST_LANGUAGE_RULE + '\n';
 
 /**
  * Check whether a summarizer call should receive runtime compression controls.
@@ -166,34 +159,8 @@ export function appendLayer0PromptConstraints(prompt, settings, metadata = {}) {
     return (
         `${String(prompt || '').trimEnd()}\n\n` +
         (metadata.budgetHint ? metadata.budgetHint + '\n\n' : '') +
-        '<summaryception_l0_constraints>\n' +
-        sourceRangeLine +
-        ENGLISH_FIRST_LANGUAGE_RULE_WITH_NEWLINE +
-        'Output exactly [NARRATIVE] and [STATE] sections with no preamble or markdown code block.\n' +
-        '[NARRATIVE] must be one dense paragraph covering ONLY events, actions, dialogue, and outcomes. Do NOT include factual parameters like dates, inventory lists, or status flags there.\n' +
-        LAYER0_DURABILITY_RULES +
-        '\n' +
-        ANTI_RUN_ON_RULE +
-        '\n' +
-        '[STATE] must rewrite the complete current snapshot. Omitted facts are removed rather than inherited.\n' +
-        '[STATE] must always include current_date_time.\n' +
-        'Use temporal format YYYY-MM-DD HH ddd with 24-hour, hour-level precision only, e.g. 2024-12-03 06 Wed; drop minutes instead of preserving them.\n' +
-        'Normalize time from raw bracket headers or passage timestamps when present; if no explicit passage time appears, carry forward prior current_date_time.\n' +
-        'Resolve any relative time expression in the passage (tomorrow, today, in N days, next or bare weekday, this evening) against the scene date for that message and write the resolved ABSOLUTE date inline in narrative prose; never leave a bare relative time word.\n' +
-        PROSE_DATE_FORMAT_RULE +
-        '\n' +
-        'When narrative [] or state carries a date, use it as the reference frame for that message.\n' +
-        '[STATE] may use only current_date_time, location, characters, dynamics, constraints, hooks, and inventory.\n' +
-        STATE_DEDUPLICATION_RULES +
-        '\n' +
-        '[STATE] must not include static character background/profile facts such as origins, hometowns, backstory, personality traits, age, species, nationality, or static job descriptions.\n' +
-        'Do NOT write descriptive sentences in the state block. Use concise key: value fragments only. Put the most important facts first.\n' +
-        'Treat [STATE] as durable continuity, not an event ledger or scene replay.\n' +
-        'Do not preserve clothing, pose, momentary mood/arousal, ordinary props, completed errands, resolved hooks, physiological or sex counters, consumed food/drink, or soiled/used/disposed temporary items.\n' +
-        'Omit repeated micro-actions, flavor dialogue, sensory detail, and transient atmosphere unless they create lasting state.\n' +
-        'When detail competes with length, keep the fact needed for future continuity and drop the scene replay.\n' +
-        '</summaryception_l0_constraints>'
-    );
+        sourceRangeLine
+    ).trimEnd();
 }
 
 function buildLayer0SourceRangeLine(metadata = {}) {
@@ -245,8 +212,8 @@ function appendPromotionPromptConstraints(prompt, metadata = {}) {
     const hardMax = getPromotionSummaryTokenHardMax(metadata);
     const targetLine =
         target === null
-            ? 'Target length: make the output significantly shorter than the combined input memories.\n'
-            : `Soft target: about ${target} tokens, 40% of the source narratives. Hard maximum: ${hardMax} tokens, 60% of the source narratives.\n`;
+            ? 'Target length: make the [NARRATIVE] output significantly shorter than the combined input memories.\n'
+            : `Soft target: about ${target} tokens, 40% of the source narratives. Hard maximum: ${hardMax} tokens, 60% of the source narratives. [NARRATIVE] output only.\n`;
     const repairLine = buildPromotionRepairLine(metadata);
 
     return (
@@ -254,28 +221,6 @@ function appendPromotionPromptConstraints(prompt, metadata = {}) {
         '<summaryception_promotion_constraints>\n' +
         targetLine +
         repairLine +
-        ENGLISH_FIRST_LANGUAGE_RULE_WITH_NEWLINE +
-        'Read the provided source narratives and the separate source-state context.\n' +
-        'Output exactly one [NARRATIVE] section. Do not output a [STATE] block.\n' +
-        '[NARRATIVE] must be exactly one dense paragraph with no heading, list, preamble, markdown, or blank line inside it.\n' +
-        '[NARRATIVE] must contain no more than 4 to 5 sentences total.\n' +
-        ANTI_RUN_ON_RULE +
-        '\n' +
-        'Fold any critical changes in state, inventory, counters, or character dynamics directly into the prose.\n' +
-        'Do not use key-value formatting, bullet lists, tables, or structured state syntax.\n' +
-        'Preserve only macro-level durable chronology, relationship/state changes, permanent rules, current position, and unresolved hooks.\n' +
-        'Preserve anchored source ranges and hour-level 24-hour timestamps already present in memory, e.g. [msgs 100-120; current 2024-12-03 09 Wed].\n' +
-        'Do not invent broad dates for unknown spans; only clean unknown spans when bounded by explicit neighboring anchors.\n' +
-        'Each source narrative begins with a scene-time anchor like [msgs X-Y; current YYYY-MM-DD HH ddd]; treat that anchor\'s date as that passage\'s "today", resolve every relative time word in that narrative against it, and emit only ABSOLUTE dates in your output. Bare weekday names are forbidden — write the full calendar date instead of a relative word.\n' +
-        PROSE_DATE_FORMAT_RULE +
-        '\n' +
-        'Omit physiological or sex counters, consumed food/drink, soiled/used/disposed temporary items, and momentary pose/arousal/mood counters.\n' +
-        'Preserve obligation counters only when clearly unresolved, pending, owed, or referenced by unresolved hooks.\n' +
-        'Do not repeat or re-summarize events already established in prior context.\n' +
-        'Deduplicate related events and merge repeated beats into one cumulative state change or outcome.\n' +
-        PROMOTION_MODERATE_MACRO_RULES +
-        '\n' +
-        'Omit all dialogue, low-impact micro-actions, scene replay, minor subplots, flavor dialogue, sensory detail, and transient atmosphere.\n' +
         '</summaryception_promotion_constraints>'
     );
 }

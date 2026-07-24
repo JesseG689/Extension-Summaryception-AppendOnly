@@ -139,9 +139,7 @@ describe('constants', () => {
         expect(PROMPT_PRESETS.narrative).toContain('On July 6');
         expect(PROMPT_PRESETS.narrative).toContain('no year');
         // The L0 repair prompt must force the relative word to be resolved inline.
-        expect(SUMMARIZER_REPAIR_PROMPT_PRESETS.narrative).toContain(
-            'resolved absolute date inline instead of the relative word',
-        );
+        expect(SUMMARIZER_REPAIR_PROMPT_PRESETS.narrative).toContain('RESOLVED ABSOLUTE DATE');
         // The prose-date format rule must also appear in the L0 repair prompt.
         expect(SUMMARIZER_REPAIR_PROMPT_PRESETS.narrative).toContain('On July 6');
         // The injection template (on defaultSettings) must mention the reference date and relative-word resolution.
@@ -241,6 +239,28 @@ describe('constants', () => {
         expect(defaultSettings.promotionUserPrompt).toContain('hour-level 24-hour timestamps');
         expect(defaultSettings.promotionUserPrompt).toContain('PROSE-FOLDING RULES');
         expect(defaultSettings.promotionUserPrompt).toContain('Omit stale transient scene facts');
+    });
+
+    // Migration: durable rules previously restated by the runtime appenders now live
+    // once in the static prompts. Assert the trimmed-out durable substrings survive
+    // in the static DEFAULT_* user-prompt presets (the appender tests no longer check them).
+    it('keeps durable L0 rules inside the static summarizer user prompt', () => {
+        const prompt = PROMPT_PRESETS.narrative;
+        expect(prompt).toContain('Collapse repeated actions');
+        expect(prompt).toContain('Use at most one line per supported key');
+        expect(prompt).toContain('short, direct sentences');
+        expect(prompt).toContain('run-on sentences');
+        expect(prompt).toContain('Prefer periods over commas and semicolons');
+        expect(prompt).toContain('Drop minutes instead of preserving them');
+    });
+
+    it('keeps durable promotion rules inside the static promotion user prompt', () => {
+        const prompt = PROMOTION_PROMPT_PRESETS.narrative;
+        expect(prompt).toContain('Do not output a [STATE] block');
+        expect(prompt).toContain('Drop ages, brands, shopping routes, meals, clothing');
+        expect(prompt).toContain('short, direct sentences');
+        expect(prompt).toContain('run-on sentences');
+        expect(prompt).toContain('Prefer periods over commas and semicolons');
     });
 
     it('strips common reasoning tokens by default', () => {

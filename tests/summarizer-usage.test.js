@@ -157,8 +157,6 @@ describe('summarizer usage logging', () => {
         });
         expect(inputLog.messages[1].content).toContain('<summaryception_source_budget>');
         expect(inputLog.messages[1].content).toContain('never exceed 270');
-        expect(inputLog.messages[1].content).toContain('current_date_time');
-        expect(inputLog.messages[1].content).toContain('YYYY-MM-DD HH ddd');
         expect(outputLog).toBeNull();
         expect(getConsoleText()).not.toContain(VALID_L0_SUMMARY);
     });
