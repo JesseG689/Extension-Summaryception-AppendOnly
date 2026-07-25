@@ -31,6 +31,7 @@ import {
     recordSuccessfulSummarizerUsage,
 } from './summarizer-pipeline.js';
 import { countTextTokens, formatTokenCount, formatTokenValue } from './token-count.js';
+import { insertBeforeTrigger, EXECUTION_TRIGGER_L0 } from './prompt-parts.js';
 
 /**
  * Run summarizer provider requests with retry and fallback routing.
@@ -463,12 +464,15 @@ function getAttemptPromptContext({ series, useRepairPrompt, repairFeedback = '' 
     };
 }
 
-function appendRepairFeedback(prompt, repairFeedback) {
+/**
+ *
+ */
+export function appendRepairFeedback(prompt, repairFeedback) {
     const feedback = String(repairFeedback || '').trim();
     if (!feedback) {
         return prompt;
     }
-    return `${String(prompt || '').trimEnd()}\n\n${feedback}`;
+    return insertBeforeTrigger(prompt, feedback, EXECUTION_TRIGGER_L0);
 }
 
 async function runSingleAttempt(params) {

@@ -59,3 +59,33 @@ export const EXECUTION_TRIGGER_L0 =
  */
 export const EXECUTION_TRIGGER_PROMO =
     'Now output exactly one [NARRATIVE] paragraph with no preamble, code fences, or commentary.';
+
+/**
+ * Insert `insert` immediately before the trailing `triggerLine` of an
+ * assembled user prompt. Static templates produced by `buildUserPrompt`
+ * end with `triggerLine`; runtime appenders use this to place dynamic
+ * budget hints, source-range lines, and repair-feedback blocks above the
+ * bare execution trigger so the model begins emitting immediately.
+ *
+ * When the prompt does NOT end with `triggerLine` (e.g. a custom
+ * user-edited setting), falls back to appending after the body so dynamic
+ * content is never lost. Empty `insert` returns the prompt unchanged.
+ * @param {string} prompt - Fully-assembled user prompt ending in `triggerLine`.
+ * @param {string} insert - Dynamic block to place before the trigger.
+ * @param {string} triggerLine - Bare imperative line the prompt must end with.
+ * @returns {string}
+ */
+export function insertBeforeTrigger(prompt, insert, triggerLine) {
+    const body = String(prompt ?? '');
+    const trigger = String(triggerLine ?? '');
+    const trimmed = body.trimEnd();
+    if (trigger && trimmed.endsWith(trigger)) {
+        const head = trimmed.slice(0, trimmed.length - trigger.length).trimEnd();
+        const extra = String(insert ?? '').trim();
+        return extra ? `${head}\n\n${extra}\n\n${trigger}` : `${head}\n\n${trigger}`;
+    }
+    // Fallback: append after body (preserves prior behavior if the template
+    // does not end with the expected trigger — e.g. a custom user setting).
+    const extra = String(insert ?? '').trim();
+    return extra ? `${body.trimEnd()}\n\n${extra}` : body;
+}

@@ -8,6 +8,11 @@ import {
     isLayer0CompressionCall,
     appendLayer0PromptConstraints,
 } from '../src/core/layer0-compression.js';
+import {
+    DEFAULT_SUMMARIZER_USER_PROMPT,
+    DEFAULT_PROMOTION_USER_PROMPT,
+} from '../src/foundation/prompt-constants.js';
+import { EXECUTION_TRIGGER_L0, EXECUTION_TRIGGER_PROMO } from '../src/core/prompt-parts.js';
 import { buildRepairDiagnostics } from '../src/core/repair-diagnostics.js';
 import { defaultSettings } from '../src/foundation/constants.js';
 
@@ -168,5 +173,53 @@ describe('appendLayer0PromptConstraints', () => {
     it('returns prompt unchanged for non-compression calls', () => {
         const result = appendLayer0PromptConstraints('prompt', {}, { kind: 'other' });
         expect(result).toBe('prompt');
+    });
+});
+
+describe('appendLayer0PromptConstraints trigger-last ordering', () => {
+    const substitutePlaceholders = (template) =>
+        template
+            .replace('{{player_name}}', 'Alice')
+            .replace('{{context_str}}', '(none yet)')
+            .replace('{{story_txt}}', 'Some passage text.')
+            .replace('{{source_state}}', 'none');
+
+    it('places the L0 trigger after the budget hint and source-range line', () => {
+        const prompt = substitutePlaceholders(DEFAULT_SUMMARIZER_USER_PROMPT);
+        const result = appendLayer0PromptConstraints(
+            prompt,
+            { layer0SummaryTokenTarget: 200 },
+            {
+                kind: 'layer0',
+                sourceRange: [12, 34],
+                budgetHint:
+                    '<summaryception_source_budget>\nSource passage: ~8000 tokens. Compress hard.\n[NARRATIVE]: aim ~180 tokens; never exceed 270. At most 5 sentences.\n</summaryception_source_budget>',
+            },
+        );
+
+        expect(result.endsWith(EXECUTION_TRIGGER_L0)).toBe(true);
+        expect(result.indexOf('<summaryception_source_budget>')).toBeLessThan(
+            result.indexOf(EXECUTION_TRIGGER_L0),
+        );
+        expect(result.indexOf('This passage covers chat messages 12-34')).toBeLessThan(
+            result.indexOf(EXECUTION_TRIGGER_L0),
+        );
+    });
+
+    it('places the promotion trigger after the promotion constraints block', () => {
+        const prompt = substitutePlaceholders(DEFAULT_PROMOTION_USER_PROMPT);
+        const result = appendLayer0PromptConstraints(
+            prompt,
+            {},
+            {
+                kind: 'promotion',
+                memoryTokensBefore: 1000,
+            },
+        );
+
+        expect(result.endsWith(EXECUTION_TRIGGER_PROMO)).toBe(true);
+        expect(result.indexOf('summaryception_promotion_constraints')).toBeLessThan(
+            result.indexOf(EXECUTION_TRIGGER_PROMO),
+        );
     });
 });

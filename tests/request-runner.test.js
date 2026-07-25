@@ -1,5 +1,7 @@
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
 import { installBrowserRuntimeStub } from './test-helpers.js';
+import { DEFAULT_SUMMARIZER_REPAIR_PROMPT } from '../src/foundation/prompt-constants.js';
+import { EXECUTION_TRIGGER_L0 } from '../src/core/prompt-parts.js';
 
 const mocks = vi.hoisted(() => ({
     sendSummarizerRequest: vi.fn(),
@@ -277,5 +279,34 @@ describe('validation repair feedback', () => {
             kind: 'layer0',
             layer0Repair: true,
         });
+    });
+});
+
+describe('appendRepairFeedback trigger-last ordering', () => {
+    it('places the repair-feedback block before the L0 trigger', async () => {
+        const { appendRepairFeedback } = await import('../src/core/request-runner.js');
+        const substitute = (t) =>
+            t
+                .replace('{{player_name}}', 'Alice')
+                .replace('{{context_str}}', '(none yet)')
+                .replace('{{story_txt}}', 'Some passage text.');
+        const prompt = substitute(DEFAULT_SUMMARIZER_REPAIR_PROMPT);
+        const feedback =
+            '<summaryception_l0_repair_feedback>[NARRATIVE] hard maximum 300</summaryception_l0_repair_feedback>';
+
+        const result = appendRepairFeedback(prompt, feedback);
+
+        expect(result.endsWith(EXECUTION_TRIGGER_L0)).toBe(true);
+        expect(result.indexOf('<summaryception_l0_repair_feedback>')).toBeLessThan(
+            result.indexOf(EXECUTION_TRIGGER_L0),
+        );
+    });
+
+    it('returns the prompt unchanged when feedback is empty', async () => {
+        const { appendRepairFeedback } = await import('../src/core/request-runner.js');
+        const prompt = DEFAULT_SUMMARIZER_REPAIR_PROMPT;
+
+        expect(appendRepairFeedback(prompt, '')).toBe(prompt);
+        expect(appendRepairFeedback(prompt, '   ')).toBe(prompt);
     });
 });

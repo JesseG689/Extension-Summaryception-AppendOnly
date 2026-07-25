@@ -4,6 +4,11 @@ import {
     STATE_SNAPSHOT_SOFT_TARGET_TOKENS,
 } from '../foundation/prompt-constants.js';
 import { buildRepairDiagnostics, formatRepairDiagnostics } from './repair-diagnostics.js';
+import {
+    insertBeforeTrigger,
+    EXECUTION_TRIGGER_L0,
+    EXECUTION_TRIGGER_PROMO,
+} from './prompt-parts.js';
 import { applySafetyGap } from './token-budget/safety-gap.js';
 import {
     buildSizeConstraintsBlock,
@@ -161,11 +166,9 @@ export function appendLayer0PromptConstraints(prompt, settings, metadata = {}) {
     }
 
     const sourceRangeLine = buildLayer0SourceRangeLine(metadata);
-    return (
-        `${String(prompt || '').trimEnd()}\n\n` +
-        (metadata.budgetHint ? metadata.budgetHint + '\n\n' : '') +
-        sourceRangeLine
-    ).trimEnd();
+    const budgetHint = metadata.budgetHint ? String(metadata.budgetHint).trim() : '';
+    const insert = [budgetHint, sourceRangeLine].filter(Boolean).join('\n\n');
+    return insertBeforeTrigger(prompt, insert, EXECUTION_TRIGGER_L0);
 }
 
 function buildLayer0SourceRangeLine(metadata = {}) {
@@ -252,14 +255,12 @@ function appendPromotionPromptConstraints(prompt, metadata = {}) {
         : 'Target length: make the [NARRATIVE] output significantly shorter than the combined input memories.';
     const repairLine = buildPromotionRepairLine(metadata);
 
-    return (
-        `${String(prompt || '').trimEnd()}\n\n` +
-        buildSizeConstraintsBlock({
-            wrapperTag: 'summaryception_promotion_constraints',
-            targetLine,
-            repairLine,
-        })
-    );
+    const block = buildSizeConstraintsBlock({
+        wrapperTag: 'summaryception_promotion_constraints',
+        targetLine,
+        repairLine,
+    });
+    return insertBeforeTrigger(prompt, block, EXECUTION_TRIGGER_PROMO);
 }
 
 /**
