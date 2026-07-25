@@ -217,7 +217,7 @@ describe('callSummarizer abort signal plumbing', () => {
         const prompt = mocks.sendSummarizerRequest.mock.calls[0][2];
         expect(prompt).toContain('<summaryception_promotion_constraints>');
         expect(prompt).toContain('[NARRATIVE]: aim ~2 tokens; never exceed 2.');
-        expect(prompt).toContain('40% of the source narratives');
+        expect(prompt).toContain('Source narratives: ~4 tokens');
     });
 
     it('uses promotion repair prompts for promotion repair calls', async () => {

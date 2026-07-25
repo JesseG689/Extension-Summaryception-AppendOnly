@@ -192,7 +192,7 @@ export const DEFAULT_PROMOTION_USER_PROMPT = buildUserPrompt({
 [NARRATIVE]
 <one dense third-person chronological prose paragraph. Never use second-person. Do not output [STATE]. ${ANTI_RUN_ON_RULE}>`,
     taskRules: `### LENGTH CONTRACT (HARD LIMIT):
-The consolidated [NARRATIVE] must not exceed 60% of the combined input length and should aim for about 40% of it. Exact token targets are appended at the end of this prompt. This is a hard limit: if a draft runs long, delete whole beats rather than trimming wording. Overlong output is rejected and regenerated.
+The consolidated [NARRATIVE] must not exceed 60% of the combined input length and should aim for about 40% of it. The exact token targets appended at the end of this prompt are the authoritative numbers — they are deliberately set below the 60% ceiling to leave first-attempt head room; treat them as the real limit. This is a hard limit: if a draft runs long, delete whole beats rather than trimming wording. Overlong output is rejected and regenerated.
 ### LOSSY COMPRESSION:
 The input memories overlap heavily: each was written with the prior ones as context, so they restate the same relationships, rules, locations, and props. Treat that overlap as redundancy, not emphasis. Compress by deletion, not summarization-in-place:
 - State each relationship, rule, location, and prop exactly once, at the point it was established or last changed.

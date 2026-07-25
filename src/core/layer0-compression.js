@@ -4,6 +4,7 @@ import {
     STATE_SNAPSHOT_SOFT_TARGET_TOKENS,
 } from '../foundation/prompt-constants.js';
 import { buildRepairDiagnostics, formatRepairDiagnostics } from './repair-diagnostics.js';
+import { applySafetyGap } from './token-budget/safety-gap.js';
 import {
     buildSizeConstraintsBlock,
     buildSizeTargetLine,
@@ -206,23 +207,49 @@ export function getPromotionSummaryTokenHardMax(metadata = {}) {
 }
 
 /**
+ * Compute the model-facing soft target for a promotion. Mirrors the L0
+ * `applySafetyGap` strategy: the prompt shows ~90% of the real validation
+ * bound so a first attempt that lands near the model-facing number still
+ * passes `validatePromotionCandidate`, which checks the RAW bound.
+ * @param {import('./summarizer-usage.js').SummarizerCallMetadata} metadata
+ * @returns {number|null}
+ */
+export function getPromotionPromptSoftTarget(metadata = {}) {
+    const realTarget = getPromotionSummaryTokenTarget(metadata);
+    return realTarget === null ? null : applySafetyGap(realTarget);
+}
+
+/**
+ * Compute the model-facing hard maximum for a promotion. Gap-adjusted so the
+ * model never sees the real ceiling; real validation uses the raw bound.
+ * @param {import('./summarizer-usage.js').SummarizerCallMetadata} metadata
+ * @returns {number|null}
+ */
+export function getPromotionPromptHardMax(metadata = {}) {
+    const realHardMax = getPromotionSummaryTokenHardMax(metadata);
+    return realHardMax === null ? null : applySafetyGap(realHardMax);
+}
+/**
  * Add Layer 1+ promotion-specific consolidation constraints.
  * @param {string} prompt
  * @param {import('./summarizer-usage.js').SummarizerCallMetadata} metadata
  * @returns {string}
  */
 function appendPromotionPromptConstraints(prompt, metadata = {}) {
-    const target = getPromotionSummaryTokenTarget(metadata);
-    const hardMax = getPromotionSummaryTokenHardMax(metadata);
-    const targetLine =
-        target === null || hardMax === null
-            ? 'Target length: make the [NARRATIVE] output significantly shorter than the combined input memories.'
-            : buildSizeTargetLine({
-                  label: '[NARRATIVE]',
-                  softTarget: target,
-                  hardMax,
-                  extra: `Soft target is 40% of the source narratives; hard maximum is 60%. [NARRATIVE] output only.`,
-              });
+    const sourceTokens = Number(metadata.memoryTokensBefore);
+    const promptTarget = getPromotionPromptSoftTarget(metadata);
+    const promptHardMax = getPromotionPromptHardMax(metadata);
+    const hasBounds = promptTarget !== null && promptHardMax !== null;
+
+    const extra = hasBounds ? buildPromotionTargetExtra(metadata, sourceTokens) : '';
+    const targetLine = hasBounds
+        ? buildSizeTargetLine({
+              label: '[NARRATIVE]',
+              softTarget: promptTarget,
+              hardMax: promptHardMax,
+              extra,
+          })
+        : 'Target length: make the [NARRATIVE] output significantly shorter than the combined input memories.';
     const repairLine = buildPromotionRepairLine(metadata);
 
     return (
@@ -233,6 +260,24 @@ function appendPromotionPromptConstraints(prompt, metadata = {}) {
             repairLine,
         })
     );
+}
+
+/**
+ * Build the trailing clause of the promotion target line. The static LENGTH
+ * CONTRACT states the 40%/60% ratios in prose; this appends the concrete
+ * source size and an L1+-specific "compress-harder" reminder so the model
+ * sees the numeric bar it must beat, not just a ratio.
+ * @param {object} metadata
+ * @param {number} sourceTokens
+ * @returns {string}
+ */
+function buildPromotionTargetExtra(metadata, sourceTokens) {
+    const sourceTokensClause = `Source narratives: ~${Math.round(sourceTokens)} tokens.`;
+    const deepReminder =
+        Number(metadata.layerIndex) >= 1
+            ? ' This is a deep-layer fold: merge whole scenes into outcome sentences; do not replay beats.'
+            : '';
+    return `${sourceTokensClause}${deepReminder} [NARRATIVE] output only.`;
 }
 
 function buildPromotionRepairLine(metadata = {}) {
@@ -271,8 +316,15 @@ function buildPromotionRepairLine(metadata = {}) {
         rejectedSectionTagPrefix: 'rejected_promotion_',
     });
 
+    const overMsg =
+        Number.isFinite(outputTokens) &&
+        Number.isFinite(hardMaxTokens) &&
+        outputTokens > hardMaxTokens
+            ? `Previous draft was ${outputTokens} tokens; the real ceiling is ${hardMaxTokens} and the aim is ${targetTokens}. Delete at least ${outputTokens - hardMaxTokens} tokens of scene replay.`
+            : '';
     return (
         'Repair task: rewrite the rejected narrative toward the soft target, not merely below the hard maximum.\n' +
+        (overMsg ? overMsg + '\n' : '') +
         'Keep only macro-level durable chronology, current position, relationship/state changes, permanent rules, and unresolved hooks.\n' +
         feedback +
         '\n'
