@@ -1,0 +1,171 @@
+import { describe, expect, it } from 'vitest';
+
+import { REQUEST_TIMEOUT, RETRY_CONFIG, isRetryableError } from '../src/foundation/retry.js';
+import {
+    ROUTE_CYCLE_RETRY_ATTEMPT,
+    classifyAttemptRetryStatus,
+    computeAttemptTimeoutMs,
+    getPrimaryHealthBucket,
+    getRetryStopReason,
+    isHardNetworkError,
+    shouldSwitchToRepairPrompt,
+} from '../src/core/request-retry-policy.js';
+
+describe('computeAttemptTimeoutMs', () => {
+    it('returns the full configured timeout on the first attempt and the ratio on retries', () => {
+        const settings = { requestTimeoutSeconds: 30 };
+        expect(computeAttemptTimeoutMs({ kind: 'layer0' }, 0, settings)).toBe(30000);
+        expect(computeAttemptTimeoutMs({ kind: 'layer0' }, 1, settings)).toBe(
+            Math.round(30000 * REQUEST_TIMEOUT.RETRY_ATTEMPT_RATIO),
+        );
+    });
+
+    it('reads each route from its own settings field', () => {
+        const settings = {
+            requestTimeoutSeconds: 30,
+            mergeRequestTimeoutSeconds: 40,
+            fallbackRequestTimeoutSeconds: 50,
+        };
+        expect(computeAttemptTimeoutMs({ kind: 'layer0' }, 0, settings)).toBe(30000);
+        expect(computeAttemptTimeoutMs({ kind: 'promotion' }, 0, settings)).toBe(40000);
+        expect(computeAttemptTimeoutMs({ useFallback: true }, 0, settings)).toBe(50000);
+    });
+
+    it('uses fallback timeouts with the documented ordering when no setting is finite', () => {
+        const l0First = computeAttemptTimeoutMs({ kind: 'layer0' }, 0, {});
+        const l0Retry = computeAttemptTimeoutMs({ kind: 'layer0' }, 1, {});
+        const promoFirst = computeAttemptTimeoutMs({ kind: 'promotion' }, 0, {});
+        const promoRetry = computeAttemptTimeoutMs({ kind: 'promotion' }, 1, {});
+        // L0 (user-facing) waits longer than its retry; likewise for promotion.
+        expect(l0First).toBeGreaterThan(l0Retry);
+        expect(promoFirst).toBeGreaterThan(promoRetry);
+        // L0 first-attempt is more generous than promotion first-attempt.
+        expect(l0First).toBeGreaterThan(promoFirst);
+    });
+});
+
+describe('classifyAttemptRetryStatus', () => {
+    it('reports an aborted result when the signal is aborted', () => {
+        expect(classifyAttemptRetryStatus(new Error('anything'), true)).toMatchObject({
+            aborted: true,
+            shouldRetry: false,
+            hardFailover: false,
+            failureStatus: 'aborted',
+        });
+    });
+
+    it('reports an aborted result for the "Aborted by user" message', () => {
+        expect(classifyAttemptRetryStatus(new Error('Aborted by user'), false)).toMatchObject({
+            aborted: true,
+            failureStatus: 'aborted',
+        });
+    });
+
+    it('reports a hard failover for a hard network error', () => {
+        expect(classifyAttemptRetryStatus(new Error('Failed to fetch'), false)).toMatchObject({
+            shouldRetry: false,
+            hardFailover: true,
+            failureStatus: 'hard-failover',
+        });
+    });
+
+    it('mirrors isRetryableError for other errors', () => {
+        const retryable = new Error('Rate limit exceeded');
+        const nonRetryable = new Error('invalid API key');
+        expect(classifyAttemptRetryStatus(retryable, false)).toMatchObject({
+            shouldRetry: isRetryableError(retryable),
+            hardFailover: false,
+            failureStatus: 'failed',
+        });
+        expect(classifyAttemptRetryStatus(nonRetryable, false).shouldRetry).toBe(
+            isRetryableError(nonRetryable),
+        );
+    });
+});
+
+describe('isHardNetworkError', () => {
+    it('returns false for an error with no message', () => {
+        expect(isHardNetworkError({})).toBe(false);
+        expect(isHardNetworkError({ message: '' })).toBe(false);
+    });
+
+    it.each([
+        'Failed to fetch',
+        'ECONNREFUSED 127.0.0.1:11434',
+        'net::ERR_CONNECTION_REFUSED',
+        'net::ERR_NAME_NOT_RESOLVED',
+        'net::ERR_INTERNET_DISCONNECTED',
+    ])('matches the disconnect substring in %s case-insensitively', (message) => {
+        expect(isHardNetworkError({ message })).toBe(true);
+    });
+
+    it('returns false for an unrelated message', () => {
+        expect(isHardNetworkError({ message: 'invalid API key' })).toBe(false);
+    });
+});
+
+describe('shouldSwitchToRepairPrompt', () => {
+    const base = {
+        attemptResult: { shouldRetry: true, failureStatus: 'empty' },
+        attempt: 0,
+        maxRetries: 3,
+        repairPrompt: 'repair',
+    };
+
+    it('is true when every condition holds and the status is a validation failure', () => {
+        expect(shouldSwitchToRepairPrompt(base)).toBe(true);
+    });
+
+    it.each([
+        ['no repair prompt', { repairPrompt: '' }],
+        ['attempt at max retries', { attempt: 3 }],
+        ['result not retryable', { attemptResult: { shouldRetry: false, failureStatus: 'empty' } }],
+        [
+            'non-validation status',
+            { attemptResult: { shouldRetry: true, failureStatus: 'failed' } },
+        ],
+    ])('is false when %s', (_label, override) => {
+        expect(shouldSwitchToRepairPrompt({ ...base, ...override })).toBe(false);
+    });
+});
+
+describe('getRetryStopReason', () => {
+    it('returns hard-failover when the attempt hard-failed', () => {
+        expect(getRetryStopReason({ hardFailover: true, shouldRetry: true }, 0, 3)).toBe(
+            'hard-failover',
+        );
+    });
+
+    it('returns non-retryable when the result is not retryable', () => {
+        expect(getRetryStopReason({ hardFailover: false, shouldRetry: false }, 0, 3)).toBe(
+            'non-retryable',
+        );
+    });
+
+    it('returns retries-exhausted at the retry ceiling and primary-probe-failed when maxRetries is 0', () => {
+        expect(getRetryStopReason({ shouldRetry: true }, 3, 3)).toBe('retries-exhausted');
+        expect(getRetryStopReason({ shouldRetry: true }, 0, 0)).toBe('primary-probe-failed');
+    });
+
+    it('returns "" while retries remain', () => {
+        expect(getRetryStopReason({ shouldRetry: true }, 1, 3)).toBe('');
+    });
+});
+
+describe('getPrimaryHealthBucket', () => {
+    it('routes promotion to a different bucket than layer0/regenerate', () => {
+        expect(getPrimaryHealthBucket({ kind: 'promotion' })).not.toBe(
+            getPrimaryHealthBucket({ kind: 'layer0' }),
+        );
+        expect(getPrimaryHealthBucket({ kind: 'regenerate' })).toBe(
+            getPrimaryHealthBucket({ kind: 'layer0' }),
+        );
+        expect(typeof getPrimaryHealthBucket({ kind: 'promotion' })).toBe('string');
+    });
+});
+
+describe('ROUTE_CYCLE_RETRY_ATTEMPT', () => {
+    it('aliases RETRY_CONFIG.maxRetries', () => {
+        expect(ROUTE_CYCLE_RETRY_ATTEMPT).toBe(RETRY_CONFIG.maxRetries);
+    });
+});
