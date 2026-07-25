@@ -37,6 +37,25 @@ export function makeLongMessages(count, length = 3000) {
     return makeMessages(count, { mes: 'x'.repeat(length) });
 }
 
+/** Build alternating user/assistant chat with fixed message sizes, ending on an assistant turn. */
+export function makeSizedChat(turnCount, { userLength = 100, assistantLength = 100 } = {}) {
+    return Array.from({ length: Math.max(0, turnCount) * 2 }, (_value, index) =>
+        makeMessage({
+            isUser: index % 2 === 0,
+            mes: 'x'.repeat(index % 2 === 0 ? userLength : assistantLength),
+        }),
+    );
+}
+
+/**
+ * Predict a message's token count under the default String-length test tokenizer.
+ *  Mirrors the "Player: "/"Assistant: " line format used by the planner modules —
+ *  this is the single coupling point if speaker names ever change.
+ */
+export function messageLineTokens(isUser, mesLength) {
+    return (isUser ? 'Player: ' : 'Assistant: ').length + mesLength;
+}
+
 /** Build common summarization settings with overrides. */
 export function makeSummarySettings(overrides = {}) {
     return {
