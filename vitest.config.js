@@ -28,9 +28,7 @@ export default defineConfig({
                 'src/foundation/prompt-constants.js',
                 'src/foundation/retry.js',
                 'src/core/chatutils.js',
-                'src/core/prompts.js',
                 'src/foundation/state.js',
-                'src/foundation/logger.js',
             ],
             thresholds: {
                 lines: 70,
