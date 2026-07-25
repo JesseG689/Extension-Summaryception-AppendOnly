@@ -192,6 +192,11 @@ describe('constants', () => {
         expect(PROMOTION_PROMPT_PRESETS.narrative).toContain('On July 6');
         expect(PROMOTION_PROMPT_PRESETS.narrative).not.toContain('2024-07-12 Fri');
         expect(PROMOTION_PROMPT_PRESETS.narrative).toContain('no year');
+        // Length contract: the promotion user prompt must state the numeric compression target in-body.
+        expect(PROMOTION_PROMPT_PRESETS.narrative).toContain('LENGTH CONTRACT');
+        expect(PROMOTION_PROMPT_PRESETS.narrative).toContain('LOSSY COMPRESSION');
+        expect(PROMOTION_PROMPT_PRESETS.narrative).toContain('Compress by deletion');
+        expect(PROMOTION_PROMPT_PRESETS.narrative).toContain('60%');
         // The promotion repair prompt must require absolute dates only and resolve relative words.
         expect(PROMOTION_REPAIR_PROMPT_PRESETS.narrative).toContain('absolute dates only');
         expect(PROMOTION_REPAIR_PROMPT_PRESETS.narrative).toContain('bare relative time word');

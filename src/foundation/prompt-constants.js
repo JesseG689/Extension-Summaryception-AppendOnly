@@ -191,7 +191,13 @@ export const DEFAULT_PROMOTION_USER_PROMPT = buildUserPrompt({
 
 [NARRATIVE]
 <one dense third-person chronological prose paragraph. Never use second-person. Do not output [STATE]. ${ANTI_RUN_ON_RULE}>`,
-    taskRules: `Consolidate the NEW events from <narratives_to_consolidate> and any durable facts from <source_state> into a highly compressed continuation that follows the runtime Layer 1+ target length.
+    taskRules: `### LENGTH CONTRACT (HARD LIMIT):
+The consolidated [NARRATIVE] must not exceed 60% of the combined input length and should aim for about 40% of it. Exact token targets are appended at the end of this prompt. This is a hard limit: if a draft runs long, delete whole beats rather than trimming wording. Overlong output is rejected and regenerated.
+### LOSSY COMPRESSION:
+The input memories overlap heavily: each was written with the prior ones as context, so they restate the same relationships, rules, locations, and props. Treat that overlap as redundancy, not emphasis. Compress by deletion, not summarization-in-place:
+- State each relationship, rule, location, and prop exactly once, at the point it was established or last changed.
+- Merge sequential scenes into one outcome sentence (cause, outcome, consequence); do not replay beat-by-beat action.
+- Keep a named detail only when it changes behavior later; delete names of one-off items, garments, purchases, and body actions.
 ### CRITICAL TEMPORAL RULES:
 1. **No Historical Rewriting:** <prior_context> is your established, immutable baseline history. Do NOT re-summarize, duplicate, or re-write any events, dates, or details already recorded in <prior_context>.
 2. **Strict Delta Scoping:** Your output must ONLY summarize the new events occurring within <narratives_to_consolidate>.

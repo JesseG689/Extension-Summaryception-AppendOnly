@@ -216,8 +216,7 @@ describe('callSummarizer abort signal plumbing', () => {
         );
         const prompt = mocks.sendSummarizerRequest.mock.calls[0][2];
         expect(prompt).toContain('<summaryception_promotion_constraints>');
-        expect(prompt).toContain('Soft target: about 2 tokens');
-        expect(prompt).toContain('Hard maximum: 2 tokens');
+        expect(prompt).toContain('[NARRATIVE]: aim ~2 tokens; never exceed 2.');
         expect(prompt).toContain('40% of the source narratives');
     });
 
@@ -317,8 +316,7 @@ describe('callSummarizer abort signal plumbing', () => {
         const promotionPrompt = mocks.sendSummarizerRequest.mock.calls[1][2];
         expect(promotionPrompt).toContain('PROMO deep context MEMORY merged snippets');
         expect(promotionPrompt).toContain('<summaryception_promotion_constraints>');
-        expect(promotionPrompt).toContain('Soft target: about 2 tokens');
-        expect(promotionPrompt).toContain('Hard maximum: 2 tokens');
+        expect(promotionPrompt).toContain('[NARRATIVE]: aim ~2 tokens; never exceed 2.');
     });
 
     it('switches Layer 0 validation retries to the repair prompt', async () => {

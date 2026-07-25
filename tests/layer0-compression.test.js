@@ -134,8 +134,8 @@ describe('appendLayer0PromptConstraints', () => {
             },
         );
         expect(result).toContain('summaryception_promotion_constraints');
-        expect(result).toContain('Soft target: about 400 tokens');
-        expect(result).toContain('Hard maximum: 600 tokens');
+        expect(result).toContain('[NARRATIVE]: aim ~400 tokens; never exceed 600.');
+        expect(result).toContain('40% of the source narratives');
         expect(result).toContain('[NARRATIVE]');
         expect(result).not.toContain('2024-07-12 Fri');
     });

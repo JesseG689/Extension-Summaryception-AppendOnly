@@ -4,6 +4,10 @@ import {
     STATE_SNAPSHOT_SOFT_TARGET_TOKENS,
 } from '../foundation/prompt-constants.js';
 import { buildRepairDiagnostics, formatRepairDiagnostics } from './repair-diagnostics.js';
+import {
+    buildSizeConstraintsBlock,
+    buildSizeTargetLine,
+} from './token-budget/budget-hint-builder.js';
 
 const MIN_LAYER0_TARGET_TOKENS = 80;
 const MAX_LAYER0_TARGET_TOKENS = 500;
@@ -211,17 +215,23 @@ function appendPromotionPromptConstraints(prompt, metadata = {}) {
     const target = getPromotionSummaryTokenTarget(metadata);
     const hardMax = getPromotionSummaryTokenHardMax(metadata);
     const targetLine =
-        target === null
-            ? 'Target length: make the [NARRATIVE] output significantly shorter than the combined input memories.\n'
-            : `Soft target: about ${target} tokens, 40% of the source narratives. Hard maximum: ${hardMax} tokens, 60% of the source narratives. [NARRATIVE] output only.\n`;
+        target === null || hardMax === null
+            ? 'Target length: make the [NARRATIVE] output significantly shorter than the combined input memories.'
+            : buildSizeTargetLine({
+                  label: '[NARRATIVE]',
+                  softTarget: target,
+                  hardMax,
+                  extra: `Soft target is 40% of the source narratives; hard maximum is 60%. [NARRATIVE] output only.`,
+              });
     const repairLine = buildPromotionRepairLine(metadata);
 
     return (
         `${String(prompt || '').trimEnd()}\n\n` +
-        '<summaryception_promotion_constraints>\n' +
-        targetLine +
-        repairLine +
-        '</summaryception_promotion_constraints>'
+        buildSizeConstraintsBlock({
+            wrapperTag: 'summaryception_promotion_constraints',
+            targetLine,
+            repairLine,
+        })
     );
 }
 
