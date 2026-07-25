@@ -8,6 +8,7 @@ import {
     buildLayer0SizeRepairFeedback,
     getLayer0SummaryRepairCeiling,
     getLayer0SummaryTokenBounds,
+    getLayer0SummaryTokenTarget,
     isLayer0SizeGuardCall,
 } from './layer0-compression.js';
 import { buildRepairDiagnostics } from './repair-diagnostics.js';
@@ -215,7 +216,8 @@ export async function validateLayer0OutputSize(text, settings, metadata = {}) {
         ).length;
         return rejectLayer0Size(diagnostics, {
             sourceStateKeyCount,
-            sourceNarrativeTokens: sourceTokens,
+            targetTokens: getLayer0SummaryTokenTarget(settings),
+            layer: 'l0',
         });
     }
 
@@ -401,7 +403,7 @@ function rejectIntegrity(reason) {
 
 /**
  * @param {object} diagnostics - From buildRepairDiagnostics
- * @param {{ sourceStateKeyCount?: number, sourceNarrativeTokens?: number }} [sourceBudget]
+ * @param {{ sourceStateKeyCount?: number, targetTokens?: number, layer?: 'l0' | 'l1' | 'l2' }} [sourceBudget]
  * @returns {{ valid: false, error: Error & { retryable?: boolean }, repairFeedback: string, diagnostics: object }}
  */
 function rejectLayer0Size(diagnostics, sourceBudget = {}) {

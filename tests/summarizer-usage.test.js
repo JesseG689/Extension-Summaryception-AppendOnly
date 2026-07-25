@@ -156,7 +156,8 @@ describe('summarizer usage logging', () => {
             ],
         });
         expect(inputLog.messages[1].content).toContain('<summaryception_source_budget>');
-        expect(inputLog.messages[1].content).toContain('never exceed 270');
+        expect(inputLog.messages[1].content).toContain('[NARRATIVE]: write at most 8 sentences.');
+        expect(inputLog.messages[1].content).not.toContain('never exceed');
         expect(outputLog).toBeNull();
         expect(getConsoleText()).not.toContain(VALID_L0_SUMMARY);
     });

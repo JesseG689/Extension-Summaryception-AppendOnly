@@ -10,11 +10,7 @@ import {
 } from './prompts.js';
 import { estimateSummarizerUsage, recordSummarizerUsage } from './summarizer-usage.js';
 import { countTextTokens, formatTokenCount } from './token-count.js';
-import { getLayer0SummaryTokenBounds, isLayer0SizeGuardCall } from './layer0-compression.js';
-import {
-    STATE_SNAPSHOT_MAX_TOKENS,
-    STATE_SNAPSHOT_SOFT_TARGET_TOKENS,
-} from '../foundation/prompt-constants.js';
+import { getLayer0SummaryTokenTarget, isLayer0SizeGuardCall } from './layer0-compression.js';
 import {
     countLayer0SourceBudget,
     getSourceTokenCount,
@@ -228,19 +224,14 @@ async function attachBudgetHint(metadata, settings) {
     }
     const sourceNarrativeTokens = getSourceTokenCount(metadata);
     const sourceStateText = String(metadata.sourceState || '');
-    const { narrativeTokens, stateTokens, stateKeyCount } = await countLayer0SourceBudget({
+    const { stateTokens, stateKeyCount } = await countLayer0SourceBudget({
         sourceNarrativeTokens,
         sourceStateText,
     });
     const budgetHint = buildLayer0BudgetHint({
-        sourceNarrativeTokens: narrativeTokens,
         sourceStateTokens: stateTokens,
         sourceStateKeyCount: stateKeyCount,
-        narrativeBounds: getLayer0SummaryTokenBounds(settings),
-        stateBounds: {
-            softTarget: STATE_SNAPSHOT_SOFT_TARGET_TOKENS,
-            max: STATE_SNAPSHOT_MAX_TOKENS,
-        },
+        targetTokens: getLayer0SummaryTokenTarget(settings),
     });
     return { ...metadata, budgetHint };
 }

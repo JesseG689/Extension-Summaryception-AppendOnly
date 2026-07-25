@@ -1,7 +1,18 @@
 export const STATE_KEY_CEILING = 7;
-export const NARRATIVE_SENTENCE_FLOOR = 3;
-export const NARRATIVE_SENTENCE_CEILING = 5;
-export const NARRATIVE_TOKENS_PER_SENTENCE = 500;
+
+// Tokens the model averages per short, direct sentence. Used only to convert
+// a backend token bound into a countable sentence cap; never shown to the model.
+export const TOKENS_PER_SENTENCE = 30;
+
+// Per-layer backend acceptance bands, as multiples of the slider target T.
+// Layer 0 = chat->L0 (direct summarizer). Layer 1 = L0->L1 promotion. Layer 2+ = L1->L2+.
+export const LAYER_MIN_RATIO = { l0: 0.4, l1: 0.4, l2: 0.3 };
+export const LAYER_HARD_MAX_RATIO = { l0: 1.5, l1: 1.75, l2: 1.5 };
+// Grace ceiling for Layer 0 near-miss repair (replaces 1.65 ratio).
+export const LAYER0_REPAIR_RATIO = 1.65;
+// Model-facing safety multiplier applied to the hard max before converting to
+// a sentence cap, so a first attempt that reaches the cap still validates.
+export const LAYER_SAFETY_MULTIPLIER = { l0: 0.85, l1: 0.75, l2: 0.65 };
 
 /**
  * Maximum number of `[STATE]` key:value lines the model should emit.
@@ -16,17 +27,33 @@ export function computeStateLineCap(sourceStateKeyCount) {
     return Math.min(count, STATE_KEY_CEILING);
 }
 
+// Normalize a layer key to 'l0' | 'l1' | 'l2'. Accepts a number (promotion
+// layerIndex) or a string; anything >= 1 is a deep layer.
+function layerKey(layer) {
+    if (layer === 'l0' || layer === 0) {
+        return 'l0';
+    }
+    if (layer === 'l1') {
+        return 'l1';
+    }
+    return 'l2'; // 'l2' or any promotion layerIndex >= 1
+}
+
 /**
- * Maximum number of NARRATIVE sentences the model should emit, derived from
- * the source passage token count.
- * @param {number | undefined} sourceNarrativeTokens - Source passage token count.
+ * Integer sentence cap for a layer, anchored to slider target T.
+ * cap = floor(hardMaxRatio * T * safetyMultiplier / TOKENS_PER_SENTENCE), min 1.
+ * @param {'l0' | 'l1' | 'l2' | number} layer - Layer key or promotion layerIndex.
+ * @param {number | undefined} targetTokens - Slider target T.
  * @returns {number}
  */
-export function computeNarrativeSentenceCap(sourceNarrativeTokens) {
-    const tokens = Number(sourceNarrativeTokens);
-    if (!Number.isFinite(tokens) || tokens <= 0) {
-        return NARRATIVE_SENTENCE_FLOOR;
+export function computeSentenceCap(layer, targetTokens) {
+    const key = layerKey(layer);
+    const t = Number(targetTokens);
+    if (!Number.isFinite(t) || t <= 0) {
+        return 1;
     }
-    const raw = Math.ceil(tokens / NARRATIVE_TOKENS_PER_SENTENCE);
-    return Math.min(NARRATIVE_SENTENCE_CEILING, Math.max(NARRATIVE_SENTENCE_FLOOR, raw));
+    const raw = Math.floor(
+        (LAYER_HARD_MAX_RATIO[key] * t * LAYER_SAFETY_MULTIPLIER[key]) / TOKENS_PER_SENTENCE,
+    );
+    return Math.max(1, raw);
 }

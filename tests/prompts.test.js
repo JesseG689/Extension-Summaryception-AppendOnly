@@ -310,9 +310,10 @@ describe('validateLayer0OutputSize', () => {
         expect(result.diagnostics.violations.map((violation) => violation.id)).toEqual([
             'narrative',
         ]);
+        expect(result.repairFeedback).toContain('[NARRATIVE]: rejected.');
         expect(result.repairFeedback).toContain('<rejected_narrative>');
         expect(result.repairFeedback).toContain('Verbose scene replay.');
-        expect(result.repairFeedback).toContain('reduce by');
+        expect(result.repairFeedback).not.toContain('token');
         expect(result.repairFeedback).toContain('Preserve [STATE] unchanged');
         expect(result.repairFeedback).toContain('<preserve_state>');
     });
@@ -399,8 +400,8 @@ describe('validateLayer0OutputSize', () => {
             'narrative',
         ]);
         expect(result.error?.message).toContain('[NARRATIVE]');
-        expect(result.repairFeedback).toContain('Total draft:');
-        expect(result.repairFeedback).toContain('(diagnostic only)');
+        expect(result.repairFeedback).toContain('[NARRATIVE]: rejected.');
+        expect(result.repairFeedback).not.toContain('token');
         expect(result.diagnostics.violations.some((v) => v.id === 'state')).toBe(false);
     });
 

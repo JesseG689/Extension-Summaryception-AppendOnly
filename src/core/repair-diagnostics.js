@@ -102,21 +102,11 @@ export function formatRepairDiagnostics(
     ];
 
     for (const section of failing) {
-        const target = section.targetTokens > 0 ? `; target ${section.targetTokens}` : '';
-        const minimum = section.minimumTokens > 0 ? `; minimum ${section.minimumTokens}` : '';
-        const hardMax = section.hardMaxTokens > 0 ? `; hard maximum ${section.hardMaxTokens}` : '';
-        const guidance = section.reductionGuidance
-            ? `; reduce by ${section.reductionGuidance}`
-            : '';
-        lines.push(
-            `${section.label}: ${section.actualTokens} tokens${target}${minimum}${hardMax}${guidance}.`,
-        );
+        lines.push(`${section.label}: rejected.`);
         if (section.repairInstruction) {
             lines.push(`${section.label} repair: ${section.repairInstruction}`);
         }
     }
-
-    lines.push(`Total draft: ${diagnostics?.totalTokens || 0} tokens (diagnostic only).`);
 
     for (const section of failing) {
         const text = section.text.trim();

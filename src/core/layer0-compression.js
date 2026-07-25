@@ -9,7 +9,13 @@ import {
     EXECUTION_TRIGGER_L0,
     EXECUTION_TRIGGER_PROMO,
 } from './prompt-parts.js';
-import { applySafetyGap } from './token-budget/safety-gap.js';
+import {
+    computeSentenceCap,
+    LAYER_HARD_MAX_RATIO,
+    LAYER_MIN_RATIO,
+    LAYER0_REPAIR_RATIO,
+} from './token-budget/structural-constraints.js';
+import { countSentences } from './token-budget/repair-feedback-adapter.js';
 import {
     buildSizeConstraintsBlock,
     buildSizeTargetLine,
@@ -17,11 +23,6 @@ import {
 
 const MIN_LAYER0_TARGET_TOKENS = 80;
 const MAX_LAYER0_TARGET_TOKENS = 500;
-const LAYER0_MIN_OUTPUT_RATIO = 1 / 3;
-const LAYER0_MAX_OUTPUT_RATIO = 1.5;
-const LAYER0_REPAIR_MAX_OUTPUT_RATIO = 1.65;
-const PROMOTION_TARGET_RATIO = 0.4;
-const PROMOTION_HARD_MAX_RATIO = 0.6;
 
 /**
  * Check whether a summarizer call should receive runtime compression controls.
@@ -57,8 +58,8 @@ export function getLayer0SummaryTokenBounds(settings = {}) {
     const target = getLayer0SummaryTokenTarget(settings);
     return {
         target,
-        min: Math.floor(target * LAYER0_MIN_OUTPUT_RATIO),
-        max: Math.round(target * LAYER0_MAX_OUTPUT_RATIO),
+        min: Math.floor(target * LAYER_MIN_RATIO.l0),
+        max: Math.round(target * LAYER_HARD_MAX_RATIO.l0),
     };
 }
 
@@ -70,7 +71,7 @@ export function getLayer0SummaryTokenBounds(settings = {}) {
  * @returns {number}
  */
 export function getLayer0SummaryRepairCeiling(settings = {}) {
-    return Math.round(getLayer0SummaryTokenTarget(settings) * LAYER0_REPAIR_MAX_OUTPUT_RATIO);
+    return Math.round(getLayer0SummaryTokenTarget(settings) * LAYER0_REPAIR_RATIO);
 }
 
 /**
@@ -162,7 +163,7 @@ export function appendLayer0PromptConstraints(prompt, settings, metadata = {}) {
     }
 
     if (metadata.kind === 'promotion') {
-        return appendPromotionPromptConstraints(prompt, metadata);
+        return appendPromotionPromptConstraints(prompt, settings, metadata);
     }
 
     const sourceRangeLine = buildLayer0SourceRangeLine(metadata);
@@ -184,76 +185,50 @@ function buildLayer0SourceRangeLine(metadata = {}) {
 }
 
 /**
- * Compute the target size for a Layer 1+ promotion from source memory size.
- * @param {import('./summarizer-usage.js').SummarizerCallMetadata} metadata
- * @returns {number|null}
+ * Compute the target size for a promotion, anchored to the slider target T.
+ * Doubles as the acceptance floor: a shorter output is rejected as over-merged.
+ * @param {object} p
+ * @param {number} p.layerIndex - Promotion SOURCE layer (0 => produces L1, >=1 => L2+).
+ * @param {number} p.targetTokens - Slider target T.
+ * @returns {number}
  */
-export function getPromotionSummaryTokenTarget(metadata = {}) {
-    const sourceTokens = Number(metadata.memoryTokensBefore);
-    if (!Number.isFinite(sourceTokens) || sourceTokens <= 0) {
-        return null;
-    }
-    return Math.max(1, Math.round(sourceTokens * PROMOTION_TARGET_RATIO));
+export function getPromotionSummaryTokenTarget({ layerIndex, targetTokens }) {
+    const key = Number(layerIndex) >= 1 ? 'l2' : 'l1';
+    return Math.max(1, Math.floor(targetTokens * LAYER_MIN_RATIO[key]));
 }
 
 /**
- * Compute the hard maximum size for a Layer 1+ promotion.
- * @param {import('./summarizer-usage.js').SummarizerCallMetadata} metadata
- * @returns {number|null}
+ * Compute the hard maximum size for a promotion, anchored to the slider
+ * target T.
+ * @param {object} p
+ * @param {number} p.layerIndex - Promotion SOURCE layer (0 => produces L1, >=1 => L2+).
+ * @param {number} p.targetTokens - Slider target T.
+ * @returns {number}
  */
-export function getPromotionSummaryTokenHardMax(metadata = {}) {
-    const sourceTokens = Number(metadata.memoryTokensBefore);
-    if (!Number.isFinite(sourceTokens) || sourceTokens <= 0) {
-        return null;
-    }
-    return Math.max(1, Math.floor(sourceTokens * PROMOTION_HARD_MAX_RATIO));
-}
-
-/**
- * Compute the model-facing soft target for a promotion. Mirrors the L0
- * `applySafetyGap` strategy: the prompt shows ~90% of the real validation
- * bound so a first attempt that lands near the model-facing number still
- * passes `validatePromotionCandidate`, which checks the RAW bound.
- * @param {import('./summarizer-usage.js').SummarizerCallMetadata} metadata
- * @returns {number|null}
- */
-export function getPromotionPromptSoftTarget(metadata = {}) {
-    const realTarget = getPromotionSummaryTokenTarget(metadata);
-    return realTarget === null ? null : applySafetyGap(realTarget);
-}
-
-/**
- * Compute the model-facing hard maximum for a promotion. Gap-adjusted so the
- * model never sees the real ceiling; real validation uses the raw bound.
- * @param {import('./summarizer-usage.js').SummarizerCallMetadata} metadata
- * @returns {number|null}
- */
-export function getPromotionPromptHardMax(metadata = {}) {
-    const realHardMax = getPromotionSummaryTokenHardMax(metadata);
-    return realHardMax === null ? null : applySafetyGap(realHardMax);
+export function getPromotionSummaryTokenHardMax({ layerIndex, targetTokens }) {
+    const key = Number(layerIndex) >= 1 ? 'l2' : 'l1';
+    return Math.max(1, Math.round(targetTokens * LAYER_HARD_MAX_RATIO[key]));
 }
 /**
  * Add Layer 1+ promotion-specific consolidation constraints.
  * @param {string} prompt
+ * @param {Partial<ExtensionSettings>} settings
  * @param {import('./summarizer-usage.js').SummarizerCallMetadata} metadata
  * @returns {string}
  */
-function appendPromotionPromptConstraints(prompt, metadata = {}) {
-    const sourceTokens = Number(metadata.memoryTokensBefore);
-    const promptTarget = getPromotionPromptSoftTarget(metadata);
-    const promptHardMax = getPromotionPromptHardMax(metadata);
-    const hasBounds = promptTarget !== null && promptHardMax !== null;
+function appendPromotionPromptConstraints(prompt, settings, metadata = {}) {
+    const targetTokens = getLayer0SummaryTokenTarget(settings);
+    const layerIndex = Number(metadata.layerIndex);
+    const sentenceCap = computeSentenceCap(layerIndex >= 1 ? 'l2' : 'l1', targetTokens);
 
-    const extra = hasBounds ? buildPromotionTargetExtra(metadata, sourceTokens) : '';
-    const targetLine = hasBounds
-        ? buildSizeTargetLine({
-              label: '[NARRATIVE]',
-              softTarget: promptTarget,
-              hardMax: promptHardMax,
-              extra,
-          })
-        : 'Target length: make the [NARRATIVE] output significantly shorter than the combined input memories.';
-    const repairLine = buildPromotionRepairLine(metadata);
+    const targetLine = buildSizeTargetLine({
+        label: '[NARRATIVE]',
+        verb: 'merge into',
+        cap: sentenceCap,
+        unit: 'sentences',
+        extra: buildPromotionTargetExtra(metadata),
+    });
+    const repairLine = buildPromotionRepairLine(metadata, targetTokens);
 
     const block = buildSizeConstraintsBlock({
         wrapperTag: 'summaryception_promotion_constraints',
@@ -264,32 +239,26 @@ function appendPromotionPromptConstraints(prompt, metadata = {}) {
 }
 
 /**
- * Build the trailing clause of the promotion target line. The static LENGTH
- * CONTRACT states the 40%/60% ratios in prose; this appends the concrete
- * source size and an L1+-specific "compress-harder" reminder so the model
- * sees the numeric bar it must beat, not just a ratio.
+ * Build the trailing clause of the promotion target line: an L1+-specific
+ * "compress-harder" reminder for deep-layer folds.
  * @param {object} metadata
- * @param {number} sourceTokens
  * @returns {string}
  */
-function buildPromotionTargetExtra(metadata, sourceTokens) {
-    const sourceTokensClause = `Source narratives: ~${Math.round(sourceTokens)} tokens.`;
-    const deepReminder =
-        Number(metadata.layerIndex) >= 1
-            ? ' This is a deep-layer fold: merge whole scenes into outcome sentences; do not replay beats.'
-            : '';
-    return `${sourceTokensClause}${deepReminder} [NARRATIVE] output only.`;
+function buildPromotionTargetExtra(metadata) {
+    return Number(metadata.layerIndex) >= 1
+        ? 'This is a deep-layer fold: merge whole scenes into single outcome sentences; do not replay beats.'
+        : '';
 }
 
-function buildPromotionRepairLine(metadata = {}) {
+function buildPromotionRepairLine(metadata = {}, sliderTargetTokens) {
     if (!metadata.promotionRepair) {
         return '';
     }
 
     const repair = metadata.promotionRepair;
     const outputTokens = Number(repair.outputTokens);
-    const targetTokens = Number(repair.targetTokens);
     const hardMaxTokens = Number(repair.hardMaxTokens ?? repair.requiredMaxTokens);
+    const tooShort = repair.reason === 'too-short';
     const rejected = String(repair.rejectedSummary || '').trim();
     const diagnostics =
         repair.diagnostics ||
@@ -301,11 +270,13 @@ function buildPromotionRepairLine(metadata = {}) {
                     id: 'draft',
                     label: '[NARRATIVE]',
                     actualTokens: outputTokens,
-                    targetTokens,
+                    targetTokens: Number(repair.targetTokens),
                     hardMaxTokens,
+                    minimumTokens: tooShort ? Number(repair.targetTokens) : 0,
                     text: rejected,
-                    repairInstruction:
-                        'rewrite as macro-level prose only; remove dialogue, scene replay, micro-actions, and transient detail',
+                    repairInstruction: tooShort
+                        ? 'expand the fold: it over-merged; restore the dropped durable beats'
+                        : 'rewrite as macro-level prose only; remove dialogue, scene replay, micro-actions, and transient detail',
                     preservationInstruction:
                         'retain only macro-level durable chronology and continuity',
                 },
@@ -317,14 +288,27 @@ function buildPromotionRepairLine(metadata = {}) {
         rejectedSectionTagPrefix: 'rejected_promotion_',
     });
 
+    if (tooShort) {
+        return (
+            'Repair task: the rejected narrative over-merged and dropped durable beats. Expand the fold.\n' +
+            'Restore the dropped durable events, agreements, position changes, and unresolved hooks while keeping macro-level prose.\n' +
+            feedback +
+            '\n'
+        );
+    }
+
+    const layerIndex = Number(metadata.layerIndex);
+    const sentenceCap = computeSentenceCap(layerIndex >= 1 ? 'l2' : 'l1', sliderTargetTokens);
+    const sentences = countSentences(rejected);
     const overMsg =
         Number.isFinite(outputTokens) &&
         Number.isFinite(hardMaxTokens) &&
-        outputTokens > hardMaxTokens
-            ? `Previous draft was ${outputTokens} tokens; the real ceiling is ${hardMaxTokens} and the aim is ${targetTokens}. Delete at least ${outputTokens - hardMaxTokens} tokens of scene replay.`
+        outputTokens > hardMaxTokens &&
+        sentences > 0
+            ? `Draft contained ${sentences} sentences; the limit is ${sentenceCap}. Delete at least ${Math.max(1, sentences - sentenceCap)} sentences. Output at most ${sentenceCap} sentences total.`
             : '';
     return (
-        'Repair task: rewrite the rejected narrative toward the soft target, not merely below the hard maximum.\n' +
+        'Repair task: rewrite the rejected narrative toward the sentence cap.\n' +
         (overMsg ? overMsg + '\n' : '') +
         'Keep only macro-level durable chronology, current position, relationship/state changes, permanent rules, and unresolved hooks.\n' +
         feedback +

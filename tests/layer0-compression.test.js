@@ -32,7 +32,7 @@ describe('getLayer0SummaryTokenBounds', () => {
     it('derives the accepted output range from the configured target', () => {
         expect(getLayer0SummaryTokenBounds({ layer0SummaryTokenTarget: 200 })).toEqual({
             target: 200,
-            min: 66,
+            min: 80,
             max: 300,
         });
     });
@@ -97,8 +97,9 @@ describe('buildLayer0SizeRepairFeedback', () => {
         });
 
         expect(result).toContain('summaryception_l0_repair_feedback');
-        expect(result).toContain('[NARRATIVE]: 400 tokens; target 200; hard maximum 300');
-        expect(result).toContain('reduce by about half');
+        expect(result).toContain('[NARRATIVE]: rejected.');
+        expect(result).not.toContain('400 tokens');
+        expect(result).not.toContain('target 200');
         expect(result).toContain('<rejected_narrative>');
         expect(result).toContain('Rejected verbose narrative.');
         expect(result).toContain('Preserve [STATE] unchanged');
@@ -115,18 +116,16 @@ describe('appendLayer0PromptConstraints', () => {
                 kind: 'layer0',
                 sourceRange: [12, 34],
                 budgetHint:
-                    '<summaryception_source_budget>\nSource passage: ~8000 tokens. Compress hard.\n[NARRATIVE]: aim ~180 tokens; never exceed 270. At most 5 sentences.\nNo existing [STATE] yet — build the first snapshot.\n[STATE]: rewrite the full snapshot; aim ~180 tokens; never exceed 270. At most 7 lines.\n</summaryception_source_budget>',
+                    '<summaryception_source_budget>\nCompress the source passage hard.\n[NARRATIVE]: write at most 8 sentences.\nNo existing [STATE] yet — build the first snapshot.\n[STATE]: rewrite the full snapshot; at most 7 lines.\n</summaryception_source_budget>',
             },
         );
         expect(result).toContain('This passage covers chat messages 12-34');
         expect(result).toContain('Message 34 is the latest summarized message');
         expect(result).toContain('<summaryception_source_budget>');
-        expect(result).toContain('never exceed 270');
-        expect(result).toContain('At most 5 sentences.');
-        expect(result).not.toContain(
-            '[NARRATIVE] target: about 200 tokens; never exceed 300 tokens',
-        );
-        expect(result).not.toContain('Keep [STATE] near 200 tokens');
+        expect(result).toContain('write at most 8 sentences.');
+        expect(result).toContain('at most 7 lines.');
+        expect(result).not.toContain('aim ~');
+        expect(result).not.toContain('never exceed');
     });
 
     it('appends narrative-only constraints for promotion calls', () => {
@@ -135,14 +134,34 @@ describe('appendLayer0PromptConstraints', () => {
             {},
             {
                 kind: 'promotion',
+                layerIndex: 0,
                 memoryTokensBefore: 1000,
             },
         );
         expect(result).toContain('summaryception_promotion_constraints');
-        expect(result).toContain('[NARRATIVE]: aim ~360 tokens; never exceed 540.');
-        expect(result).toContain('Source narratives: ~1000 tokens');
-        expect(result).toContain('[NARRATIVE]');
+        // layerIndex 0 produces L1: floor(1.75 * 200 * 0.75 / 30) === 8.
+        expect(result).toContain('[NARRATIVE]: merge into at most 8 sentences.');
+        expect(result).not.toContain('aim ~');
+        expect(result).not.toContain('never exceed');
+        expect(result).not.toContain('Source narratives');
+        expect(result).not.toContain('deep-layer fold');
         expect(result).not.toContain('2024-07-12 Fri');
+    });
+
+    it('tightens the cap and adds the fold reminder for deep-layer promotions', () => {
+        const result = appendLayer0PromptConstraints(
+            'prompt',
+            {},
+            {
+                kind: 'promotion',
+                layerIndex: 1,
+                memoryTokensBefore: 1000,
+            },
+        );
+        // layerIndex >= 1 produces L2+: floor(1.5 * 200 * 0.65 / 30) === 6.
+        expect(result).toContain('[NARRATIVE]: merge into at most 6 sentences.');
+        expect(result).toContain('deep-layer fold');
+        expect(result).not.toContain('token');
     });
 
     it('appends repair feedback for promotion repair calls', () => {
@@ -151,23 +170,52 @@ describe('appendLayer0PromptConstraints', () => {
             {},
             {
                 kind: 'promotion',
+                layerIndex: 0,
                 memoryTokensBefore: 1000,
                 promotionRepair: {
+                    reason: 'compression-ratio',
                     outputTokens: 700,
-                    targetTokens: 400,
-                    hardMaxTokens: 600,
-                    rejectedSummary: 'Rejected verbose summary.',
+                    targetTokens: 80,
+                    hardMaxTokens: 350,
+                    rejectedSummary:
+                        'One beat. Two beat. Three beat. Four beat. Five beat. Six beat. Seven beat. Eight beat. Nine beat. Ten beat.',
                 },
             },
         );
         expect(result).toContain('Repair task');
         expect(result).toContain('previous Layer 1+ promotion draft failed');
-        expect(result).toContain('700 tokens');
-        expect(result).toContain('target 400');
-        expect(result).toContain('hard maximum 600');
-        expect(result).toContain('reduce by about two-fifths');
+        // Sentence-delta repair: 10 sentences against a cap of 8.
+        expect(result).toContain('Draft contained 10 sentences; the limit is 8.');
+        expect(result).toContain('Delete at least 2 sentences.');
+        expect(result).toContain('[NARRATIVE]: rejected.');
         expect(result).toContain('<rejected_promotion_draft>');
-        expect(result).toContain('Rejected verbose summary.');
+        expect(result).toContain('Ten beat.');
+        expect(result).not.toContain('700 tokens');
+        expect(result).not.toContain('target 80');
+    });
+
+    it('appends over-merge repair feedback for too-short promotion repairs', () => {
+        const result = appendLayer0PromptConstraints(
+            'prompt',
+            {},
+            {
+                kind: 'promotion',
+                layerIndex: 0,
+                memoryTokensBefore: 1000,
+                promotionRepair: {
+                    reason: 'too-short',
+                    outputTokens: 40,
+                    targetTokens: 80,
+                    hardMaxTokens: 350,
+                    rejectedSummary: 'The trio moved on.',
+                },
+            },
+        );
+        expect(result).toContain('over-merged');
+        expect(result).toContain('Expand the fold.');
+        expect(result).toContain('restore the dropped durable beats');
+        expect(result).toContain('<rejected_promotion_draft>');
+        expect(result).not.toContain('Delete at least');
     });
 
     it('returns prompt unchanged for non-compression calls', () => {
@@ -193,7 +241,7 @@ describe('appendLayer0PromptConstraints trigger-last ordering', () => {
                 kind: 'layer0',
                 sourceRange: [12, 34],
                 budgetHint:
-                    '<summaryception_source_budget>\nSource passage: ~8000 tokens. Compress hard.\n[NARRATIVE]: aim ~180 tokens; never exceed 270. At most 5 sentences.\n</summaryception_source_budget>',
+                    '<summaryception_source_budget>\nCompress the source passage hard.\n[NARRATIVE]: write at most 8 sentences.\n</summaryception_source_budget>',
             },
         );
 

@@ -1,4 +1,4 @@
-import { computeNarrativeSentenceCap, computeStateLineCap } from './structural-constraints.js';
+import { computeSentenceCap, computeStateLineCap } from './structural-constraints.js';
 
 /**
  * Given a size-rejection diagnostics object, produce a structural feedback
@@ -6,7 +6,7 @@ import { computeNarrativeSentenceCap, computeStateLineCap } from './structural-c
  * model how many lines/sentences it produced versus the source-derived cap,
  * so it has a countable signal alongside the token diagnostics.
  * @param {object} diagnostics - From `buildRepairDiagnostics` (repair-diagnostics.js).
- * @param {{ sourceStateKeyCount?: number, sourceNarrativeTokens?: number }} sourceBudget
+ * @param {{ sourceStateKeyCount?: number, targetTokens?: number, layer?: 'l0' | 'l1' | 'l2' }} sourceBudget
  * @returns {string} Extra structural lines ('' when nothing actionable).
  */
 export function buildStructuralRepairFeedback(diagnostics = {}, sourceBudget = {}) {
@@ -29,7 +29,7 @@ export function buildStructuralRepairFeedback(diagnostics = {}, sourceBudget = {
             }
         } else if (violation.id === 'narrative') {
             const actual = countSentences(text);
-            const cap = computeNarrativeSentenceCap(sourceBudget.sourceNarrativeTokens);
+            const cap = computeSentenceCap(sourceBudget.layer ?? 'l0', sourceBudget.targetTokens);
             if (actual > cap) {
                 lines.push(
                     `Your [NARRATIVE] had ${actual} sentences; maximum ${cap}. Merge or drop the ${actual - cap} least-important.`,
@@ -58,7 +58,7 @@ function countStateLines(text) {
  * @param {string} text
  * @returns {number}
  */
-function countSentences(text) {
+export function countSentences(text) {
     const trimmed = String(text || '').trim();
     if (!trimmed) {
         return 0;

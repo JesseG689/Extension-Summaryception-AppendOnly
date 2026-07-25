@@ -1,13 +1,15 @@
 import { describe, it, expect } from 'vitest';
 
 import {
-    computeNarrativeSentenceCap,
+    computeSentenceCap,
     computeStateLineCap,
     STATE_KEY_CEILING,
-    NARRATIVE_SENTENCE_FLOOR,
-    NARRATIVE_SENTENCE_CEILING,
+    TOKENS_PER_SENTENCE,
+    LAYER_MIN_RATIO,
+    LAYER_HARD_MAX_RATIO,
+    LAYER0_REPAIR_RATIO,
+    LAYER_SAFETY_MULTIPLIER,
 } from '../src/core/token-budget/structural-constraints.js';
-import { applySafetyGap, BUDGET_SAFETY_GAP_RATIO } from '../src/core/token-budget/safety-gap.js';
 import { buildLayer0BudgetHint } from '../src/core/token-budget/budget-hint-builder.js';
 import { buildStructuralRepairFeedback } from '../src/core/token-budget/repair-feedback-adapter.js';
 
@@ -32,95 +34,91 @@ describe('computeStateLineCap', () => {
     });
 });
 
-describe('computeNarrativeSentenceCap', () => {
-    it('floors at the minimum for small sources', () => {
-        expect(computeNarrativeSentenceCap(100)).toBe(3);
-        expect(computeNarrativeSentenceCap(0)).toBe(3);
-        expect(computeNarrativeSentenceCap(undefined)).toBe(3);
+describe('computeSentenceCap', () => {
+    it('matches the reference matrix at the default slider target of 200', () => {
+        expect(computeSentenceCap('l0', 200)).toBe(8);
+        expect(computeSentenceCap('l1', 200)).toBe(8);
+        expect(computeSentenceCap('l2', 200)).toBe(6);
     });
 
-    it('ceilings at the maximum for large sources', () => {
-        expect(computeNarrativeSentenceCap(3000)).toBe(5);
-        expect(computeNarrativeSentenceCap(100000)).toBe(5);
+    it('treats a numeric layer as a direct/promotion source layer', () => {
+        expect(computeSentenceCap(0, 200)).toBe(8);
+        expect(computeSentenceCap(1, 200)).toBe(6);
+        expect(computeSentenceCap(4, 200)).toBe(6);
     });
 
-    it('scales linearly between the floor and ceiling', () => {
-        // ceil(1200 / 500) === 3
-        expect(computeNarrativeSentenceCap(1200)).toBe(3);
-        // ceil(2000 / 500) === 4
-        expect(computeNarrativeSentenceCap(2000)).toBe(4);
+    it('scales with the slider target', () => {
+        // floor(1.5 * 500 * 0.85 / 30) === 21
+        expect(computeSentenceCap('l0', 500)).toBe(21);
+        // floor(1.75 * 500 * 0.75 / 30) === 21
+        expect(computeSentenceCap('l1', 500)).toBe(21);
+        // floor(1.5 * 500 * 0.65 / 30) === 16
+        expect(computeSentenceCap('l2', 500)).toBe(16);
     });
 
-    it('exposes the floor and ceiling constants', () => {
-        expect(NARRATIVE_SENTENCE_FLOOR).toBe(3);
-        expect(NARRATIVE_SENTENCE_CEILING).toBe(5);
-    });
-});
-
-describe('applySafetyGap', () => {
-    it('rounds 90% of the real bound', () => {
-        expect(applySafetyGap(300)).toBe(270);
-        expect(applySafetyGap(200)).toBe(180);
+    it('floors at 1 for invalid or non-positive targets', () => {
+        expect(computeSentenceCap('l0', 0)).toBe(1);
+        expect(computeSentenceCap('l0', -5)).toBe(1);
+        expect(computeSentenceCap('l2', NaN)).toBe(1);
+        expect(computeSentenceCap('l1', undefined)).toBe(1);
     });
 
-    it('returns 0 for non-finite input', () => {
-        expect(applySafetyGap(NaN)).toBe(0);
-        expect(applySafetyGap(undefined)).toBe(0);
-    });
-
-    it('exposes the 10% gap ratio', () => {
-        expect(BUDGET_SAFETY_GAP_RATIO).toBe(0.9);
+    it('exposes the load-bearing band constants', () => {
+        expect(TOKENS_PER_SENTENCE).toBe(30);
+        expect(LAYER_MIN_RATIO).toEqual({ l0: 0.4, l1: 0.4, l2: 0.3 });
+        expect(LAYER_HARD_MAX_RATIO).toEqual({ l0: 1.5, l1: 1.75, l2: 1.5 });
+        expect(LAYER0_REPAIR_RATIO).toBe(1.65);
+        expect(LAYER_SAFETY_MULTIPLIER).toEqual({ l0: 0.85, l1: 0.75, l2: 0.65 });
     });
 });
 
 describe('buildLayer0BudgetHint', () => {
-    const baseNarrativeBounds = { target: 200, max: 300 };
-    const baseStateBounds = { softTarget: 200, max: 300 };
-
-    it('emits the source-relative budget block with 10%-gapped numbers and structural caps', () => {
+    it('emits only countable caps anchored to the slider target, with no token figures', () => {
         const hint = buildLayer0BudgetHint({
-            sourceNarrativeTokens: 8000,
             sourceStateTokens: 120,
             sourceStateKeyCount: 5,
-            narrativeBounds: baseNarrativeBounds,
-            stateBounds: baseStateBounds,
+            targetTokens: 200,
         });
 
         expect(hint).toContain('<summaryception_source_budget>');
-        expect(hint).toContain('Source passage: ~8000 tokens');
-        // Safety-gapped numbers (90% of 200 / 300).
-        expect(hint).toContain('aim ~180 tokens');
-        expect(hint).toContain('never exceed 270');
-        // Narrative sentence cap: ceil(8000 / 500) clamped to 5.
-        expect(hint).toContain('At most 5 sentences.');
+        // Sentence cap: floor(1.5 * 200 * 0.85 / 30) === 8.
+        expect(hint).toContain('[NARRATIVE]: write at most 8 sentences.');
         // State key count present, line cap is min(5, 7) === 5.
-        expect(hint).toContain('Existing [STATE]: ~120 tokens, 5 keys.');
-        expect(hint).toContain('At most 5 lines.');
-        // The plan's rejected wording must NOT appear.
-        expect(hint).not.toContain('At most 5 key:value lines');
+        expect(hint).toContain('Existing [STATE]: 5 keys.');
+        expect(hint).toContain('[STATE]: rewrite the full snapshot; at most 5 lines.');
+        // No token arithmetic reaches the model.
+        expect(hint).not.toContain('token');
+        expect(hint).not.toContain('aim ~');
+        expect(hint).not.toContain('never exceed');
     });
 
     it('switches to the first-snapshot variant and the ceiling line cap when there is no prior [STATE]', () => {
         const hint = buildLayer0BudgetHint({
-            sourceNarrativeTokens: 8000,
             sourceStateTokens: 0,
             sourceStateKeyCount: 0,
-            narrativeBounds: baseNarrativeBounds,
-            stateBounds: baseStateBounds,
+            targetTokens: 200,
         });
 
         expect(hint).toContain('No existing [STATE] yet — build the first snapshot.');
-        expect(hint).toContain('At most 7 lines.');
+        expect(hint).toContain('at most 7 lines.');
         expect(hint).not.toContain('Existing [STATE]:');
+    });
+
+    it('scales the sentence cap with the slider target', () => {
+        const hint = buildLayer0BudgetHint({
+            sourceStateTokens: 0,
+            sourceStateKeyCount: 0,
+            targetTokens: 120,
+        });
+        // floor(1.5 * 120 * 0.85 / 30) === 5.
+        expect(hint).toContain('[NARRATIVE]: write at most 5 sentences.');
     });
 
     it('returns no trailing newline', () => {
         const hint = buildLayer0BudgetHint({
-            sourceNarrativeTokens: 8000,
             sourceStateTokens: 120,
             sourceStateKeyCount: 5,
-            narrativeBounds: baseNarrativeBounds,
-            stateBounds: baseStateBounds,
+            targetTokens: 200,
         });
         expect(hint.endsWith('\n')).toBe(false);
     });
@@ -163,12 +161,14 @@ describe('buildStructuralRepairFeedback', () => {
     });
 
     it('emits a NARRATIVE sentence-count structural feedback when over the cap', () => {
-        const narrative = 'One. Two. Three. Four. Five. Six. Seven.';
+        const narrative = 'One. Two. Three. Four. Five. Six. Seven. Eight. Nine.';
         const feedback = buildStructuralRepairFeedback(narrativeDiagnostics(narrative), {
-            sourceNarrativeTokens: 100,
+            targetTokens: 200,
+            layer: 'l0',
         });
-        expect(feedback).toContain('maximum 3');
-        expect(feedback).toContain('Merge or drop the');
+        // Cap is 8 at T=200; 9 sentences means one must go.
+        expect(feedback).toContain('maximum 8');
+        expect(feedback).toContain('Merge or drop the 1 least-important.');
     });
 
     it('returns an empty string when there are no violations', () => {
@@ -194,6 +194,6 @@ describe('buildStructuralRepairFeedback', () => {
                 },
             ],
         };
-        expect(buildStructuralRepairFeedback(diagnostics, { sourceNarrativeTokens: 100 })).toBe('');
+        expect(buildStructuralRepairFeedback(diagnostics, { targetTokens: 200 })).toBe('');
     });
 });

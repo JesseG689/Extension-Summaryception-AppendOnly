@@ -216,8 +216,9 @@ describe('callSummarizer abort signal plumbing', () => {
         );
         const prompt = mocks.sendSummarizerRequest.mock.calls[0][2];
         expect(prompt).toContain('<summaryception_promotion_constraints>');
-        expect(prompt).toContain('[NARRATIVE]: aim ~2 tokens; never exceed 2.');
-        expect(prompt).toContain('Source narratives: ~4 tokens');
+        expect(prompt).toContain('[NARRATIVE]: merge into at most 8 sentences.');
+        expect(prompt).not.toContain('aim ~');
+        expect(prompt).not.toContain('never exceed');
     });
 
     it('uses promotion repair prompts for promotion repair calls', async () => {
@@ -305,10 +306,10 @@ describe('callSummarizer abort signal plumbing', () => {
 
         const layer0Prompt = mocks.sendSummarizerRequest.mock.calls[0][2];
         expect(layer0Prompt).toContain('<summaryception_source_budget>');
-        expect(layer0Prompt).toContain('never exceed 162');
-        expect(layer0Prompt).not.toContain(
-            '[NARRATIVE] target: about 120 tokens; never exceed 180 tokens',
-        );
+        // Sentence cap at T=120: floor(1.5 * 120 * 0.85 / 30) === 5.
+        expect(layer0Prompt).toContain('[NARRATIVE]: write at most 5 sentences.');
+        expect(layer0Prompt).not.toContain('never exceed');
+        expect(layer0Prompt).not.toContain('aim ~');
         expect(layer0Prompt).toContain('This passage covers chat messages 0-1');
         expect(layer0Prompt).toContain('Message 1 is the latest summarized message');
         expect(layer0Prompt).not.toContain('timeline_start');
@@ -316,7 +317,9 @@ describe('callSummarizer abort signal plumbing', () => {
         const promotionPrompt = mocks.sendSummarizerRequest.mock.calls[1][2];
         expect(promotionPrompt).toContain('PROMO deep context MEMORY merged snippets');
         expect(promotionPrompt).toContain('<summaryception_promotion_constraints>');
-        expect(promotionPrompt).toContain('[NARRATIVE]: aim ~2 tokens; never exceed 2.');
+        // L1 cap at T=120: floor(1.75 * 120 * 0.75 / 30) === 5.
+        expect(promotionPrompt).toContain('[NARRATIVE]: merge into at most 5 sentences.');
+        expect(promotionPrompt).not.toContain('token');
     });
 
     it('switches Layer 0 validation retries to the repair prompt', async () => {

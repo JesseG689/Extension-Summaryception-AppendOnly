@@ -25,6 +25,7 @@ import {
 import { callSummarizer } from './summarizer-request.js';
 import { validateSummarizerOutputIntegrity } from './prompts.js';
 import {
+    getLayer0SummaryTokenTarget,
     getPromotionSummaryTokenHardMax,
     getPromotionSummaryTokenTarget,
 } from './layer0-compression.js';
@@ -408,7 +409,8 @@ async function buildValidatedPromotionSnippet({
     }
 
     if (
-        firstValidation.reason !== 'compression-ratio' ||
+        (firstValidation.reason !== 'compression-ratio' &&
+            firstValidation.reason !== 'too-short') ||
         !firstValidation.outputTokens ||
         !firstValidation.sourceTokens
     ) {
@@ -418,6 +420,7 @@ async function buildValidatedPromotionSnippet({
     const repairNarrative = await callSummarizer(storyTxt, contextStr, {
         ...metadata,
         promotionRepair: {
+            reason: firstValidation.reason,
             outputTokens: firstValidation.outputTokens.count,
             targetTokens: firstValidation.targetTokens,
             hardMaxTokens: firstValidation.hardMaxTokens,
@@ -471,10 +474,10 @@ async function validatePromotionCandidate({
     }
 
     const outputTokens = await countTextTokens(promotedSnippet.text);
-    const sizeMetadata = { memoryTokensBefore: sourceTokens.count };
-    const targetTokens = getPromotionSummaryTokenTarget(sizeMetadata);
-    const hardMaxTokens = getPromotionSummaryTokenHardMax(sizeMetadata);
-    if (hardMaxTokens !== null && outputTokens.count > hardMaxTokens) {
+    const targetTokens = getLayer0SummaryTokenTarget(settings);
+    const minTokens = getPromotionSummaryTokenTarget({ layerIndex, targetTokens });
+    const hardMaxTokens = getPromotionSummaryTokenHardMax({ layerIndex, targetTokens });
+    if (outputTokens.count > hardMaxTokens) {
         const diagnostics = buildRepairDiagnostics({
             scope: 'Layer 1+ promotion',
             totalTokens: outputTokens.count,
@@ -483,7 +486,7 @@ async function validatePromotionCandidate({
                     id: 'draft',
                     label: '[NARRATIVE]',
                     actualTokens: outputTokens.count,
-                    targetTokens,
+                    targetTokens: minTokens,
                     hardMaxTokens,
                     text: promotedSnippet.text,
                     repairInstruction:
@@ -498,7 +501,7 @@ async function validatePromotionCandidate({
             `Promotion L${layerIndex} rejected: output exceeded the compression hard maximum ` +
                 `(${formatTokenValue(sourceTokens.count, sourceTokens.estimated)}->` +
                 `${formatTokenValue(outputTokens.count, outputTokens.estimated)} tokens; ` +
-                `target ${formatTokenValue(targetTokens, sourceTokens.estimated)}, ` +
+                `target ${formatTokenValue(minTokens, sourceTokens.estimated)}, ` +
                 `hard maximum ${formatTokenValue(hardMaxTokens, sourceTokens.estimated)}).`,
         );
         return {
@@ -506,7 +509,46 @@ async function validatePromotionCandidate({
             reason: 'compression-ratio',
             sourceTokens,
             outputTokens,
-            targetTokens,
+            targetTokens: minTokens,
+            hardMaxTokens,
+            requiredMaxTokens: hardMaxTokens,
+            diagnostics,
+        };
+    }
+
+    if (outputTokens.count < minTokens) {
+        const diagnostics = buildRepairDiagnostics({
+            scope: 'Layer 1+ promotion',
+            totalTokens: outputTokens.count,
+            sections: [
+                {
+                    id: 'draft',
+                    label: '[NARRATIVE]',
+                    actualTokens: outputTokens.count,
+                    targetTokens: minTokens,
+                    hardMaxTokens,
+                    minimumTokens: minTokens,
+                    text: promotedSnippet.text,
+                    repairInstruction:
+                        'expand the fold: it over-merged; restore the dropped durable beats',
+                    preservationInstruction:
+                        'retain only macro-level durable chronology and continuity',
+                },
+            ],
+            rejectedDraft: promotedSnippet.text,
+        });
+        warn(
+            `Promotion L${layerIndex} rejected: output under the over-merge floor ` +
+                `(${formatTokenValue(sourceTokens.count, sourceTokens.estimated)}->` +
+                `${formatTokenValue(outputTokens.count, outputTokens.estimated)} tokens; ` +
+                `minimum ${formatTokenValue(minTokens, sourceTokens.estimated)}).`,
+        );
+        return {
+            valid: false,
+            reason: 'too-short',
+            sourceTokens,
+            outputTokens,
+            targetTokens: minTokens,
             hardMaxTokens,
             requiredMaxTokens: hardMaxTokens,
             diagnostics,

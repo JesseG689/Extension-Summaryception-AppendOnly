@@ -113,7 +113,7 @@ describe('constants', () => {
         expect(PROMPT_PRESETS.narrative).toContain('COMPLETE current snapshot');
         expect(PROMPT_PRESETS.narrative).toContain('Omission means');
         expect(PROMPT_PRESETS.narrative).toContain('constraints');
-        expect(PROMPT_PRESETS.narrative).toContain('follow the token budget and line cap');
+        expect(PROMPT_PRESETS.narrative).toContain('follow the sentence and line caps');
         expect(PROMPT_PRESETS.narrative).toContain('current_date_time');
         expect(PROMPT_PRESETS.narrative).toContain('YYYY-MM-DD HH ddd');
         expect(PROMPT_PRESETS.narrative).toContain('physiological or sex counters');
@@ -192,11 +192,14 @@ describe('constants', () => {
         expect(PROMOTION_PROMPT_PRESETS.narrative).toContain('On July 6');
         expect(PROMOTION_PROMPT_PRESETS.narrative).not.toContain('2024-07-12 Fri');
         expect(PROMOTION_PROMPT_PRESETS.narrative).toContain('no year');
-        // Length contract: the promotion user prompt must state the numeric compression target in-body.
+        // Length contract: the promotion user prompt must state the sentence-cap limit in-body.
         expect(PROMOTION_PROMPT_PRESETS.narrative).toContain('LENGTH CONTRACT');
         expect(PROMOTION_PROMPT_PRESETS.narrative).toContain('LOSSY COMPRESSION');
         expect(PROMOTION_PROMPT_PRESETS.narrative).toContain('Compress by deletion');
-        expect(PROMOTION_PROMPT_PRESETS.narrative).toContain('60%');
+        expect(PROMOTION_PROMPT_PRESETS.narrative).toContain('must stay within the sentence cap');
+        expect(PROMOTION_PROMPT_PRESETS.narrative).not.toContain('60%');
+        expect(PROMOTION_PROMPT_PRESETS.narrative).not.toContain('40%');
+        expect(PROMOTION_PROMPT_PRESETS.narrative).not.toContain('token');
         // The promotion repair prompt must require absolute dates only and resolve relative words.
         expect(PROMOTION_REPAIR_PROMPT_PRESETS.narrative).toContain('absolute dates only');
         expect(PROMOTION_REPAIR_PROMPT_PRESETS.narrative).toContain('bare relative time word');
