@@ -1,8 +1,8 @@
 export const STATE_KEY_CEILING = 7;
 
-// Tokens the model averages per short, direct sentence. Used only to convert
+// Tokens the model averages per short, direct RP sentence. Used only to convert
 // a backend token bound into a countable sentence cap; never shown to the model.
-export const TOKENS_PER_SENTENCE = 30;
+export const TOKENS_PER_SENTENCE = 35;
 
 // Per-layer backend acceptance bands, as multiples of the slider target T.
 // Layer 0 = chat->L0 (direct summarizer). Layer 1 = L0->L1 promotion. Layer 2+ = L1->L2+.
@@ -12,7 +12,9 @@ export const LAYER_HARD_MAX_RATIO = { l0: 1.5, l1: 1.75, l2: 1.5 };
 export const LAYER0_REPAIR_RATIO = 1.65;
 // Model-facing safety multiplier applied to the hard max before converting to
 // a sentence cap, so a first attempt that reaches the cap still validates.
-export const LAYER_SAFETY_MULTIPLIER = { l0: 0.85, l1: 0.75, l2: 0.65 };
+// Promotions (l1/l2) run a tighter multiplier to hold folds to 4-5 sentences,
+// keeping first-pass output well inside the backend hard-max window.
+export const LAYER_SAFETY_MULTIPLIER = { l0: 0.85, l1: 0.5, l2: 0.5 };
 
 /**
  * Maximum number of `[STATE]` key:value lines the model should emit.

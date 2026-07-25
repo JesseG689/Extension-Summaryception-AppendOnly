@@ -220,6 +220,7 @@ function appendPromotionPromptConstraints(prompt, settings, metadata = {}) {
     const targetTokens = getLayer0SummaryTokenTarget(settings);
     const layerIndex = Number(metadata.layerIndex);
     const sentenceCap = computeSentenceCap(layerIndex >= 1 ? 'l2' : 'l1', targetTokens);
+    const withSchemaCap = fillSentenceCapPlaceholders(prompt, sentenceCap);
 
     const targetLine = buildSizeTargetLine({
         label: '[NARRATIVE]',
@@ -235,7 +236,37 @@ function appendPromotionPromptConstraints(prompt, settings, metadata = {}) {
         targetLine,
         repairLine,
     });
-    return insertBeforeTrigger(prompt, block, EXECUTION_TRIGGER_PROMO);
+    return insertBeforeTrigger(withSchemaCap, block, EXECUTION_TRIGGER_PROMO);
+}
+
+// Small cardinals for dual-framing the sentence cap in <output_schema>
+// (e.g. "AT MOST five (5)"). Falls back to the digit for larger values.
+const SENTENCE_CAP_WORDS = [
+    'zero',
+    'one',
+    'two',
+    'three',
+    'four',
+    'five',
+    'six',
+    'seven',
+    'eight',
+    'nine',
+    'ten',
+];
+
+/**
+ * Replace {{max_sentences}} / {{max_sentences_word}} schema placeholders with
+ * the computed cap. No-op when the template omits them (e.g. repair prompt).
+ * @param {string} prompt
+ * @param {number} sentenceCap
+ * @returns {string}
+ */
+function fillSentenceCapPlaceholders(prompt, sentenceCap) {
+    const word = SENTENCE_CAP_WORDS[sentenceCap] || String(sentenceCap);
+    return prompt
+        .replace('{{max_sentences_word}}', word)
+        .replace('{{max_sentences}}', String(sentenceCap));
 }
 
 /**

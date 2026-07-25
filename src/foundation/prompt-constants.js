@@ -190,6 +190,7 @@ export const DEFAULT_PROMOTION_USER_PROMPT = buildUserPrompt({
     schemaBlock: `Output exactly one section:
 
 [NARRATIVE]
+One single prose paragraph containing AT MOST {{max_sentences_word}} ({{max_sentences}}) sentences total. Summarize major plot outcomes only.
 <one dense third-person chronological prose paragraph. Never use second-person. Do not output [STATE]. ${ANTI_RUN_ON_RULE}>`,
     taskRules: `### LENGTH CONTRACT (HARD LIMIT):
 The consolidated [NARRATIVE] must stay within the sentence cap given at the end of this prompt. This is a hard limit: if a draft runs long, delete whole beats rather than trimming wording. Overlong output is rejected and regenerated.
@@ -204,7 +205,7 @@ The input memories overlap heavily: each was written with the prior ones as cont
 3. **Appended Continuity:** Structure the output so that it chronologically and seamlessly appends directly to the end of <prior_context> without looking back or repeating past timelines.
 4. **Temporal Anchors:** Preserve lower-layer anchors such as [msgs 100-120; current 2024-12-03 09 Wed]. Keep hour-level 24-hour timestamps exactly when provided. Do not reduce inferable absolute timing to vague relative timing; future goals/plans should retain explicit date/hour anchors when available. Each source narrative is prefixed with a scene-time anchor like [msgs X-Y; current YYYY-MM-DD HH ddd]; treat that anchor's date AS the scene's "today" for that passage, compute every relative word in that narrative against it, and emit absolute dates in your output. Bare weekday names (e.g. "Friday") are forbidden — write the full calendar date instead of a relative word.
 ### PROSE-FOLDING RULES:
-The <source_state> block contains dynamic facts extracted from the source memories. Fold any still-durable facts, inventory changes, counters, relationship changes, current positions, and unresolved hooks directly into the narrative prose.
+The <source_state> block contains dynamic facts extracted from the source memories. Do NOT list every item from <source_state>. Fold in only major plot-arc changes that affect future events; ignore minor inventory items, temporary rules, and transient positions.
 Do not output a [STATE] block, key-value lines, tables, bullets, or structured state syntax.
 Omit stale transient scene facts and static character background/profile facts such as origins, hometowns, backstory, personality traits, age, species, nationality, or static job descriptions.
 Omit ephemeral trivia: physiological or sex counters, consumed food/drink, soiled/used/disposed temporary items, and momentary pose/arousal/mood counters. Preserve obligation counters only when clearly unresolved, pending, owed, or referenced by an unresolved hook.

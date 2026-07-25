@@ -29,15 +29,17 @@ describe('computeSentenceCap', () => {
         }
     });
 
-    it('preserves the intended layer ordering l1 > l0 > l2 at a large slider target', () => {
-        // At T=2000 the three ratio×safety products (l1 1.3125, l0 1.275,
-        // l2 0.975) stay far enough apart that Math.floor preserves ordering.
+    it('preserves the intended layer ordering l0 > l1 > l2 at a large slider target', () => {
+        // Promotions run a tighter safety multiplier than the direct L0 pass, so
+        // both promotion bands (l1, l2) fall below l0. At T=2000 the three
+        // ratio×safety products (l0 1.275, l1 0.875, l2 0.75) stay far enough
+        // apart that Math.floor preserves ordering.
         // A future refactor that intentionally re-orders bands SHOULD fail here.
         const l0 = computeSentenceCap('l0', 2000);
         const l1 = computeSentenceCap('l1', 2000);
         const l2 = computeSentenceCap('l2', 2000);
-        expect(l1).toBeGreaterThan(l0);
-        expect(l0).toBeGreaterThan(l2);
+        expect(l0).toBeGreaterThan(l1);
+        expect(l1).toBeGreaterThan(l2);
     });
 
     it('maps numeric layer indices to the same bands as their string keys', () => {
