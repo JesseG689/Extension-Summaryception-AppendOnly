@@ -32,7 +32,10 @@ export function buildEffectiveMemoryText(layers, settings = getEffectiveSettings
     if (!memory) {
         return '';
     }
-    return String(settings.injectionTemplate || '{{summary}}').replace('{{summary}}', memory);
+    return String(settings.injectionTemplate || '{{summary}}').replaceAll(
+        '{{summary}}',
+        () => memory,
+    );
 }
 
 /**
@@ -44,9 +47,9 @@ export function buildEffectiveMemoryText(layers, settings = getEffectiveSettings
 export async function getEffectiveMemoryUsage(layers, settings = getEffectiveSettings()) {
     const injectionParts = buildMemoryInjectionParts(layers, { compactAnchors: true });
     const text = injectionParts.memoryText
-        ? String(settings.injectionTemplate || '{{summary}}').replace(
+        ? String(settings.injectionTemplate || '{{summary}}').replaceAll(
               '{{summary}}',
-              injectionParts.memoryText,
+              () => injectionParts.memoryText,
           )
         : '';
 
