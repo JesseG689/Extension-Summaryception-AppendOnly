@@ -439,8 +439,8 @@ const HELP_ENTRIES = [
             controls: [controlFor('sc_injection_template')],
             controlsText:
                 'Sets the wrapper that goes around Summaryception memory, and it has to include the {{summary}} variable.',
-            when: 'Reach for it if your model follows a different memory tag or framing better.',
-            risk: 'Drop the {{summary}} variable and no memory text gets injected at all.',
+            when: 'Reach for it if your model follows a different memory tag or framing better. You can also write {{summary}} twice so the memory block repeats near the end of the prompt, where models pay the most attention; the Insert Recall-Repeat Sample button below the field drops in a ready-made example.',
+            risk: 'Drop the {{summary}} variable and no memory text gets injected at all. A repeated block makes the Memory Block bar count each copy, so it can show over budget; that is display-only, because summarization triggers count every layer just once.',
         }),
     ],
     [

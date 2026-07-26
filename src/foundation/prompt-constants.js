@@ -60,6 +60,14 @@ export const DEFAULT_INJECTION_TEMPLATE =
     '{{summary}}\n' +
     '</summaryception_memory>';
 
+/**
+ * Sample wrapper that repeats the memory block for stronger recall. Models
+ * attend most to the start and end of the prompt, so a second copy near the
+ * end reinforces past events. Built from the default so both stay in sync.
+ */
+export const RECALL_REPEAT_INJECTION_TEMPLATE =
+    DEFAULT_INJECTION_TEMPLATE + '\n\n---REPEATED FOR RECALL---\n\n' + DEFAULT_INJECTION_TEMPLATE;
+
 export const DEFAULT_SUMMARIZER_SYSTEM_PROMPT = buildSystemPrompt(
     'Role: narrative-state dual compressor. Output a [NARRATIVE] paragraph and a [STATE] key-value block.',
     'No preamble, no commentary, no markdown code fences.\nNever use second-person pronouns in the output.\nWrite the output mainly in English; short non-English names, titles, and source-language phrases are allowed.',

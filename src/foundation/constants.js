@@ -8,6 +8,8 @@ import {
     DEFAULT_SUMMARIZER_USER_PROMPT,
 } from './prompt-constants.js';
 
+export { RECALL_REPEAT_INJECTION_TEMPLATE } from './prompt-constants.js';
+
 export const MODULE_NAME = 'summaryception';
 export const LOG_PREFIX = '[Summaryception]';
 

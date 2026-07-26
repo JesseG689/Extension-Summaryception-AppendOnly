@@ -5,6 +5,7 @@ import {
     PROMOTION_REPAIR_PROMPT_PRESETS,
     PROMOTION_SYSTEM_PROMPT_PRESETS,
     PROMPT_PRESETS,
+    RECALL_REPEAT_INJECTION_TEMPLATE,
     SUMMARIZER_REPAIR_PROMPT_PRESETS,
     SUMMARIZER_SYSTEM_PROMPT_PRESETS,
     UI_MODES,
@@ -768,6 +769,18 @@ function bindClickHandlers() {
     $(document).on('click', '#sc_import', triggerImport);
 
     $(document).on('click', '#sc_reset_defaults', onResetDefaults);
+
+    $(document).on('click', '#sc_insert_recall_template', function () {
+        if (
+            !confirm(
+                'Replace the current Injection Wrapper Template with the recall-repeat sample?',
+            )
+        ) {
+            return;
+        }
+        $('#sc_injection_template').val(RECALL_REPEAT_INJECTION_TEMPLATE).trigger('change');
+        toastr.success('Recall-repeat template inserted.', 'Summaryception');
+    });
 }
 
 /**
