@@ -112,6 +112,7 @@ export const defaultSettings = Object.freeze({
     customMemoryPosition: MEMORY_POSITIONS.IN_PROMPT,
     customMemoryRole: MEMORY_ROLES.SYSTEM,
     customMemoryDepth: 0,
+    injectCurrentState: true, // true = include the [CURRENT STATE] block in injected memory
     minSummaryTurns: 3,
     maxSummaryTurns: 8,
     layer0SummaryTokenTarget: 200,

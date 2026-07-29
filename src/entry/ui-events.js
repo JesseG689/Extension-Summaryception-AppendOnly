@@ -175,6 +175,14 @@ function bindToggleHandlers() {
         { selector: '#sc_apply_regex_scripts', key: 'applyRegexScripts' },
         { selector: '#sc_strip_chinese_ideographs', key: 'stripChineseIdeographs' },
         {
+            selector: '#sc_inject_current_state',
+            key: 'injectCurrentState',
+            afterSave: () => {
+                updateInjection();
+                syncLLMContextPreview(getEffectiveSettings());
+            },
+        },
+        {
             selector: '#sc_mask_user_role_as_assistant',
             key: 'maskUserRoleAsAssistant',
             afterSave: (_settings, value) => syncRoleMaskModeControl(Boolean(value)),
@@ -681,6 +689,7 @@ function onResetDefaults() {
     s.promptOutputLogMode = defaultSettings.promptOutputLogMode;
     s.applyRegexScripts = defaultSettings.applyRegexScripts;
     s.stripChineseIdeographs = defaultSettings.stripChineseIdeographs;
+    s.injectCurrentState = defaultSettings.injectCurrentState;
     s.maskUserRoleAsAssistant = defaultSettings.maskUserRoleAsAssistant;
     s.maskUserRoleMode = defaultSettings.maskUserRoleMode;
 

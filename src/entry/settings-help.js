@@ -335,6 +335,19 @@ const HELP_ENTRIES = [
             risk: 'A bad depth puts memory too close to or too far from the latest turn.',
         }),
     ],
+    [
+        'inject_current_state',
+        basicHelp({
+            selector: selectorFor('sc_inject_current_state'),
+            title: 'Include [STATE]',
+            short: 'Prepend the active-facts snapshot to the injected memory.',
+            controls: [controlFor('sc_inject_current_state')],
+            controlsText:
+                'Decides whether the [CURRENT STATE] active-facts block leads the memory block Summaryception injects. Turn it off to send only the [CHRONOLOGY] history and shrink the prompt.',
+            when: 'Reach for it when state facts are duplicated by your preset or context, or when you want a smaller memory block.',
+            risk: 'With it off, the model loses the compact rolling snapshot of current facts and has to re-derive them from narrative chronology, which can drop time, location, and counters the model is supposed to keep.',
+        }),
+    ],
     ...CONNECTION_HELP_ENTRIES,
     [
         'easy_memory_mode_standard',

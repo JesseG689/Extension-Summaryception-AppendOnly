@@ -30,7 +30,7 @@
 
 ## Injection and ghosting
 
-- `memory-injection.js` compiles one current-state block plus chronology. `memory-budget.js` applies injected-memory budget.
+- `memory-injection.js` compiles one current-state block plus chronology. `memory-budget.js` applies injected-memory budget. The `injectCurrentState` setting (boolean, default true) gates whether `buildMemoryInjectionParts` prepends the `[CURRENT STATE]` block to the memory text bound for the RP prompt — direct injection, `{{summaryception_memory}}` macro, `/sc-preview`, and the inline preview all flow through `buildEffectiveMemoryText`, so they all follow the toggle; turning it off sends only `[CHRONOLOGY]`. The summarizer's own source-context paths (`buildFullContext`/`buildMemoryInjection` in `summarizer-batch.js` and `summarizer-promotion.js`) and the Layer 0 budget-hint path (`getCurrentStateSnapshotText`) bypass the flag, so the summarizer still sees prior state when generating summaries and the budget hint still reflects real state size.
 - Effective injected memory uses compact `[start-end@YYYY-MM-DDTHH]` chronology anchors; summarizer and promotion context retain verbose anchors, and budget accounting follows the compact rendered form.
 - Direct placement uses `setExtensionPrompt()`. Macro Only exposes `{{summaryception_memory}}` and clears direct injection.
 - Ghosting uses SillyTavern `/hide`; originals stay visible in chat UI. Ownership tracked by `extra.sc_ghosted` and `store.ghostedIndices`.

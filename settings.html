@@ -982,6 +982,16 @@
                                 <input id="sc_custom_memory_depth" type="number" class="text_pole" min="0" max="10000" step="1" />
                             </div>
                         </div>
+                        <div class="sc-toggle-list">
+                            <label class="checkbox_label sc-toggle-row" for="sc_inject_current_state">
+                                <span class="sc-toggle-icon fa-solid fa-list-check"></span>
+                                <span class="sc-toggle-copy">
+                                    <span class="sc-toggle-title">Include [STATE]</span>
+                                    <small class="sc-hint">Prepend the active-facts snapshot block (<code>[CURRENT STATE]</code>) in what's injected into the prompt. Turn off to send only the <code>[CHRONOLOGY]</code> history and shrink the prompt.</small>
+                                </span>
+                                <input type="checkbox" id="sc_inject_current_state" />
+                            </label>
+                        </div>
                         <div id="sc_macro_memory_note" class="sc-note" style="display: none;">
                             <span class="fa-solid fa-circle-info"></span>
                             <small>Macro Only exposes <code>{{summaryception_memory}}</code> and skips direct prompt injection.</small>

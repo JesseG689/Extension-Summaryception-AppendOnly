@@ -25,15 +25,18 @@ export function buildMemoryInjection(layers) {
 /**
  * Build memory injection sections while preserving per-layer chronology parts.
  * @param {Array<Array<{ text: string }>>} layers
- * @param {{ compactAnchors?: boolean }} [options]
+ * @param {{ compactAnchors?: boolean, injectCurrentState?: boolean }} [options]
  * @returns {MemoryInjectionParts}
  */
-export function buildMemoryInjectionParts(layers, { compactAnchors = false } = {}) {
+export function buildMemoryInjectionParts(
+    layers,
+    { compactAnchors = false, injectCurrentState = true } = {},
+) {
     if (!Array.isArray(layers)) {
         return emptyParts();
     }
 
-    const stateText = buildCurrentStateText(layers);
+    const stateText = injectCurrentState ? buildCurrentStateText(layers) : '';
     const chronologyParts = collectChronologyParts(layers, compactAnchors);
     const chronologyText = chronologyParts.map((part) => part.text).join('\n');
     const memoryText = combineMemoryText(stateText, chronologyText);

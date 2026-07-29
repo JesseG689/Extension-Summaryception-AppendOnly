@@ -63,6 +63,7 @@ interface ExtensionSettings {
     customMemoryPosition: string;
     customMemoryRole: string;
     customMemoryDepth: number;
+    injectCurrentState: boolean;
     minSummaryTurns: number;
     maxSummaryTurns: number;
     layer0SummaryTokenTarget: number;
