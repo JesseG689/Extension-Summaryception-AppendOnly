@@ -99,7 +99,7 @@ Do NOT extract static character background/profile facts such as origins, hometo
 Do NOT write descriptive sentences in the state block. Use concise keys and values only.
 Always include temporal key:
 - current_date_time: YYYY-MM-DD HH ddd
-Use 24-hour, hour-level precision only, e.g. 2024-12-03 06 Wed. Normalize from raw bracket headers or passage timestamps when present. Drop minutes instead of preserving them.
+Use 24-hour, hour-level precision only, e.g. 2024-07-04 16 Thu. Derive the ddd weekday from the ISO date (2024-07-04 = Thu); never carry it over from the prior snapshot when the date changed. Normalize from raw bracket headers or passage timestamps when present. Drop minutes instead of preserving them.
 If no explicit time appears in the passage, carry forward the prior current_date_time if known.
 
 Use only these keys and omit empty categories:{{state_schema}}`,
@@ -142,7 +142,7 @@ Do NOT extract static character background/profile facts such as origins, hometo
 Do NOT write descriptive sentences in the state block. Use concise keys and values only.
 Always include temporal key:
 - current_date_time: YYYY-MM-DD HH ddd
-Use 24-hour, hour-level precision only, e.g. 2024-12-03 06 Wed. Normalize from raw bracket headers or passage timestamps when present. Drop minutes instead of preserving them.
+Use 24-hour, hour-level precision only, e.g. 2024-07-04 16 Thu. Derive the ddd weekday from the ISO date (2024-07-04 = Thu); never carry it over from the prior snapshot when the date changed. Normalize from raw bracket headers or passage timestamps when present. Drop minutes instead of preserving them.
 If no explicit time appears in the passage, carry forward the prior current_date_time if known.
 
 Use only these keys and omit empty categories:{{state_schema}}`,

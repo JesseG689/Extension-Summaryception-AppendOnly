@@ -16,6 +16,13 @@ const LEGACY_STATE_WINDOW = 3;
 const COMPOSITE_MERGE_KEYS = new Set(['characters', 'inventory', 'counters', 'dynamics', 'hooks']);
 const IGNORED_STATE_KEYS = new Set(['timeline_start', 'timeline_end', 'start_time', 'end_time']);
 const COMPOSITE_ENTRY_RE = /^([a-zA-Z0-9 _-]+?)\s*[:=]\s*(.+)$/;
+// YYYY-MM-DD [HH] [ddd]. Weekday is corrected against the ISO date so the
+// model cannot persist a hallucinated weekday (e.g. 2024-12-03 06 Fri when
+// Dec 3 2024 is Tue). Returns null when input is missing, malformed, or
+// carries no weekday token, preserving verbatim fall-through at call sites.
+const WEEKDAY_NAMES = Object.freeze(['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat']);
+const CURRENT_DATE_TIME_RE =
+    /^\s*(\d{4})-(\d{2})-(\d{2})(?:\s+(\d{2})(?::\d{2})?)?(?:\s+([A-Za-z]{3}))?\s*$/;
 const STATIC_PROFILE_KEY_PARTS = [
     'origin',
     'hometown',
@@ -376,7 +383,8 @@ function parseStateLines(lines) {
         if (IGNORED_STATE_KEYS.has(key)) {
             continue;
         }
-        state[key] = match[2].trim();
+        const rawValue = match[2].trim();
+        state[key] = key === 'current_date_time' ? normalizeCurrentDateTime(rawValue) : rawValue;
     }
 
     const notes = dedupeNotes(unclassified);
@@ -384,6 +392,44 @@ function parseStateLines(lines) {
         state.unclassified_notes = formatCappedNotes(notes);
     }
     return state;
+}
+
+/**
+ * Correctly derives the ISO weekday from the date and rewrites the value's
+ * weekday token when it is missing or wrong. Preserves the hour and drops
+ * stray minutes (per the HH-resolution contract). Returns the input verbatim
+ * when no valid ISO date is present, so malformed values stay untouched.
+ * @param {string} value - raw current_date_time value from the model
+ * @returns {string}
+ */
+function normalizeCurrentDateTime(value) {
+    const text = String(value || '').trim();
+    const match = text.match(CURRENT_DATE_TIME_RE);
+    if (!match) {
+        return text;
+    }
+    const [, yStr, mStr, dStr, , weekday] = match;
+    const year = Number(yStr);
+    const month = Number(mStr);
+    const day = Number(dStr);
+    if (!Number.isInteger(year) || !Number.isInteger(month) || !Number.isInteger(day)) {
+        return text;
+    }
+    const date = new Date(Date.UTC(year, month - 1, day));
+    if (
+        Number.isNaN(date.getTime()) ||
+        date.getUTCFullYear() !== year ||
+        date.getUTCMonth() !== month - 1 ||
+        date.getUTCDate() !== day
+    ) {
+        return text;
+    }
+    const correctWeekday = WEEKDAY_NAMES[date.getUTCDay()];
+    const normalizedHour = match[4] || '00';
+    if (weekday && weekday.toLowerCase() === correctWeekday.toLowerCase()) {
+        return `${yStr}-${mStr}-${dStr} ${normalizedHour} ${correctWeekday}`;
+    }
+    return `${yStr}-${mStr}-${dStr} ${normalizedHour} ${correctWeekday}`;
 }
 
 function stripNarrativeHeader(text) {

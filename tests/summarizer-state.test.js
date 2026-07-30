@@ -1,0 +1,67 @@
+import { describe, expect, it } from 'vitest';
+
+import { parseSnippet } from '../src/core/summarizer-state.js';
+
+describe('parseSnippet current_date_time weekday normalization', () => {
+    it('corrects a hallucinated weekday against the ISO date', () => {
+        // Dec 3 2024 is Tuesday, not Friday (the kind of slip seen in f12 log).
+        const parsed = parseSnippet(
+            '[NARRATIVE]\nScene.\n\n[STATE]\ncurrent_date_time: 2024-12-03 06 Fri',
+        );
+        expect(parsed.state.current_date_time).toBe('2024-12-03 06 Tue');
+    });
+
+    it('preserves an already-correct weekday', () => {
+        // July 4 2024 is Thursday — the canonical prompt example, verified correct.
+        const parsed = parseSnippet(
+            '[NARRATIVE]\nScene.\n\n[STATE]\ncurrent_date_time: 2024-07-04 16 Thu',
+        );
+        expect(parsed.state.current_date_time).toBe('2024-07-04 16 Thu');
+    });
+
+    it('inserts the weekday when the model omitted it', () => {
+        const parsed = parseSnippet(
+            '[NARRATIVE]\nScene.\n\n[STATE]\ncurrent_date_time: 2024-07-07 06',
+        );
+        expect(parsed.state.current_date_time).toBe('2024-07-07 06 Sun');
+    });
+
+    it('repairs the exact Call #14 regression from the review', () => {
+        // Log: 2024-07-07 slipped to 'Wed' (Jul 7 2024 is Sun).
+        const parsed = parseSnippet(
+            '[NARRATIVE]\nScene.\n\n[STATE]\ncurrent_date_time: 2024-07-07 06 Wed',
+        );
+        expect(parsed.state.current_date_time).toBe('2024-07-07 06 Sun');
+    });
+
+    it('drops stray minutes and re-derives the weekday', () => {
+        const parsed = parseSnippet(
+            '[NARRATIVE]\nScene.\n\n[STATE]\ncurrent_date_time: 2024-07-04 16:32 Wed',
+        );
+        // Wrong weekday AND minutes present — hour retained, minutes dropped, weekday fixed.
+        expect(parsed.state.current_date_time).toBe('2024-07-04 16 Thu');
+    });
+
+    it('leaves malformed values untouched rather than fabricating', () => {
+        const parsed = parseSnippet(
+            '[NARRATIVE]\nScene.\n\n[STATE]\ncurrent_date_time: someday soon',
+        );
+        expect(parsed.state.current_date_time).toBe('someday soon');
+    });
+
+    it('rejects impossible calendar dates and leaves them verbatim', () => {
+        const parsed = parseSnippet(
+            '[NARRATIVE]\nScene.\n\n[STATE]\ncurrent_date_time: 2024-02-30 06 Sat',
+        );
+        // Feb 30 does not exist; do not silently coerce.
+        expect(parsed.state.current_date_time).toBe('2024-02-30 06 Sat');
+    });
+
+    it('preserves other state keys alongside the corrected timestamp', () => {
+        const parsed = parseSnippet(
+            "[NARRATIVE]\nScene.\n\n[STATE]\ncurrent_date_time: 2024-12-03 06 Fri\nlocation: Vova's house",
+        );
+        expect(parsed.state.current_date_time).toBe('2024-12-03 06 Tue');
+        expect(parsed.state.location).toBe("Vova's house");
+    });
+});
