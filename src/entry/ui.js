@@ -60,6 +60,14 @@ export async function updateUI() {
         $('#sc_apply_regex_scripts').prop('checked', s.applyRegexScripts);
         $('#sc_strip_chinese_ideographs').prop('checked', s.stripChineseIdeographs);
         $('#sc_inject_current_state').prop('checked', s.injectCurrentState !== false);
+        // alwaysOn category: the input is disabled in markup, so reflect it as
+        // permanently ticked rather than reading the (ignored) persisted flag.
+        $('#sc_state_cat_date_time').prop('checked', true);
+        $('#sc_state_cat_bonds').prop('checked', s.stateCatBonds);
+        $('#sc_state_cat_chekhov').prop('checked', s.stateCatChekhov);
+        $('#sc_state_cat_gm_notes').prop('checked', s.stateCatGmNotes);
+        $('#sc_state_cat_inventory').prop('checked', s.stateCatInventory);
+        $('#sc_state_cat_location').prop('checked', s.stateCatLocation);
         $('#sc_mask_user_role_as_assistant').prop('checked', s.maskUserRoleAsAssistant);
         $('#sc_mask_user_role_mode').val(s.maskUserRoleMode);
         syncRoleMaskModeControl(s.maskUserRoleAsAssistant);

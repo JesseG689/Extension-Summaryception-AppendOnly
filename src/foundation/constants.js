@@ -114,16 +114,16 @@ export const defaultSettings = Object.freeze({
     customMemoryDepth: 0,
     injectCurrentState: true, // true = include the [CURRENT STATE] block in injected memory
     // ─── Modular STATE categories (stateCat*) ─────────────────────────
-    // Each optional category the user enables here they should disable in
-    // their RP preset; the extension's [CURRENT STATE] injection becomes the
-    // sole carrier. stateCatDateTime is informational only — alwaysOn forces
-    // true at runtime regardless of this flag.
+    // All categories ship enabled: the extension's [CURRENT STATE] injection
+    // is meant to be the sole carrier, so users should disable the equivalent
+    // blocks in their RP preset. stateCatDateTime is informational only —
+    // alwaysOn forces true at runtime regardless of this flag.
     stateCatDateTime: true,
-    stateCatBonds: false,
-    stateCatChekhov: false,
-    stateCatGmNotes: false,
-    stateCatInventory: false,
-    stateCatLocation: false,
+    stateCatBonds: true,
+    stateCatChekhov: true,
+    stateCatGmNotes: true,
+    stateCatInventory: true,
+    stateCatLocation: true,
     minSummaryTurns: 3,
     maxSummaryTurns: 8,
     layer0SummaryTokenTarget: 200,

@@ -111,8 +111,9 @@ export function getCategoryByKey(key) {
 
 /**
  * Whether a category is enabled. `alwaysOn` categories are always true
- * regardless of the persisted flag. Optional categories default to false
- * when unset (old persisted settings normalize cleanly to date-time-only).
+ * regardless of the persisted flag. Optional categories read the persisted
+ * flag directly, so a raw settings object that predates a key reads as off
+ * until `getSettings()` normalization fills in the (enabled) default.
  * @param {ExtensionSettings} settings
  * @param {string} key
  * @returns {boolean}

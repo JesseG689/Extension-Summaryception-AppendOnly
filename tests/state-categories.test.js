@@ -1,5 +1,7 @@
 import { describe, expect, it } from 'vitest';
 
+import { defaultSettings } from '../src/foundation/constants.js';
+
 import {
     STATE_CATEGORIES,
     buildStateSchemaText,
@@ -86,9 +88,17 @@ describe('state-categories catalog', () => {
         expect(isCategoryEnabled({ stateCatDateTime: false }, 'current_date_time')).toBe(true);
     });
 
-    it('back-compat: a settings object without any stateCat* keys normalizes to date-time-only', () => {
+    it('an un-normalized settings object missing every stateCat* key reads as date-time-only', () => {
+        // Raw objects bypass the getSettings() backfill, so only the alwaysOn
+        // category survives. Normalized settings get the all-enabled defaults.
         const legacy = { someOtherSetting: true };
         expect(getEnabledStateKeys(legacy)).toStrictEqual(['current_date_time']);
         expect(getActiveLineCap(legacy)).toBe(2);
+    });
+
+    it('ships with every category enabled by default', () => {
+        expect(getEnabledStateKeys(defaultSettings)).toStrictEqual(
+            STATE_CATEGORIES.map((c) => c.key),
+        );
     });
 });
