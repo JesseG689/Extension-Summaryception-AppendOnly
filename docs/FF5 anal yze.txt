@@ -1,0 +1,117 @@
+Now I have everything. Here's the firm keep/move table with full mechanics per block.
+
+---
+
+# Firm keep/move analysis — FF5 internal states → Summaryception memory
+
+## How each block actually works (mechanics)
+
+Decisive characteristics:
+- **Persistence model** — Is the data rebuilt every turn or carried across turns? Per-turn output is not memory; carried state is.
+- **Update locus** — Who updates it: the main RP model emitting the block, or our snapshot pipeline rewriting `[STATE]`?
+- **Fire/decision rule** — Does the block decide the *current* turn's action via a fresh roll/formula (execution) or just store state?
+- **Output contract** — Must the model emit this block *every* turn for the system to function?
+- **Token math** — Captured, accumulating, dropped?
+
+And one cross-cutting subtlety: FF5 leans on ST `{{setvar}}` constants (`bond_X_Y`, `gmNotebook`, `chekhovActive`). In the FF5 architecture those carry across turns *inside* the model's `internal_states` block — they're not native ST conversation memory. Moving to extension means our snapshot pipeline takes over that carrying job. We don't need `{{setvar}}` plumbing.
+
+---
+
+## The keep/move table
+
+| # | Block (preset state) | Persistence | Update locus | Fire rule | Output contract | Verdict | Tokens /turn we'd free |
+|---|---|---|---|---|---|---|---|
+| 1 | 🐉 **DnD Simulator** ✔ on | **Per-turn.** DC locked in-head, roll resolved, outcome narrated, all gone after this turn. | Main model executes | **Yes — current turn.** Roll decides *this* action's outcome. | Must emit `🎲 DND TASK SIM` every turn a skill check happens. | **STAY in preset** (your D20 rule). Roll is output, not memory. | — |
+| 2 | ⏰ **Time and Place** ✔ on | Hygiene: header rebuilt per turn. `current_date_time` *value* is persistent; the *rendering* is per-output. | Main model emits | Decides nothing (display). **Must** be on every reply line 1. | First-line format mandate. | **STAY in preset.** We already carry `current_date_time` in `[STATE]` to inform it; the format directive is execution. | ~80 |
+| 3 | 📅 **Internal Agenda** ✗ off in your preset | **Cross-turn.** Each NPC agenda has `Step: cur/max` and the prompt says "+1 per turn for OFF-SCREEN NPCs"; completion effects ripple into BOND/Chekhov/inventory. Genuinely accumulating state. | Main model emits the `NPC AGENDAS` sub-block | Slow ticking; spawns NPC entrances mid-game | "After the loud block this turn, fill it out" | **MOVE to extension.** It's the textbook cross-turn case. Could safely stay in `characters` key, expanding it. | ~120–180 (4–6 NPCs × ~30) |
+| 4 | 📒 **GM's Notebook** ✔ on | **Cross-turn, by design.** The prompt literally calls it a "short-term and medium-term memory block"; you persist it via `{{setvar::gmNotebook}}`. Cap: 20 entries, prune oldest. `‖[R]/[T]/[D]` prefixes. | Main model reads prev, writes new | No fire rule — pure memory | Emit-or-lose. | **MOVE to extension.** This is *the* thing your rolling summary exists to replace. Becomes our memory layer; `‖[R]/[T]/[D]` schema stays or wraps into structured keys. The 20-entry cap is exactly a memory-budget concern. | ~150–250 (it grows large in your seen-inputs example) |
+| 5 | 🗡️ **Inventory, Feats, Titles** ✗ off | **Cross-turn.** Items add/remove; titles/skills permanent buffs apply ‑/+1/2 to DnD rolls; status conditions clear over time. | Main model | No roll; buff values *feed* DnD(1). Must be in the block for the modifier math to work this turn. | Emit when changed; could be load-from-extension instead. | **MOVE to extension** (merge into `inventory`). The model still needs to read these *this turn* to compute rolls — but it gets that read from injected memory, not from an emitted block. **Caveat:** the buff→DC/Judging hook stays in preset; the *numbers* move. | ~60–100 |
+| 6 | 🥰 **Relationships RPG (BOND/Sparks/Grudge)** ✔ on | **Cross-turn, classic.** Values persist. Mechanics: Sparks→/5/→BOND, Grudge→/3/→BOND; nightly drift; thresholds unlock behaviors (+4 hug, +14 kiss, +18 sex); DC modifiers ‑2/–4/+2/+4. | Main model emits; the prompt says "do not track manually in narrative" — explicit memory call. | No per-turn roll; **the values themselves feed DnD DC mods and physical gates**. The emission is a "render current values" duty. | Emit every turn (it's part of the `BONDS` sub-block the template forces). | **MOVE to extension.** The persistence is memory; the emission duty is exactly what you're trying to relieve the main model from. **Split:** the *values* move; the **DC-mod & threshold & drift logic** stays in preset (rows 1, 14). Numbers migrate to extension memory; the rules for *how to use* them stay defined in the prompt. | ~150–300 (scales with pair count) |
+| 7 | 🌎 **World Sim** ✗ off | **Per-turn execution.** Roll `1d20` each turn → pick from StandardTable/DuoTable → fires an off-screen event this turn. The *consequences* (rumors, NPC meetings) flow into GM Notebook/Agenda. | Main model | **Yes — roll fires event this turn.** | Emit `🌎 WORLD SIM` block if active. | **STAY in preset.** Rolling-this-decides-output. The *state drift* it produces is captured by rows 3/4/8 — those move, the d20 mechanic stays. | — |
+| 8 | 🔫 **Chekhov's Gun** ✔ on | **Cross-turn.* Bullets age (+1/turn), weight × base threshold (W1=18, W2=13, W3=8), modifiers (−age, −2 if subject speaking, etc.), eligible at age≥4, prune at age≥12, cap 20. Time-locks `[LOCKED: T:HH:MM]`. | Main model emits; 5 chekhovD20 seeds rolled | **Hybrid.** The *fire decision* is per-turn execution (row 8a). The *bullet inventory + ages + locks* is memory (row 8b). | Emit `🔫 CHEKHOV'S GUN` every turn (active/locked/fired + bullet list). | **SPLIT.** (a) **The bullet list, ages, weights, locks — MOVE to extension** (pure cross-turn narrative debt). (b) **The fire-decision formula + d20 seeds + proximity mods — STAY in preset** (it's a roll-this-turn mechanic, akin to DnD). The preset's CoT still runs the fire check; it reads the bullet register from injected memory and writes any newly-loaded/fired bullets there. | ~150–300 |
+| 9 | 🧠 **Internal Thoughts** ✔ on | **Per-turn ephemeral.** Each model response narrates 1–3 NPCs' thoughts for *this turn*. No accumulation. (Could distill recurring patterns to GM Notebook.) | Main model | None | Emit 3 NPCs' thoughts. | **STAY in preset.** Output craft, not memory. | — |
+| 10 | 👾 **Internal States master** ✔ on | Wrapper/block-collection. By itself nothing; orchestrates sub-blocks. | Main model | Per turn | Emit. | **STAY in preset** (in a reduced form). After moving rows 3/4/6/8a, what remains is the wrapper for **per-turn emiters**: Thoughts(9), DnD(1), World Sim(7), BOND→DC logic, Agendas/locations still in preset for ON-screen NPCs (see 11). | — |
+| 11 | 👤 **NPC AGENDAS** / **NPC LOCATIONS** / ⚐ **FACTIONS** (sub-blocks of master toggle) | § **Agendas (off-screen)**: cross-turn; covered by row 3.<br>§ **Agendas (on-screen)**: per-turn render of what NPC is up to now.<br>§ **Locations**: per-turn render; underlying truth is cross-turn but the *rendering* is what tracks on-screen presence. True persistence belongs to a `characters`/`where` key.<br>§ **Factions**: rarely active in intimate RP, but where used — cross-turn (goals/intel/lies/relations). | Main model emits | Agendas tick; locations reflect movement (decided by World Sim etc.) | Emit in `internal_states`. | **SPLIT.<br>** Off-screen agendas → **MOVE** (row 3). On-screen agenda rendering → **STAY** (depends on tracking *this* scene's NPCs; "Distracted/incomplete/energized" tags tie to row-3 state). Locations → **MOVE the persistent `where` truth to extension `location`**; the line per on-screen NPC can stay as a thin reminder or fold into our `characters` block. Factions → **MOVE** if you ever use them; otherwise drop both sides. | ~80–200 |
+| 12 | 📲 **Twitter X Feed** ✗ off | Per-turn garnish | Main model | None | Emit. | **STAY in preset** (off anyway). | — |
+| 13 | Prose/POV/NSFW/CoT/banned-words/format/color/combat/onomatopoeia toggles | Per-turn **formatting only**. None accumulate. | Main model conforms | None | Every turn | **STAY in preset.** Zero cross-turn content; all execution-format. | — |
+| 14 | 🥰→**DnD** Bond→DC mod & **relationship physical gates/unlock thresholds** | Per-turn use. Reads BOND values (memory), applies to DnD DC and to behavior thresholds. | Main model | Yes — feeds this-turn roll/gate. | Following intra-turn. | **STAY in preset.** The *logic* is execution. The *numbers* come from row 6 in injected memory. | — |
+| 15 | 📅 Complete effects of agenda (FireRECONCLE, plant Chekhov, +1 Sparks etc.) | Per-turn effect rules. They fire when a row crosses a boundary. | Main model applies | Yes — acting on completing agenda. | Following intra-turn. | **STAY**. Mechanics/rules don't move; only the *state they consume/emit* moves. | — |
+
+---
+
+## What this gives you, token-budget-wise
+
+For the **active preset** right now — the blocks you have **enabled** (✔): DnD, Time/Place, BOLT CoT, Hybrid POV, Realism NSFW, anti-parrot, Realistic NPCs, Anti-Omniscient, NPC Instincts, Banned Words, output length, NPC voice, Colored Dialogue, Pop-in Graphics, Spectacle Combat, Icebreaker, HQ NPC Genesis, DnD, GM Notebook, Relationships BONDS, Internal Thoughts, Chekhov's Gun, Internal States master, Auto-Image.
+
+Now apply the table. The blocks you *keep in preset* but their **content duty** moves to extension memory (freeing the main model from emitting each turn):
+
+- GM's Notebook — ~150–250
+- BONDS list (full pair list, ages, sparks, grudges) — ~150–300 (this scales)
+- Chekhov's Gun bullet inventory + ages — ~150–300 (this grows)
+- Inventory/Titles/Status *(currently off in your preset, so zero saving now)* — ~0 today; ~60–100 if you ever turn it on
+- On-screen agenda repetition/redundancy vs `characters` key — ~50–150
+
+Net per-turn freeing on the *models you actually run with* ≈ **350–900 tokens of main-model output, every turn** — and the model stops dragging those blocks through its CoT (the BOLT CoT spends tasks on `BOND`, `CHEKHOV_FIRE`, `GM_NOTEBOOK` even when there's nothing new). So the upstream output budget saved isn't merely the emitted-block tokens but each concrete CoT-slave task that's "FILL THE BLOCK" work.
+
+## Should the extension STATE cap grow?
+
+Your today's cap: 7 keys, 200 token soft target, 300 hard max, 7 lines.
+
+What lands in extension STATE after the move:
+```
+current_date_time, location, characters(+agendas+where merged), dynamics(+BOND pairs),
+constraints, hooks + NEW: bonds, agendas(off-screen), bullets, gm_notes, titles, factions(optional)
+```
+
+That's not 7-into-7 anymore. Concretely, the *moved* content fits nothing if you keep the 7-line/300-token ceiling — the entire value of moving disappears and you're back to "garbo" by a different name.
+
+Targeting the blocks listed and a 6–10-turn reasonable scale:
+- `bonds` — up to ~6 pairs × `BOND x | Sparks y | Grudge z` = ~80 tokens
+- `bullets` — up to ~8 active bullets × `[BULLET: ...] (weight, age/12)` = ~120 tokens
+- `gm_notes` — up to ~12 entries × ~6 tokens = ~80 tokens (capped per your prune logic)
+- `agendas` — ~3–5 NPCs × ~22 tokens = ~110 tokens
+- `titles` — ~40 tokens
+- existing keys: ~80 tokens
+
+Total realistic cap needed ≈ **≈ 510–600 tokens.** But you only ever inject the *latest* L0 snapshot (L1+ carry no state), so the cap bites only on **model emission time** and **one injected block.** Even at 600 you stay well within L0 narrative tokens saved.
+
+**Recommendation: raise cap to 500 tokens hard max, soft target 400.** That clears the counted content (~510) by shaving the least-durable sub-field, which is exactly what your `_repair` already does — drop the weakest lines. Going to 600 hard / 450 soft gives a one-line margin if you want to be conservative; bumping key-ceiling `STATE_KEY_CEILING` from 7 to ~12.
+
+## What stays a preset CoT task vs what gets stripped from CoT
+
+| CoT task today | After move |
+|---|---|
+| `DND_Dc`, `DND_RESULT` (DnD) | **Keep.** Pure execution. |
+| `BOND` shifts/conversion/drift | **Keep**, but it reads values from injected memory & writes adjusted values back to the STATE block (which is one of the keys the model re-emits). Or — *stronger option* — remove BOND conversion from the main model entirely and let our L0 snapshot pipeline compute the conversion (BOND/Sparks/Grudge are deterministic arithmetic). **This is the design question for later.** |
+| `CHEKHOV_FIRE` | **Keep** (it's a per-turn dice roll). It reads the bullet register from memory; the *register* is the extension's job, the *fire check* stays in preset CoT. |
+| `GM_NOTEBOOK` | **Strip from CoT.** No per-turn decision to make; just load from memory. |
+| `AGENDA_TICK` | **Keep partially.** Off-screen +1 is arithmetic and could move to extension snapshot pipeline, but the in-scene behavioral tags ("Distracted/Energized") are inference. Keep it light. |
+
+---
+
+## Net keep/move, one line each
+
+**MOVE to extension memory** (injected as `[CURRENT STATE]`, snapshot pipeline rewrites on L0):
+- GM Notebook → `gm_notes`
+- BOND/Sparks/Grudge values → `bonds`
+- Chekhov bullet inventory + ages + locks → `bullets`
+- Off-screen NPC agendas + off-screen `where` → `agendas`, extended `characters`/`location`
+- Titles & permanent skills/status → extend `inventory`
+- Factions (only if used) → `factions`
+
+**STAY in preset** (per-turn execution or output format):
+- DnD roll/DC/outcome
+- World Sim d20 + table pick
+- Chekhov fire-trigger formula + d20 seeds + proximity mods (reads `bullets` from memory)
+- Internal Thoughts (per-turn narration)
+- Time/Place header *rendering* (reads `current_date_time` from memory)
+- BOND→DC mod logic, physical-gate thresholds, agenda completion effects, plot-momentum hooks
+- All prose/POV/NSFW/CoT/format toggles
+- NPC on-screen behavioral tags (Distracted/Incomplete/Energized)
+- NPC on-screen current-location render (the persistent `where` truth lives in extension)
+
+**Open question (for the schema design phase, not now):** Should the deterministic parts of BOND/Grudge conversion (the `turn % 5` and `turn % 3` shifts) and off-screen agenda `+1` ticking lift entirely out of the main model into our snapshot pipeline, leaving the model just to *report* events that should trigger them? That's cleaner but it's a bigger refactor — flag for the design doc.
+
+---
+
+If this table holds, the answer to your budget question is firm: **raise to 500 hard / 400 soft, lift key ceiling from 7 to ~12.** Ready to move on to schema design whenever you confirm or amend this analysis.
