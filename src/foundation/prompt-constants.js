@@ -12,29 +12,29 @@ export const ANTI_RUN_ON_RULE =
     'Write in short, direct sentences. Prefer periods over commas and semicolons; do not chain actions together with commas, semicolons, or conjunctions into run-on sentences. Limit each sentence to roughly two actions or events.';
 
 export const STATE_SNAPSHOT_MODE = 'snapshot-v1';
-export const STATE_SNAPSHOT_SOFT_TARGET_TOKENS = 200;
-export const STATE_SNAPSHOT_MAX_TOKENS = 300;
+export const STATE_SNAPSHOT_SOFT_TARGET_TOKENS = 500;
+export const STATE_SNAPSHOT_MAX_TOKENS = 600;
 /**
  * Highest [STATE] token count still eligible for deterministic compaction
  * before falling back to a full LLM retry. Overshoots up to this ceiling are
  * trimmed in-process; anything larger is treated as unrepairable and retried.
- * Measured over-size outputs in practice land in the 380–480 token band, so
- * 500 covers the observed worst case while remaining below the char budget's
- * physical ceiling (~STATE_SNAPSHOT_MAX_CHARS * 1.4 tokens).
+ * Scaled with the raised hard cap (600): 1000 holds the ~1.67× ceiling ratio
+ * so modular multi-category overshoots still land in-process.
  */
-export const STATE_SNAPSHOT_REPAIR_CEILING_TOKENS = 500;
+export const STATE_SNAPSHOT_REPAIR_CEILING_TOKENS = 1000;
 /**
  * Char budget the deterministic state compactor aims for. Kept below the
  * hard max so accepted trims land comfortably under STATE_SNAPSHOT_MAX_TOKENS
  * even for denser scripts (Cyrillic averages ~3.5 chars/token vs ~4.2 English).
+ * Scaled with the soft target (500/200 = 2.5× from the legacy 1056).
  */
-export const STATE_SNAPSHOT_COMPACTION_TARGET_CHARS = 1056;
-export const STATE_SNAPSHOT_MAX_CHARS = 1200;
+export const STATE_SNAPSHOT_COMPACTION_TARGET_CHARS = 2640;
+export const STATE_SNAPSHOT_MAX_CHARS = 3000;
 export const LAYER0_DURABILITY_RULES =
     'Preserve each major durable beat once. Collapse repeated actions, physical interaction, or dialogue loops into one outcome sentence. Omit brands, shopping routes, meals, clothing, poses, body mechanics, ordinary props, and temporary physical conditions unless they create a lasting decision, rule, resource, injury, or unresolved hook.';
 
 export const STATE_DEDUPLICATION_RULES =
-    'Use at most one line per supported key. Do not repeat the same fact across characters, dynamics, constraints, hooks, or inventory. Characters may include only presence and consequential persistent conditions. Inventory is plot-critical ownership or access only. Hooks are unresolved future-affecting threads only.';
+    'Use at most one line per supported key. Do not repeat the same fact across bonds, chekhov, gm_notes, inventory, or location. Bonds holds one pair per line. Chekhov holds one bullet per line. Inventory tracks the player only. GM Notes logs only what no other category owns.';
 
 export const PROMOTION_MODERATE_MACRO_RULES =
     'Keep named people and places only when needed to understand a lasting relationship, obligation, location, or unresolved hook. Drop ages, brands, shopping routes, meals, clothing, one-off supplies, dialogue, and mechanical scene replay unless future continuity depends on them. Prefer cumulative outcomes over a list of scene beats.';
@@ -102,14 +102,7 @@ Always include temporal key:
 Use 24-hour, hour-level precision only, e.g. 2024-12-03 06 Wed. Normalize from raw bracket headers or passage timestamps when present. Drop minutes instead of preserving them.
 If no explicit time appears in the passage, carry forward the prior current_date_time if known.
 
-Use only these keys and omit empty categories:
-- current_date_time: <YYYY-MM-DD HH ddd>
-- location: <current place>
-- characters: <present or immediately relevant names and consequential conditions only>
-- dynamics: <active relationships, roles, trust, hostility, or social standing>
-- constraints: <active rules, obligations, permissions, deadlines, or persistent limitations>
-- hooks: <unresolved goals, threats, secrets, or near-future plans>
-- inventory: <plot-critical carried items, controlled resources, or access only>`,
+Use only these keys and omit empty categories:{{state_schema}}`,
     taskRules: `Compress only the essential narrative progression from <passage_in_question>, then rewrite the complete compact current-state snapshot at the end of that passage using <prior_context> as the baseline.
 If the prose uses 2nd person ('you'), map it directly to <player_name>. Never use second-person pronouns in the output.
 Keep [STATE] compact; follow the sentence and line caps provided at the end of this prompt. Put the most important facts first within each value.
@@ -152,14 +145,7 @@ Always include temporal key:
 Use 24-hour, hour-level precision only, e.g. 2024-12-03 06 Wed. Normalize from raw bracket headers or passage timestamps when present. Drop minutes instead of preserving them.
 If no explicit time appears in the passage, carry forward the prior current_date_time if known.
 
-Use only these keys and omit empty categories:
-- current_date_time: <YYYY-MM-DD HH ddd>
-- location: <current place>
-- characters: <present or immediately relevant names and consequential conditions only>
-- dynamics: <active relationships, roles, trust, hostility, or social standing>
-- constraints: <active rules, obligations, permissions, deadlines, or persistent limitations>
-- hooks: <unresolved goals, threats, secrets, or near-future plans>
-- inventory: <plot-critical carried items, controlled resources, or access only>`,
+Use only these keys and omit empty categories:{{state_schema}}`,
     taskRules: `The previous Layer 0 summary attempt failed output validation. Repair the response by summarizing the same passage again with stricter formatting.
 If the prose uses 2nd person ('you'), map it directly to <player_name>. Never use second-person pronouns in the output.
 Omission removes a fact rather than preserving it. Exclude transient scene detail, completed tasks, resolved hooks, and ordinary items.

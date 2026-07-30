@@ -39,48 +39,52 @@ const KEY_ALIASES = Object.freeze({
     where: 'location',
     room: 'location',
     area: 'location',
-    characters: 'characters',
-    people: 'characters',
-    npcs: 'characters',
-    who: 'characters',
+    bonds: 'bonds',
+    bond: 'bonds',
+    relationship: 'bonds',
+    relationships: 'bonds',
+    chekhov: 'chekhov',
+    chechkov: 'chekhov',
+    bullet: 'chekhov',
+    bullets: 'chekhov',
+    gun: 'chekhov',
+    gm_notes: 'gm_notes',
+    gmnote: 'gm_notes',
+    gmnotebook: 'gm_notes',
+    notebook: 'gm_notes',
+    notes: 'gm_notes',
     inventory: 'inventory',
+    inv: 'inventory',
     items: 'inventory',
-    equipment: 'inventory',
-    toys: 'inventory',
-    gear: 'inventory',
-    dynamics: 'dynamics',
-    relationship: 'dynamics',
-    power: 'dynamics',
-    roles: 'dynamics',
-    hooks: 'hooks',
-    plans: 'hooks',
-    goals: 'hooks',
-    threads: 'hooks',
-    unresolved: 'hooks',
-    counters: 'counters',
-    tally: 'counters',
-    tallies: 'counters',
-    counts: 'counters',
-    score: 'counters',
+    titles: 'inventory',
     current_date_time: 'current_date_time',
     current_datetime: 'current_date_time',
     current_time: 'current_date_time',
-    constraints: 'constraints',
-    rules: 'constraints',
-    obligations: 'constraints',
-    limitations: 'constraints',
 });
 const CANONICAL_STATE_KEYS = new Set(Object.values(KEY_ALIASES));
 const SNAPSHOT_STATE_KEYS = Object.freeze([
     'current_date_time',
-    'location',
-    'characters',
-    'dynamics',
-    'constraints',
-    'hooks',
+    'bonds',
+    'chekhov',
+    'gm_notes',
     'inventory',
+    'location',
 ]);
 
+// Per-category soft char budgets. Internal-only — never surfaced to the
+// model. Bound each category's serialized length so one runaway category
+// cannot monopolize the global budget. current_date_time is exempt from
+// per-category trim (priorityRank -1 = carried verbatim). Sum ≈ 1060 chars
+// (≈265 tokens) leaves headroom under the 600-token hard cap for the [STATE]
+// wrapper and key labels.
+const STATE_CATEGORY_CHAR_BUDGET = Object.freeze({
+    current_date_time: 120,
+    bonds: 260,
+    chekhov: 260,
+    gm_notes: 200,
+    inventory: 160,
+    location: 60,
+});
 /**
  * Check whether text contains an explicit [STATE] section.
  * @param {string} text
@@ -237,7 +241,19 @@ function compactSnapshotState(state) {
         if (remaining <= 0) {
             break;
         }
-        const compactValue = compactStateValueToLength(value, remaining);
+
+        // Per-category trim: hold each category under its own soft char cap so
+        // one runaway category can't monopolize the global budget. Runs even
+        // when the global budget is under-run (intentional: category bounding
+        // is independent of global headroom). current_date_time is exempt
+        // (priorityRank -1 = carried verbatim).
+        let compactValue = value;
+        const categoryCap = STATE_CATEGORY_CHAR_BUDGET[key];
+        if (key !== 'current_date_time' && categoryCap && value.length > categoryCap) {
+            compactValue = compactStateValueToLength(value, categoryCap);
+        }
+        // Global budget trim (still respected for every category).
+        compactValue = compactStateValueToLength(compactValue, remaining);
         if (!compactValue) {
             continue;
         }

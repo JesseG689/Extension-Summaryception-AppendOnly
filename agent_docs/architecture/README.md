@@ -17,7 +17,7 @@ Directory view:
 3. `src/features/`: user workflows over core.
 4. `src/entry/`: DOM, events, commands, orchestration.
 
-`eslint.config.js` owns exact element matrix. Boundary rule currently reports `warn`; still treat violations as architecture failures. Point to config instead of copying its allow-list.
+`eslint.config.js` owns exact element matrix. Boundary rule currently reports `warn`; still treat violations as architecture failures. Point to config instead of copying its allow-list. When a lower layer needs a value owned by a higher layer (e.g. a `foundation/` module wanting `STATE_KEY_CEILING` from `core/token-budget/structural-constraints.js`), do NOT import it — thread the value in through the call site (e.g. `getActiveLineCap(settings, ceiling)` takes `ceiling` as an optional param; the core caller passes it). One-way flow is load-bearing, not advisory.
 
 ## SillyTavern facade
 

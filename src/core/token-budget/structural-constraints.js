@@ -1,4 +1,4 @@
-export const STATE_KEY_CEILING = 7;
+export const STATE_KEY_CEILING = 12;
 
 // Tokens the model averages per short, direct RP sentence. Used only to convert
 // a backend token bound into a countable sentence cap; never shown to the model.

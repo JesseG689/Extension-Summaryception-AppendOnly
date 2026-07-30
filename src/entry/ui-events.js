@@ -187,6 +187,11 @@ function bindToggleHandlers() {
             key: 'maskUserRoleAsAssistant',
             afterSave: (_settings, value) => syncRoleMaskModeControl(Boolean(value)),
         },
+        { selector: '#sc_state_cat_bonds', key: 'stateCatBonds' },
+        { selector: '#sc_state_cat_chekhov', key: 'stateCatChekhov' },
+        { selector: '#sc_state_cat_gm_notes', key: 'stateCatGmNotes' },
+        { selector: '#sc_state_cat_inventory', key: 'stateCatInventory' },
+        { selector: '#sc_state_cat_location', key: 'stateCatLocation' },
     ];
 
     for (const toggle of toggles) {

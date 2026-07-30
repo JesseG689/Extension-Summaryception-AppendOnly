@@ -15,6 +15,7 @@ import {
     countLayer0SourceBudget,
     getSourceTokenCount,
 } from './token-budget/source-token-counter.js';
+import { buildStateSchemaText } from '../foundation/state-categories.js';
 import { buildLayer0BudgetHint } from './token-budget/budget-hint-builder.js';
 
 /**
@@ -232,6 +233,7 @@ async function attachBudgetHint(metadata, settings) {
         sourceStateTokens: stateTokens,
         sourceStateKeyCount: stateKeyCount,
         targetTokens: getLayer0SummaryTokenTarget(settings),
+        settings,
     });
     return { ...metadata, budgetHint };
 }
@@ -308,7 +310,8 @@ function buildSummarizerPrompt({ template, storyTxt, contextStr, settings, metad
         .replace('{{player_name}}', getPlayerName())
         .replace('{{context_str}}', contextStr || '(none yet)')
         .replace('{{source_state}}', sourceState)
-        .replace('{{story_txt}}', storyTxt);
+        .replace('{{story_txt}}', storyTxt)
+        .replace('{{state_schema}}', buildStateSchemaText(settings));
     return appendLayer0PromptConstraints(prompt, settings, metadata);
 }
 

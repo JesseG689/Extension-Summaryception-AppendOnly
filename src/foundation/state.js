@@ -349,6 +349,17 @@ function buildEasyEffectiveSettings(settings) {
         easyConnectionProfileId: settings.easyConnectionProfileId,
         easyMergeConnectionSource: settings.easyMergeConnectionSource,
         easyMergeConnectionProfileId: settings.easyMergeConnectionProfileId,
+        // Modular STATE category toggles must take effect in Easy mode too:
+        // buildEasyEffectiveSettings starts from defaultSettings (all optionals
+        // false), so without these copies an Easy-mode user ticking a category
+        // checkbox would see no change. stateCatDateTime preserves the true
+        // default; the other five fall back to false.
+        stateCatDateTime: settings.stateCatDateTime ?? defaultSettings.stateCatDateTime,
+        stateCatBonds: settings.stateCatBonds ?? false,
+        stateCatChekhov: settings.stateCatChekhov ?? false,
+        stateCatGmNotes: settings.stateCatGmNotes ?? false,
+        stateCatInventory: settings.stateCatInventory ?? false,
+        stateCatLocation: settings.stateCatLocation ?? false,
     });
 
     const sourceCap = deriveEasySourceCap(settings.easySummarizerContextTokens);

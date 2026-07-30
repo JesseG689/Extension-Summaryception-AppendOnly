@@ -10,6 +10,7 @@ import {
     buildSizeConstraintsBlock,
     buildSizeTargetLine,
 } from '../src/core/token-budget/budget-hint-builder.js';
+import { getActiveLineCap } from '../src/foundation/state-categories.js';
 
 describe('computeSentenceCap', () => {
     const degenerateTargets = [undefined, 0, -5, NaN];
@@ -149,5 +150,28 @@ describe('buildLayer0BudgetHint', () => {
         // The [STATE] cap line equals computeStateLineCap(4) (cross-check via
         // the same exported function the builder uses — never a literal).
         expect(result).toContain(`at most ${computeStateLineCap(4)} lines`);
+    });
+
+    it('anchors the state line cap to the enabled modular categories when settings are supplied with no prior state', () => {
+        const settings = {
+            stateCatDateTime: true,
+            stateCatBonds: true,
+            stateCatChekhov: true,
+            stateCatGmNotes: true,
+            stateCatInventory: true,
+            stateCatLocation: true,
+        };
+        const result = buildLayer0BudgetHint({
+            sourceStateTokens: 0,
+            sourceStateKeyCount: 0,
+            targetTokens: 250,
+            settings,
+        });
+        // With all six categories enabled the raw sum is 36, clamped to the
+        // STATE_KEY_CEILING (12) — the same contract getActiveLineCap encodes.
+        expect(getActiveLineCap(settings, STATE_KEY_CEILING)).toBe(12);
+        expect(result).toContain('at most 12 lines');
+        // Must never leak the unclamped 36 figure.
+        expect(result).not.toContain('at most 36 lines');
     });
 });

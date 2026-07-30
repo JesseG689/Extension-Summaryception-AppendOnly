@@ -348,6 +348,71 @@ const HELP_ENTRIES = [
             risk: 'With it off, the model loses the compact rolling snapshot of current facts and has to re-derive them from narrative chronology, which can drop time, location, and counters the model is supposed to keep.',
         }),
     ],
+    [
+        'state_cat_bonds',
+        basicHelp({
+            selector: selectorFor('sc_state_cat_bonds'),
+            title: 'Bonds (Relationships RPG)',
+            short: 'Persistent relationship engine: BOND/Sparks/Grudge per character pair.',
+            controls: [controlFor('sc_state_cat_bonds')],
+            controlsText:
+                'Toggles the persistent relationship engine that tracks BOND, Sparks, and Grudge per character pair. Disable the matching FF5 <internal_bondtracker> block in your preset when on.',
+            when: "Replaces FF5's <internal_bondtracker>. Disable that block in your preset when on.",
+            risk: 'Disable in preset: the bond numbers, gates, and drift rules move here; keep the BOND→DnD DC-mod logic in your preset CoT.',
+        }),
+    ],
+    [
+        'state_cat_chekhov',
+        basicHelp({
+            selector: selectorFor('sc_state_cat_chekhov'),
+            title: 'Chekhov (Narrative Gun)',
+            short: 'Aging narrative-debt bullets that fire probabilistically.',
+            controls: [controlFor('sc_state_cat_chekhov')],
+            controlsText:
+                'Toggles the narrative-debt bullet register that ages and fires probabilistically. Keep the FIRE-decision d20 logic in your preset CoT; only the register lives here.',
+            when: "Replaces FF5's <internal_chekhovguntracker> storage. Disable that block in your preset when on.",
+            risk: 'Keep the FIRE-decision d20 logic in your preset CoT — only the bullet register lives here.',
+        }),
+    ],
+    [
+        'state_cat_gm_notes',
+        basicHelp({
+            selector: selectorFor('sc_state_cat_gm_notes'),
+            title: 'GM Notes',
+            short: 'Persistent GM scratchpad with [R]/[T]/[D] prefixed entries.',
+            controls: [controlFor('sc_state_cat_gm_notes')],
+            controlsText:
+                'Toggles the persistent GM scratchpad that holds [R]/[T]/[D] prefixed entries. Avoid duplicating content already tracked in bonds, chekhov, or inventory.',
+            when: "Replaces FF5's <internal_gmnotebook>. Disable that block in your preset when on.",
+            risk: 'Do not duplicate content that already lives in bonds/chekhov/inventory.',
+        }),
+    ],
+    [
+        'state_cat_inventory',
+        basicHelp({
+            selector: selectorFor('sc_state_cat_inventory'),
+            title: 'Inventory & Titles',
+            short: 'User-only items, titles/skills, and status conditions.',
+            controls: [controlFor('sc_state_cat_inventory')],
+            controlsText:
+                'Toggles user-only item tracking plus titles, skills, and status conditions. Consumable items live here; future-affecting one-shots belong in chekhov.',
+            when: "Replaces FF5's <internal_inv>. Disable that block in your preset when on.",
+            risk: 'Track user only, not NPCs. Consumable items go here; future-affecting one-shots go in chekhov.',
+        }),
+    ],
+    [
+        'state_cat_location',
+        basicHelp({
+            selector: selectorFor('sc_state_cat_location'),
+            title: 'Location',
+            short: 'Current scene location.',
+            controls: [controlFor('sc_state_cat_location')],
+            controlsText:
+                'Toggles tracking of the current scene location. Optional — only needed when your preset keys off proximity-based modifiers such as Chekhov location-match.',
+            when: 'Optional. Needed if your preset uses proximity-based modifiers (e.g. Chekhov location-match).',
+            risk: 'Low risk — dispensable if your preset does not key off scene location.',
+        }),
+    ],
     ...CONNECTION_HELP_ENTRIES,
     [
         'easy_memory_mode_standard',
