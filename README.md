@@ -125,6 +125,7 @@ If something looks off, use Clear or `/sc-clear`. That removes Summaryception's 
 
 Switch branches in SillyTavern if you prefer an older major version.
 
+- **v20:** Stop now pauses. Modular [STATE] experiment
 - **v19:** Changed prompts so less repair needed (second LLM pass).
 - **v18:** Improved UI + tooltip.
 - **v17:** Replaced ever-growing accumulated state with bounded rolling snapshots, shortened chronology anchors to spend fewer tokens on bookkeeping, and made compression repair section-aware. Failed output can now be repaired one bad section at a time instead of taking the whole summary back to the workshop. Layer 0 and promotion paths also gained stricter size checks and type guards.
