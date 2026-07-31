@@ -1,35 +1,26 @@
-# Architecture
+# Architecture & State Ownership
 
-## Runtime composition
+## Runtime Composition
+- Unbundled, browser-native extension loaded by SillyTavern (`manifest.json` -> `index.js`, `style.css`).
+- Renders `settings.html`, binds SillyTavern lifecycle events, and initializes extension features.
 
-`manifest.json` loads `index.js` and `style.css`. `index.js` renders `settings.html`, initializes feature/UI modules, binds SillyTavern events. Runtime stays browser-native: no build, bundler, server, or application database.
+## Dependency Policy
+Strict one-way hierarchy enforced (`eslint.config.js`):
+`foundation -> core -> features -> entry`
 
-## Dependency policy
+1. `src/foundation/`: Base constants, settings defaults, ST context facade, logger, retry primitives.
+2. `src/core/`: Summarization engines, prompt assembly, token planning, ghosting, connections.
+3. `src/features/`: Workflows over core (injection, maintenance, snippet management).
+4. `src/entry/`: DOM bindings, settings UI, commands, ST event listeners.
 
-One-way flow mandatory:
+*Rule*: Lower layers never import higher layers. When a lower layer needs a higher-layer value (e.g. `STATE_KEY_CEILING`), pass it as an optional parameter at the call site.
 
-`constants/context/logger/retry/state <- core <- features <- entry`
+## SillyTavern Facade
+- All runtime calls to SillyTavern globals pass through `src/foundation/context.js`.
+- Missing optional ST APIs return `null`, `false`, or safe fallbacks. Update `tests/setup.js` whenever facade exports change.
 
-Directory view:
-
-1. `src/foundation/`: lowest layer.
-2. `src/core/`: engine and runtime mechanics.
-3. `src/features/`: user workflows over core.
-4. `src/entry/`: DOM, events, commands, orchestration.
-
-`eslint.config.js` owns exact element matrix. Boundary rule currently reports `warn`; still treat violations as architecture failures. Point to config instead of copying its allow-list. When a lower layer needs a value owned by a higher layer (e.g. a `foundation/` module wanting `STATE_KEY_CEILING` from `core/token-budget/structural-constraints.js`), do NOT import it — thread the value in through the call site (e.g. `getActiveLineCap(settings, ceiling)` takes `ceiling` as an optional param; the core caller passes it). One-way flow is load-bearing, not advisory.
-
-## SillyTavern facade
-
-- Runtime code accesses `SillyTavern` only through `src/foundation/context.js`.
-- Add a facade wrapper when new runtime API access is needed; update global test mock in `tests/setup.js` in same change.
-- Optional APIs return `null`, `false`, or another safe fallback. Required APIs may throw clear errors when runtime contract is absent.
-- Tests may install `globalThis.SillyTavern` stubs through shared helpers.
-
-## State ownership
-
-- Per-chat store: `chatMetadata[MODULE_NAME]`, accessed through `getChatStore()`.
-- Cross-chat settings: `extensionSettings[MODULE_NAME]`, accessed through `getSettings()`.
-- Runtime behavior: `getEffectiveSettings()` so Off/Easy/Advanced semantics apply.
-- Raw settings: persistence, migration, and UI form editing only.
-- `saveChatStore()` persists normalized metadata. Layer/snippet mutations also require `bumpSummaryStoreMutationEpoch()`.
+## State Ownership
+- **Per-Chat Metadata**: `chatMetadata[MODULE_NAME]`, accessed via `getChatStore()`.
+- **Global Settings**: `extensionSettings[MODULE_NAME]`, accessed via `getSettings()`.
+- **Effective Settings**: `getEffectiveSettings()` applies Easy, Advanced, or Off operating modes.
+- **Mutations**: Save state via `saveChatStore()`. Any snippet/layer edit must call `bumpSummaryStoreMutationEpoch(store)`.

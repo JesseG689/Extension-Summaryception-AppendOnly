@@ -1,7 +1,10 @@
-# Source router
+# Source Router
 
-- Foundation or cross-layer changes: read [architecture](../agent_docs/architecture/README.md).
-- Summarization, state, connections, token planning, or ghosting: read [engine](../agent_docs/engine/README.md).
-- Features, entry, `settings.html`, or `style.css`: read [UI and workflows](../agent_docs/ui/README.md).
-- Lower layers never import higher layers. Only `foundation/context.js` accesses runtime `SillyTavern` global.
-- Summary-layer or snippet mutations always bump mutation epoch.
+- **Architecture & Layering**: `agent_docs/architecture/README.md`
+- **Engine, Prompts, Connections & State**: `agent_docs/engine/README.md`
+- **UI, DOM & Workflows**: `agent_docs/ui/README.md`
+
+## Rules
+- Enforce one-way imports (`foundation -> core -> features -> entry`). Pass parameters at call sites instead of importing upward.
+- Runtime `SillyTavern` global is accessed ONLY via `src/foundation/context.js`.
+- Bump mutation epoch (`bumpSummaryStoreMutationEpoch`) on any snippet or layer edit.

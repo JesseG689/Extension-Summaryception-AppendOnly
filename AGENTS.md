@@ -1,38 +1,20 @@
 # Summaryception
 
-## Project
+Browser-only SillyTavern extension for recursive layered summarization. Uses native `/hide` & `/unhide` commands to exclude summarized messages from LLM context while keeping them visible in the chat UI.
 
-Browser-only SillyTavern extension. No server, database, build step, bundler. Recent chat stays verbatim; older chat becomes recursive summary layers. Summarized messages stay visible in UI, hidden from model context.
+## Work Rules
+- **Tooling**: Husky manages ESLint, Prettier, repomix outputs, and post-commit version bumps. Never run formatting manually.
+- **Git**: Preserve unrelated changes. Do not commit, push, or sync without explicit authorization.
 
-## Work
+## Critical Boundaries
+- **One-Way Imports**: `foundation -> core -> features -> entry`. Lower layers NEVER import higher layers.
+- **SillyTavern Global**: Access runtime `SillyTavern` strictly via `src/foundation/context.js`.
+- **Settings**: Use `getEffectiveSettings()` for runtime behavior; use raw `getSettings()` for persistence and UI forms.
+- **Mutation Epoch**: Any summary-layer or snippet mutation MUST call `bumpSummaryStoreMutationEpoch(store)`.
 
-- Shell: Windows PowerShell 7+. Separate commands with `;`. No `&&`, `||`, Bash heredocs, pipelines, `tail`. Use `Get-Content -Tail`. Pass multiline text through variables or single-line flags.
-- Run `npm test` after behavior changes.
-- Husky owns ESLint and Prettier. Never run lint or format manually.
-- `post-commit` hook auto-creates a follow-up `chore: bump version` commit (`scripts/bump-version-after-commit.js`) and regenerates repomix output. Expect an extra commit after each `git commit`; not stray work.
-- Keep runtime code browser-native, unbundled.
-- Preserve unrelated user changes. No commit, push, or sync without explicit user authorization.
-
-## Critical boundaries
-
-- Entry may depend on features, core, foundation; lower layers never depend upward. See [architecture](agent_docs/architecture/README.md).
-- Only `src/foundation/context.js` accesses runtime `SillyTavern` global. Add facade wrappers for new API access.
-- Runtime behavior uses `getEffectiveSettings()`; raw `getSettings()` for persistence and UI forms.
-- Any summary-layer or snippet mutation must call `bumpSummaryStoreMutationEpoch()`.
-
-## Repository map
-
-- `index.js`: extension composition, SillyTavern event registration.
-- `src/foundation/`: constants, runtime facade, settings/store, logging, retry primitives.
-- `src/core/`: summarization, promotion, connections, token planning, ghosting.
-- `src/features/`: injection, maintenance, persistence, memory workflows.
-- `src/entry/`: UI binding, events, dialogs, commands.
-- `settings.html`, `style.css`: SillyTavern-rendered UI assets. Read [UI rules](agent_docs/ui/README.md) before editing.
-- `tests/`: Vitest suite. Read `tests/AGENTS.md` before test work.
-- Source work also follows `src/AGENTS.md`.
-
-## Beads
-
-- Use Beads for durable tasks and shared memory; never create markdown TODO or MEMORY files.
-- Run `bd prime` when workflow context missing. Full guidance: `.agents/skills/beads/SKILL.md`.
-- Default profile conservative: no commit, push, or `bd dolt push` without current authorization.
+## Documentation Map
+- **Source Architecture**: `agent_docs/architecture/README.md`
+- **Engine, Prompts & Connections**: `agent_docs/engine/README.md`
+- **UI & Workflows**: `agent_docs/ui/README.md`
+- **Testing Guidelines**: `agent_docs/testing/README.md`
+- **Sub-Routers**: `src/AGENTS.md`, `tests/AGENTS.md`
