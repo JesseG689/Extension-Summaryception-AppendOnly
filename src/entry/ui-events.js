@@ -138,6 +138,11 @@ function bindModeHandlers() {
 
         s.uiMode = mode;
         s.enabled = mode !== UI_MODES.OFF;
+        // Remember the complexity panel so it stays visible when the extension
+        // is turned off; selecting Easy/Advanced updates it, Off leaves it.
+        if (mode === UI_MODES.EASY || mode === UI_MODES.ADVANCED) {
+            s.configMode = mode;
+        }
         saveSettings();
         updateInjection();
         updateUI();
@@ -156,7 +161,8 @@ function bindToggleHandlers() {
     $(document).on('change', '#sc_enabled', function () {
         const s = getSettings();
         s.enabled = $(this).prop('checked');
-        s.uiMode = s.enabled ? UI_MODES.EASY : UI_MODES.OFF;
+        // Preserve the chosen complexity panel; only flip on/off, not Easy↔Advanced.
+        s.uiMode = s.enabled ? s.configMode || UI_MODES.EASY : UI_MODES.OFF;
         saveSettings();
         updateInjection();
         updateUI();
@@ -430,6 +436,53 @@ function bindTextareaHandlers() {
 function cancelManualRun(controller) {
     controller.abort();
     abortSummarization();
+}
+
+/**
+ * Stop the in-flight summarizer and latch autoPaused so automatic cycles do
+ * not resume on their own while the user is still changing settings.
+ * @returns {void}
+ */
+function onStopSummarize() {
+    if (!getIsSummarizing() && !hasActiveAbortController()) {
+        if (getSettings().autoPaused) {
+            toastr.info('Already paused.', 'Summaryception');
+        } else {
+            toastr.info('Nothing is running.', 'Summaryception');
+        }
+        return;
+    }
+    abortSummarization();
+    const s = getSettings();
+    s.autoPaused = true;
+    saveSettings();
+    toastr.warning(
+        'Summarization paused. Progress saved. Press Resume to continue.',
+        'Summaryception',
+        { timeOut: 5000 },
+    );
+    $(this).prop('disabled', true);
+    setTimeout(() => $(this).prop('disabled', false), 2000);
+    updateUI();
+}
+
+/**
+ * Clear the autoPaused latch and kick a single automatic cycle.
+ * @returns {void}
+ */
+function onResumeSummarize() {
+    const s = getSettings();
+    if (!s.autoPaused) {
+        toastr.info('Not paused.', 'Summaryception');
+        return;
+    }
+    s.autoPaused = false;
+    saveSettings();
+    toastr.success('Resumed. Automatic summarization is active again.', 'Summaryception', {
+        timeOut: 3000,
+    });
+    updateUI();
+    void maybeSummarizeTurns().catch((e) => warn('Resume-triggered summary failed:', e));
 }
 
 /**
@@ -751,19 +804,8 @@ function bindClickHandlers() {
     $(document).on('click', '#sc_force_summarize, #sc_easy_force_summarize', onForceSummarize);
     $(document).on('click', '#sc_slop_breaker, #sc_easy_slop_breaker', onSlopBreaker);
 
-    $(document).on('click', '#sc_stop_summarize, #sc_easy_stop_summarize', function () {
-        if (!getIsSummarizing() && !hasActiveAbortController()) {
-            toastr.info('Nothing is running.', 'Summaryception');
-            return;
-        }
-        abortSummarization();
-        toastr.warning('Summarization stopped. Progress has been saved.', 'Summaryception', {
-            timeOut: 4000,
-        });
-        $(this).prop('disabled', true);
-        setTimeout(() => $(this).prop('disabled', false), 2000);
-        updateUI();
-    });
+    $(document).on('click', '#sc_stop_summarize, #sc_easy_stop_summarize', onStopSummarize);
+    $(document).on('click', '#sc_resume_summarize, #sc_easy_resume_summarize', onResumeSummarize);
 
     $(document).on('click', '#sc_refresh_preview', () => updateUI());
     $(document).on('click', '#sc_estimate_main_context', () => refreshMainLLMContextEstimate());

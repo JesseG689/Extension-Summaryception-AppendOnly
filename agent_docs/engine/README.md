@@ -30,3 +30,8 @@
 ## Injection & Ghosting
 - **Injection**: Standard placement uses `setExtensionPrompt()`. Macro Only mode uses `{{summaryception_memory}}`. `injectCurrentState` controls whether `[CURRENT STATE]` is prepended to prompt memory.
 - **Ghosting**: Hides native chat via `/hide`. Owned turns marked with `extra.sc_ghosted` and tracked in `store.ghostedIndices`. Clearing uses `/unhide` strictly on owned messages.
+
+## Auto-Cycle Gating
+- **Single gate**: `runElasticAutoCycle` (`summarizer-engine.js`) is the only entry point for automatic work. Every auto-trigger — `maybeSummarizeTurns`, `requeue` callbacks, generation-ended, the `#sc_enabled`/mode toggles, and the post-batch continuation — routes through `summarizerQueue.request() -> drainOneCycle -> runElasticAutoCycle`. Add run-control guards here, not in callers.
+- **`autoPaused` latch**: Stop latches the persistent `autoPaused` setting; the gate returns `'idle'` (queue settles, no busy loop) so automatic work will not resume on its own. Resume clears the latch and kicks one cycle.
+- **Manual bypass**: `runElasticManual` (Force Summarize / Slop Breaker) intentionally does NOT read `autoPaused` or `enabled` at the engine level — one-shot orders work while paused. The UI handlers (`onForceSummarize`/`onSlopBreaker`) still gate on `enabled` with an "Enable Summaryception first" toast.

@@ -8,7 +8,7 @@
 - Sliders persist on `input`; text/numeric chips persist on `change` or blur.
 
 ## Navigation & Appearance
-- Mode selection (Off / Easy / Advanced) controls visible panels and runtime defaults.
+- Mode selection (Off / Easy / Advanced) sets `uiMode`, which gates runtime enablement. `configMode` (Easy/Advanced) is decoupled so the chosen complexity panel stays visible and editable even when the extension is Off. `syncEnabledContent` renders the off banner alongside the `configMode` panel, never instead of it.
 - Default settings tab on startup is always `Status`.
 - Inherit SillyTavern CSS variables; keep styling restrained and responsive (~520px collapse threshold).
 

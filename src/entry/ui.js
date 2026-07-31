@@ -120,9 +120,19 @@ function syncSettingsInputs(s, effectiveSettings) {
 }
 
 function syncEnabledContent(s) {
-    $('#sc_off_content').toggle(s.uiMode === UI_MODES.OFF);
-    $('#sc_easy_content').toggle(s.uiMode === UI_MODES.EASY);
-    $('#sc_enabled_content').toggle(s.uiMode === UI_MODES.ADVANCED);
+    // Show the off banner when the extension is off, but keep the complexity
+    // panel (chosen via configMode) visible below it so configuration stays
+    // editable while off — turning off no longer hides the settings UI.
+    const off = s.uiMode === UI_MODES.OFF;
+    const complexity = off ? s.configMode || UI_MODES.EASY : s.uiMode;
+    $('#sc_off_content').toggle(off);
+    $('#sc_easy_content').toggle(complexity === UI_MODES.EASY);
+    $('#sc_enabled_content').toggle(complexity === UI_MODES.ADVANCED);
+    // Stop latches autoPaused; show Resume while paused so users can continue
+    // without re-triggering automatic work while they finish changing settings.
+    const paused = Boolean(s.autoPaused);
+    $('#sc_stop_summarize, #sc_easy_stop_summarize').toggle(s.enabled && !paused);
+    $('#sc_resume_summarize, #sc_easy_resume_summarize').toggle(s.enabled && paused);
 }
 
 function syncEasyPayloadSchematic(s = getEffectiveSettings()) {

@@ -56,7 +56,7 @@ export async function runElasticAutoCycle(queue, { refreshUi } = {}) {
     }
 
     const s = getEffectiveSettings();
-    if (!s.enabled) {
+    if (!s.enabled || s.autoPaused) {
         queue.setPhase('paused');
         return 'idle';
     }

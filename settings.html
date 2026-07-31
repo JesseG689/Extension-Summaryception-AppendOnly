@@ -44,7 +44,7 @@
                         Summaryception Off
                     </h4>
                 </div>
-                <small class="sc-help-text">Memory injection and automatic summarizing are disabled. Existing summaries remain stored.</small>
+                <small class="sc-help-text">Memory injection and automatic summarizing are disabled. Existing summaries remain stored. Settings below are still editable and apply when you turn the extension back on.</small>
             </div>
             <div id="sc_easy_content" style="display: none;">
                 <div class="sc-console-header" aria-label="Summaryception easy status">
@@ -217,6 +217,10 @@
                             <i class="fa-solid fa-stop"></i>
                             <span>Stop</span>
                         </button>
+                        <button id="sc_easy_resume_summarize" class="menu_button" style="display: none;" title="Resume automatic summarization after Stop.">
+                            <i class="fa-solid fa-play"></i>
+                            <span>Resume</span>
+                        </button>
                     </div>
                 </section>
             </div>
@@ -305,6 +309,10 @@
                         <button id="sc_stop_summarize" class="menu_button menu_button_danger">
                             <i class="fa-solid fa-stop"></i>
                             <span>Stop</span>
+                        </button>
+                        <button id="sc_resume_summarize" class="menu_button" style="display: none;" title="Resume automatic summarization after Stop.">
+                            <i class="fa-solid fa-play"></i>
+                            <span>Resume</span>
                         </button>
                     </div>
                     <div id="sc_manual_cache_warning" class="sc-note" style="display: none;">

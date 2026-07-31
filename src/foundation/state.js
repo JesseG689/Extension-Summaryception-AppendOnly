@@ -331,6 +331,18 @@ function normalizeModeSettings(settings, hadMode) {
         settings.uiMode = settings.enabled === false ? UI_MODES.OFF : defaultSettings.uiMode;
     }
 
+    // configMode tracks the Easy/Advanced complexity panel independently of
+    // on/off, so config stays visible (and editable) even when the extension
+    // is off. Backfill from the current/active mode when it's a complexity
+    // mode, else from the default.
+    if (
+        !Object.hasOwn(settings, 'configMode') ||
+        !isSettingValue([UI_MODES.EASY, UI_MODES.ADVANCED], settings.configMode)
+    ) {
+        settings.configMode =
+            settings.uiMode === UI_MODES.ADVANCED ? UI_MODES.ADVANCED : defaultSettings.configMode;
+    }
+
     const nextEnabled = settings.uiMode !== UI_MODES.OFF;
     const changed = !hadMode || settings.enabled !== nextEnabled;
     settings.enabled = nextEnabled;

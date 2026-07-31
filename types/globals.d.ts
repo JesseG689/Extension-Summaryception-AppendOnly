@@ -51,6 +51,8 @@ interface SummaryceptionStore {
 
 interface ExtensionSettings {
     enabled: boolean;
+    autoPaused: boolean;
+    configMode: string;
     uiMode: string;
     easySummarizerContextTokens: number;
     easyMemoryTokenBudget: number;

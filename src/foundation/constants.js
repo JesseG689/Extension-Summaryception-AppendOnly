@@ -100,6 +100,11 @@ export const REQUEST_TIMEOUT = Object.freeze({
 
 export const defaultSettings = Object.freeze({
     enabled: true,
+    // Latched by Stop; blocks only automatic cycles. Manual runs ignore it.
+    autoPaused: false,
+    // Decoupled from uiMode: which complexity panel (Easy/Advanced) to render,
+    // shown even when the extension is off so config stays editable.
+    configMode: UI_MODES.EASY,
     uiMode: UI_MODES.EASY,
     easySummarizerContextTokens: 16000,
     easyMemoryTokenBudget: 10000,
