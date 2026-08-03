@@ -1,47 +1,67 @@
 # Summaryception UI visual language
 
-Use for Summaryception restyling or sibling SillyTavern plugins. Copy interaction grammar and density, not product name, exact layout, or every color. References: `settings.html`, `style.css`, `src/entry/ui-tabs.js`.
+Reference for restyling Summaryception or building a sibling SillyTavern plugin. Copy the interaction grammar and density. Do not copy the product name, exact layout, labels, or accent color.
 
 ## Goals
 
-- First view shows enabled mode, current activity, attention needs.
-- Compact, not cramped: routine tabs near one settings-panel viewport.
-- Calm technical console: cards, rails, meters, terse labels; no raw diagnostic wall.
-- Inherit SillyTavern theme; add restrained product accent and domain visualization.
+- The first view shows enabled mode, current activity, and anything needing attention.
+- Compact, not cramped. Routine tabs fit near one settings-panel viewport.
+- Read as a calm technical console: cards, rails, meters, terse labels. Never a wall of diagnostics.
+- Inherit the host theme. Add one restrained product accent.
 - Navigation stays usable while content scrolls.
 
-## Information architecture
+## Structure
 
-Order:
+Order: host drawer header, compact mode control, one-line live status strip, sticky tab strip, active panel.
 
-1. SillyTavern drawer header with icon, name, collapse control.
-2. Compact global mode/enable control when meaningful.
-3. One-line live status strip.
-4. Sticky primary tab strip.
-5. Active tab panel with compact sections/cards.
-
-Use three to five tabs progressing from routine to specialist: Status, stored Data/Memory, Settings, Prompts/Templates when relevant, Tools/Diagnostics. Rename or omit by domain. Never place every control on one long page.
+Use three to five tabs, ordered routine to specialist. Status, then stored data, then settings, then prompts, then diagnostics. Rename or omit by domain. Never put every control on one long page.
 
 ## Navigation
 
-- Status opens after every reload, initialization, or new SillyTavern session. Never restore previous tab at startup.
-- Tab click changes active panel only; hide inactive panels.
-- Active tab uses subtle filled surface/border, not loud solid fill.
-- Tab strip uses `position: sticky; top: 0`, solid/mostly opaque theme-derived background, z-index above content.
-- Header, modes, and status may scroll away; tabs stay docked. Scrolling labels must not show through sticky background.
-- Preserve `tablist`, `tab`, `tabpanel`, `aria-selected`, visible keyboard focus, and useful text labels.
+- Status opens on every reload and new session. Never restore the previous tab.
+- A tab click changes the panel only. Inactive panels hide.
+- The active tab uses a subtle filled surface and border, not a loud solid fill.
+- The tab strip sticks to the top with a solid theme-derived background above content in stacking order. A transparent sticky bar lets scrolling labels show through and is wrong.
+- Header, mode cards, and status may scroll away. Tabs stay docked.
+- Keep list and tab roles, selected state, visible keyboard focus, and real text labels.
 
-## Density and hierarchy
+## Density
 
-- Status normally shows overview, primary visualization, and operations together or with little scroll.
-- Large specialist tabs use compact sections and collapsible expert groups.
-- Use responsive two-column grids; one column on narrow screens.
-- Avoid large headings, hero space, wide prose, excess padding. Target roughly 5-8 px primary spacing.
-- Put one short muted explanation under label; move long education into help tooltip.
-- Put compact editable value chip beside slider.
-- Surfaces stay shallow: drawer background, faint bordered card, stronger nested/selected surface, theme field, opaque sticky navigation. Avoid heavy shadows.
+- Status shows overview, primary visualization, and operations together or with little scroll.
+- Large specialist tabs use compact sections with collapsible expert groups.
+- Use responsive two-column grids that drop to one column when narrow.
+- Target roughly 5 to 8 pixels of primary spacing. Avoid large headings, hero space, wide prose, and excess padding.
+- Give a label one short muted explanation. Move longer education into a help tooltip.
+- Put a compact editable value chip beside every slider.
+- Keep surfaces shallow: drawer background, faint bordered card, stronger nested surface, theme field, opaque sticky navigation. Avoid heavy shadows.
 
-Reference structure:
+## Type and components
+
+- Inherit body font and color. The plugin root sits near 0.9em.
+- Small bold section titles pair with an accent icon.
+- Labels carry the meaning; icons reinforce. An icon-only action still needs a tooltip and accessible label.
+- Secondary text stays smaller and muted. Numeric and status values take stronger contrast.
+- Prefer plain operational tab names.
+
+Signature patterns:
+
+- Mode cards: semantic icon, short title and description, native radio, accent border when selected. A row on desktop, stacked when narrow.
+- Status strip: terse live facts separated by muted dots, quiet styling, wrapping allowed.
+- Metrics: small two or three column cards showing only important values.
+- Process rail: linked blocks for a pipeline or allocation, wrapping as coherent rows.
+- Capacity bar: total beside the title, major label inside when space allows, compact legend, gray unused space. Never rely on color alone.
+- Operations: common actions in a responsive row at the bottom of Status. Danger styling only for destructive or interrupting actions.
+
+## Responsive
+
+- Near 520 pixels, collapse grids and mode cards. Tabs may stack icon over label.
+- Buttons may wrap or share width. Keep tab targets near 30 pixels.
+- Never introduce horizontal page scroll. Rails, legends, and long values wrap or truncate safely.
+- Test sticky tabs inside the real host drawer scroll container, not in isolation.
+
+## Theme variables
+
+Derive from host theme variables with a local fallback, so the plugin follows user themes:
 
 ```css
 --plugin-border: var(--SmartThemeBorderColor, rgba(255, 255, 255, 0.16));
@@ -54,40 +74,12 @@ Reference structure:
 --plugin-radius: 8px;
 ```
 
-Sibling plugin may change accent/icon motif. Accent decorates icons, focus, active borders, small data marks; never flood panels.
-
-## Type and components
-
-- Inherit body font/color; plugin root near `0.9em`.
-- Small bold section titles pair with accent Font Awesome icon.
-- Labels carry meaning; icons reinforce. Familiar icon-only actions still need tooltip/ARIA label.
-- Secondary text stays smaller, muted, tight; numeric/status values use stronger contrast.
-- Prefer plain operational names: Status, Memory, Settings, Prompts, Tools, Operations.
-
-Signature patterns:
-
-- Mode cards: semantic icon, short title/description, native radio, selected accent border/surface; row on desktop, stack narrow.
-- Status strip: terse live facts separated by muted dots, quiet styling, wrapping allowed.
-- Metrics: two/three-column small cards; show only important values.
-- Process rail: linked blocks for pipeline/allocation; wrap as coherent rows.
-- Capacity bar: total beside title, major label inside when space allows, compact text/value legend, gray unused space. Never rely on color alone.
-- Operations: common actions at Status bottom in responsive row; danger only for destructive/interrupting actions.
-- Settings: bordered groups, responsive grids, collapsed expert tuning, slider/value pairs, inline help, adjacent related selects.
-
-## Responsive and identity
-
-- Around 520 px, collapse grids and mode cards; tabs may stack icon over label.
-- Buttons may wrap/share width. Keep roughly 30 px tab targets.
-- Never add horizontal page scroll. Rails, legends, long values wrap or truncate safely.
-- Test sticky tabs inside actual SillyTavern drawer scroll container.
-- Family constants: compact bordered surfaces, sticky Status-first tabs, accent icons, muted help/strong values, grids/cards/meters, bottom operations, theme variables, accessible responsive states.
-- Plugin identity may vary icon/name, restrained accent/palette, tab naming/order, domain visualization, wording, modes. Sibling, not clone.
+The accent decorates icons, focus rings, active borders, and small data marks. Never flood panels with it.
 
 ## Reject
 
-- Restored last tab on reload; scrolling-away tabs; transparent sticky bar.
-- One huge settings page; oversized padding; permanent help paragraphs.
-- Hard-coded page theme; accent-filled panels; unexplained icon-only navigation.
-- Hidden essential status/actions inside diagnostics.
-- Horizontal scrolling, clipped names, missing focus/disabled/warning/danger states.
-- Copying Summaryception-specific labels or blue accent without domain reason.
+- A restored last tab, scrolling-away tabs, or a transparent sticky bar.
+- One huge settings page, oversized padding, or permanent help paragraphs.
+- A hard-coded page theme, accent-filled panels, or unexplained icon-only navigation.
+- Essential status or actions hidden inside diagnostics.
+- Horizontal scrolling, clipped names, or missing focus, disabled, warning, and danger states.
