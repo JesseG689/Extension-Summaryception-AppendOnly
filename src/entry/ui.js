@@ -285,13 +285,10 @@ function syncConnectionInputs(s) {
     $('#sc_easy_merge_connection_profile').val(s.easyMergeConnectionProfileId || '');
     $('#summaryception_connection_source').val(s.connectionSource || 'default');
     $('#summaryception_connection_profile').val(s.connectionProfileId);
-    $('#summaryception_ollama_model').val(s.ollamaModel);
     $('#summaryception_merge_connection_source').val(s.mergeConnectionSource || 'inherit');
     $('#summaryception_merge_connection_profile').val(s.mergeConnectionProfileId);
-    $('#summaryception_merge_ollama_model').val(s.mergeOllamaModel);
     $('#summaryception_fallback_connection_source').val(s.fallbackConnectionSource || 'disabled');
     $('#summaryception_fallback_connection_profile').val(s.fallbackConnectionProfileId);
-    $('#summaryception_fallback_ollama_model').val(s.fallbackOllamaModel);
 }
 
 function syncEasyConnectionPanels(s) {

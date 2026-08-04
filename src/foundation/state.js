@@ -430,16 +430,9 @@ function copyFallbackRouteSettings(effective, settings) {
     if (settings.fallbackConnectionSource === 'disabled') {
         return;
     }
-    effective.ollamaUrl = settings.ollamaUrl;
-    effective.ollamaModelsCache = settings.ollamaModelsCache;
-    effective.openaiUrl = settings.openaiUrl;
-    effective.openaiKey = settings.openaiKey;
     effective.fallbackConnectionSource = settings.fallbackConnectionSource;
     effective.fallbackSummarizerResponseLength = settings.fallbackSummarizerResponseLength;
     effective.fallbackConnectionProfileId = settings.fallbackConnectionProfileId;
-    effective.fallbackOllamaModel = settings.fallbackOllamaModel;
-    effective.fallbackOpenaiModel = settings.fallbackOpenaiModel;
-    effective.fallbackOpenaiMaxTokens = settings.fallbackOpenaiMaxTokens;
 }
 
 function normalizePromptSettings(settings) {

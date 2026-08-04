@@ -177,34 +177,21 @@ export const defaultSettings = Object.freeze({
     promptOutputLogMode: false,
 
     // ─── Connection Settings ─────────────────────────────────────
-    connectionSource: 'default', // 'default' | 'profile' | 'ollama' | 'openai'
+    connectionSource: 'default', // 'default' | 'profile'
     summarizerResponseLength: 0, // 0 = provider/profile default
     connectionProfileId: '', // ID of selected ST Connection Profile
-    ollamaUrl: 'http://localhost:11434',
-    ollamaModel: '',
-    ollamaModelsCache: [], // Cached model list from Ollama
-    openaiUrl: '',
-    openaiKey: '',
-    openaiModel: '',
-    openaiMaxTokens: 0, // 0 = provider default
     requestTimeoutSeconds: REQUEST_TIMEOUT.DEFAULT_SECONDS, // Layer 0 / regenerate, in seconds
 
     // Optional Layer 1+ promotion merge connection. 'inherit' uses the Layer 0 connection above.
-    mergeConnectionSource: 'inherit', // 'inherit' | 'default' | 'profile' | 'ollama' | 'openai'
+    mergeConnectionSource: 'inherit', // 'inherit' | 'default' | 'profile'
     mergeSummarizerResponseLength: 0,
     mergeConnectionProfileId: '',
-    mergeOllamaModel: '',
-    mergeOpenaiModel: '',
-    mergeOpenaiMaxTokens: 0,
     mergeRequestTimeoutSeconds: REQUEST_TIMEOUT.MERGE_DEFAULT_SECONDS, // L1+ promotions, in seconds
 
     // Optional fallback connection used after the primary route exhausts retryable failures.
-    fallbackConnectionSource: 'disabled', // 'disabled' | 'default' | 'profile' | 'ollama' | 'openai'
+    fallbackConnectionSource: 'disabled', // 'disabled' | 'default' | 'profile'
     fallbackSummarizerResponseLength: 0,
     fallbackConnectionProfileId: '',
-    fallbackOllamaModel: '',
-    fallbackOpenaiModel: '',
-    fallbackOpenaiMaxTokens: 0,
     fallbackRequestTimeoutSeconds: REQUEST_TIMEOUT.DEFAULT_SECONDS, // fallback route, in seconds
 });
 

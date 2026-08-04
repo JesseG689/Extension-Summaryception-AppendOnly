@@ -1,11 +1,7 @@
 import { getRequestHeaders } from '../foundation/context.js';
-import { error as logError, warn } from '../foundation/logger.js';
-import {
-    fetchOllamaModels,
-    testSummarizerConnection,
-    populateProfileDropdown,
-} from '../core/connectionutil.js';
-import { getSettings, saveSettings } from '../foundation/state.js';
+import { warn } from '../foundation/logger.js';
+import { populateProfileDropdown } from '../core/connectionutil.js';
+import { getSettings } from '../foundation/state.js';
 import { bindDataSettingElements, bindElementSetting, readString } from './ui-bind.js';
 
 // Connection settings UI - jQuery-based DOM access consistent with the rest of the UI layer.
@@ -55,12 +51,6 @@ const CONNECTION_ROUTE_BINDINGS = Object.freeze([
     },
 ]);
 
-const OLLAMA_MODEL_DROPDOWNS = Object.freeze([
-    { elementId: 'summaryception_ollama_model', key: 'ollamaModel' },
-    { elementId: 'summaryception_merge_ollama_model', key: 'mergeOllamaModel' },
-    { elementId: 'summaryception_fallback_ollama_model', key: 'fallbackOllamaModel' },
-]);
-
 /**
  * Initialize connection settings panel: bind inputs/selects and set initial visibility.
  * @returns {void}
@@ -70,11 +60,6 @@ export function initConnectionUI() {
 
     bindConnectionRoutes(settings);
     bindConnectionInputs();
-    bindOllamaModelDropdowns(settings);
-    bindConnectionButton('summaryception_ollama_refresh', refreshOllamaModels);
-    bindConnectionButton('summaryception_openai_test', testOpenAIConnectionHandler);
-    bindConnectionButton('summaryception_merge_ollama_refresh', refreshOllamaModels);
-    bindConnectionButton('summaryception_fallback_ollama_refresh', refreshOllamaModels);
 
     updateEasyConnectionSubPanels(settings.easyConnectionSource || 'default');
     updateEasyMergeConnectionSubPanels(settings.easyMergeConnectionSource || 'inherit');
@@ -151,49 +136,8 @@ function syncMatchingConnectionInputs(_settings, value, $source) {
     });
 }
 
-function bindOllamaModelDropdowns(settings) {
-    for (const binding of OLLAMA_MODEL_DROPDOWNS) {
-        bindOllamaModelDropdown(settings, binding);
-    }
-}
-
 /**
- * Populate the Ollama model dropdown and bind its change handler.
- * @param {ReturnType<typeof getSettings>} settings
- * @param {{ elementId: string, key: string }} binding
- * @returns {void}
- */
-function bindOllamaModelDropdown(settings, { elementId, key }) {
-    const $ollamaModel = $('#' + elementId);
-    if (!$ollamaModel.length) {
-        return;
-    }
-    populateOllamaModelDropdown($ollamaModel, settings.ollamaModelsCache || [], settings[key]);
-    bindElementSetting($ollamaModel, {
-        eventName: 'change',
-        key,
-        read: readString,
-    });
-}
-
-/**
- * Bind a button click to an async handler.
- * @param {string} elementId
- * @param {() => Promise<void>} handler
- * @returns {void}
- */
-function bindConnectionButton(elementId, handler) {
-    const $el = $('#' + elementId);
-    if (!$el.length) {
-        return;
-    }
-    $el.on('click', async () => {
-        await handler();
-    });
-}
-
-/**
- * Show or hide connection sub-panels (profile/ollama/openai) based on source.
+ * Show or hide connection sub-panels based on source.
  * @param {string} source
  * @returns {void}
  */
@@ -242,10 +186,7 @@ export function updateFallbackConnectionSubPanels(source) {
  */
 function toggleRouteSubPanels(prefix, source, { toggleResponseLength = false } = {}) {
     const $profile = $(`#summaryception${prefix}_profile_settings`);
-    const $ollama = $(`#summaryception${prefix}_ollama_settings`);
-    const $openai = $(`#summaryception${prefix}_openai_settings`);
-
-    $profile.add($ollama).add($openai).hide();
+    $profile.hide();
     if (toggleResponseLength) {
         $(`#summaryception${prefix}_response_length_row`).toggle(
             source === 'default' || source === 'profile',
@@ -254,136 +195,6 @@ function toggleRouteSubPanels(prefix, source, { toggleResponseLength = false } =
 
     if (source === 'profile') {
         $profile.show();
-    } else if (source === 'ollama') {
-        $ollama.show();
-    } else if (source === 'openai') {
-        $openai.show();
-    }
-}
-
-/**
- * Populate an Ollama model dropdown.
- * @param {object} $select jQuery-wrapped <select> element
- * @param {Array<({ name: string } | string)>} models
- * @param {string} currentValue
- * @returns {void}
- */
-export function populateOllamaModelDropdown($select, models, currentValue) {
-    $select.html('<option value="">-- Select Model --</option>');
-
-    if (models && models.length > 0) {
-        for (const model of models) {
-            const name = typeof model === 'string' ? model : model.name;
-            $select.append($('<option></option>').val(name).text(name));
-        }
-    }
-
-    if (currentValue) {
-        $select.val(currentValue);
-    }
-}
-
-/**
- * Fetch available Ollama models from the configured URL and refresh the dropdown.
- * @returns {Promise<void>}
- */
-export async function refreshOllamaModels() {
-    const s = getSettings();
-    const ollamaUrl = s.ollamaUrl || 'http://localhost:11434';
-    const $modelSelect = $('#summaryception_ollama_model');
-    const $mergeModelSelect = $('#summaryception_merge_ollama_model');
-    const $fallbackModelSelect = $('#summaryception_fallback_ollama_model');
-
-    showConnectionStatus('loading', 'Fetching Ollama models...');
-
-    try {
-        const models = await fetchOllamaModels(ollamaUrl);
-        s.ollamaModelsCache = models.map((m) => ({ name: m.name }));
-        saveSettings();
-
-        if ($modelSelect.length) {
-            populateOllamaModelDropdown($modelSelect, models, s.ollamaModel);
-        }
-        if ($mergeModelSelect.length) {
-            populateOllamaModelDropdown($mergeModelSelect, models, s.mergeOllamaModel);
-        }
-        if ($fallbackModelSelect.length) {
-            populateOllamaModelDropdown($fallbackModelSelect, models, s.fallbackOllamaModel);
-        }
-
-        showConnectionStatus('success', `Found ${models.length} model(s)`);
-        toastr.success(`Found ${models.length} Ollama model(s)`, 'Summaryception');
-    } catch (error) {
-        logError('Failed to fetch Ollama models:', error);
-        showConnectionStatus('error', `Failed: ${error.message}`);
-        toastr.error(`Failed to fetch Ollama models: ${error.message}`, 'Summaryception');
-    }
-}
-
-/**
- * Test the OpenAI-compatible connection using current settings.
- * @returns {Promise<void>}
- */
-export async function testOpenAIConnectionHandler() {
-    const s = getSettings();
-
-    if (!s.openaiUrl) {
-        toastr.warning('Please enter an endpoint URL first.', 'Summaryception');
-        return;
-    }
-    if (!s.openaiModel) {
-        toastr.warning('Please enter a model name first.', 'Summaryception');
-        return;
-    }
-
-    showConnectionStatus('loading', 'Testing connection...');
-
-    const result = await testSummarizerConnection({ ...s, connectionSource: 'openai' });
-
-    if (result.success) {
-        showConnectionStatus('success', result.message);
-        toastr.success(result.message, 'Summaryception');
-    } else {
-        showConnectionStatus('error', result.message);
-        toastr.error(result.message, 'Summaryception');
-    }
-}
-
-/**
- * Show connection status indicator with auto-hide for non-loading states.
- * @param {string} type
- * @param {string} message
- * @returns {void}
- */
-export function showConnectionStatus(type, message) {
-    const $container = $('#summaryception_connection_status');
-    const $icon = $('#summaryception_connection_status_icon');
-    const $text = $('#summaryception_connection_status_text');
-
-    if (!$container.length || !$icon.length || !$text.length) {
-        return;
-    }
-
-    $container.css('display', 'flex').attr('class', 'sc-connection-status ' + type);
-
-    const icons = {
-        success: 'fa-solid fa-circle-check',
-        error: 'fa-solid fa-circle-xmark',
-        loading: 'fa-solid fa-spinner fa-spin',
-    };
-
-    $icon.attr(
-        'class',
-        /** @type {Record<string, string>} */ (icons)[type] || 'fa-solid fa-circle',
-    );
-    $text.text(message);
-
-    if (type !== 'loading') {
-        setTimeout(() => {
-            if ($container.length) {
-                $container.hide();
-            }
-        }, 8000);
     }
 }
 

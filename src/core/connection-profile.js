@@ -17,9 +17,6 @@ export const ProfileProvider = {
             signal,
         });
     },
-    async testConnection(settings) {
-        return await testProfileConnection(settings.connectionProfileId);
-    },
     displayName(settings) {
         return `Profile: ${settings.connectionProfileId || '(none)'}`;
     },
@@ -82,32 +79,6 @@ export async function sendViaProfile({
         return result;
     } catch (error) {
         handleProfileRequestError({ error, profileId });
-    }
-}
-
-/**
- * Test whether the selected ST Connection Profile can be used.
- * @param {string} profileId
- * @returns {Promise<ConnectionTestResult>}
- */
-export async function testProfileConnection(profileId) {
-    try {
-        if (!profileId) {
-            throw new ConnectionError(
-                'No Connection Profile selected. Please select one in Summaryception settings.',
-                { retryable: false },
-            );
-        }
-        getProfileRequestService();
-        return {
-            success: true,
-            message: `Connection Profile service is available for "${profileId}".`,
-        };
-    } catch (error) {
-        return {
-            success: false,
-            message: `Connection Profile unavailable: ${error.message}`,
-        };
     }
 }
 

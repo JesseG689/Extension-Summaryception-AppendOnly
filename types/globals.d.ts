@@ -108,27 +108,14 @@ interface ExtensionSettings {
     connectionSource: string;
     summarizerResponseLength: number;
     connectionProfileId: string;
-    ollamaUrl: string;
-    ollamaModel: string;
-    ollamaModelsCache: Array<{ name: string }>;
-    openaiUrl: string;
-    openaiKey: string;
-    openaiModel: string;
-    openaiMaxTokens: number;
     requestTimeoutSeconds: number;
     mergeConnectionSource: string;
     mergeSummarizerResponseLength: number;
     mergeConnectionProfileId: string;
-    mergeOllamaModel: string;
-    mergeOpenaiModel: string;
-    mergeOpenaiMaxTokens: number;
     mergeRequestTimeoutSeconds: number;
     fallbackConnectionSource: string;
     fallbackSummarizerResponseLength: number;
     fallbackConnectionProfileId: string;
-    fallbackOllamaModel: string;
-    fallbackOpenaiModel: string;
-    fallbackOpenaiMaxTokens: number;
     fallbackRequestTimeoutSeconds: number;
 }
 
@@ -142,22 +129,6 @@ interface GenerateRawOptions {
     systemPrompt?: string;
     trimNames?: boolean;
     responseLength?: number;
-    [key: string]: unknown;
-}
-
-interface OpenAIChatCompletionDelta {
-    content?: string;
-    role?: string;
-    [key: string]: unknown;
-}
-
-interface OpenAIChatCompletionChoice {
-    delta?: OpenAIChatCompletionDelta;
-    [key: string]: unknown;
-}
-
-interface OpenAIChatCompletionChunk {
-    choices?: OpenAIChatCompletionChoice[];
     [key: string]: unknown;
 }
 
@@ -198,14 +169,8 @@ interface ConnectionGenerateParams {
     signal?: AbortSignal;
 }
 
-interface ConnectionTestResult {
-    success: boolean;
-    message: string;
-}
-
 interface ConnectionProvider {
     generate(params: ConnectionGenerateParams): Promise<string>;
-    testConnection(settings: ExtensionSettings): Promise<ConnectionTestResult>;
     displayName(settings: ExtensionSettings): string;
 }
 

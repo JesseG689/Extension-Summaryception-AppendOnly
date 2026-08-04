@@ -1,22 +1,18 @@
 /**
  * Summaryception Connection Utility
  *
- * Routes summarization requests through one of four backends:
+ * Routes summarization requests through one of two backends:
  *   - default: SillyTavern's generateRaw() active connection
  *   - profile: ST Connection Profile via ConnectionManagerRequestService
- *   - ollama: Ollama instance through the ST CORS proxy when needed
- *   - openai: OpenAI-compatible endpoint, streaming supported
  */
 
 import { ConnectionError } from './connection-error.js';
 import { getConnectionManagerRequestService } from '../foundation/context.js';
 import { error as logError, warn } from '../foundation/logger.js';
 import { DefaultProvider } from './connection-default.js';
-import { OllamaProvider, fetchOllamaModels } from './connection-ollama.js';
-import { OpenAIProvider, testOpenAIConnection } from './connection-openai.js';
 import { ProfileProvider } from './connection-profile.js';
 
-export { ConnectionError, fetchOllamaModels, testOpenAIConnection };
+export { ConnectionError };
 
 /**
  * Registered connection providers keyed by settings.connectionSource.
@@ -25,21 +21,14 @@ export { ConnectionError, fetchOllamaModels, testOpenAIConnection };
 export const providers = Object.freeze({
     default: DefaultProvider,
     profile: ProfileProvider,
-    ollama: OllamaProvider,
-    openai: OpenAIProvider,
 });
 
 const ROUTE_SETTING_DEFAULTS = Object.freeze({
     summarizerResponseLength: 0,
     connectionProfileId: '',
-    ollamaModel: '',
-    openaiModel: '',
-    openaiMaxTokens: 0,
 });
 const ROUTE_IDENTITY_KEYS = Object.freeze({
     profile: ['connectionProfileId'],
-    ollama: ['ollamaUrl', 'ollamaModel'],
-    openai: ['openaiUrl', 'openaiKey', 'openaiModel'],
 });
 
 /**
@@ -92,16 +81,6 @@ function normalizeProviderRequest(requestOrSettings, legacyArgs) {
 
 function isProviderRequest(value) {
     return Boolean(value && typeof value === 'object' && Object.hasOwn(value, 'settings'));
-}
-
-/**
- * Test the configured connection provider.
- * @param {ExtensionSettings} settings
- * @returns {Promise<ConnectionTestResult>}
- */
-export async function testSummarizerConnection(settings) {
-    const provider = getConnectionProvider(settings.connectionSource);
-    return await provider.testConnection(settings);
 }
 
 /**
