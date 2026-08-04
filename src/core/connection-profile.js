@@ -64,6 +64,7 @@ export async function sendViaProfile({
 
         const tokenLimit = maxTokens && maxTokens > 0 ? maxTokens : undefined;
         const raw = await service.sendRequest(profileId, messages, tokenLimit, {
+            includePreset: false,
             includeInstruct: false,
             ...(signal ? { signal } : {}),
         });
