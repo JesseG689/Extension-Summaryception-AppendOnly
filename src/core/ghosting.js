@@ -1,5 +1,5 @@
 import { executeSlashCommandsWithOptions, getChat } from '../foundation/context.js';
-import { getChatStore } from '../foundation/state.js';
+import { getChatStore, getEffectiveSettings } from '../foundation/state.js';
 import { debug, error, info, warn } from '../foundation/logger.js';
 import { persistChatState } from './persist-state.js';
 import { canStartPromptMutation, queuePromptEffect, runPromptEffect } from './summarizer-commit.js';
@@ -241,7 +241,11 @@ function messageNeedsGhosting(msg) {
  * @returns {boolean}
  */
 function isGhostableMessage(msg) {
-    if (!msg || !msg.mes?.trim()) {
+    if (!msg) {
+        return false;
+    }
+    const hideNonText = getEffectiveSettings().hideNonTextMessages !== false;
+    if (!hideNonText && !msg.mes?.trim()) {
         return false;
     }
     return !isUserHidden(msg);

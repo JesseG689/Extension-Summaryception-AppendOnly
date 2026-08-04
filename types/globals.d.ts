@@ -94,8 +94,9 @@ interface ExtensionSettings {
     promotionRepairPromptPreset: string;
     promotionRepairPrompt: string;
     promptPreset: string;
-    promotionPromptPreset: string;
     applyRegexScripts: boolean;
+    promotionPromptPreset: string;
+    hideNonTextMessages: boolean;
     stripChineseIdeographs: boolean;
     maskUserRoleAsAssistant: boolean;
     maskUserRoleMode: 'marker_first' | 'rewrite_all' | 'marker_last' | 'keep_last_user';

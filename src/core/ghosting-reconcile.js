@@ -4,6 +4,7 @@ import {
     bumpSummaryStoreMutationEpoch,
     calculateContiguousSummarizedUpTo,
     getChatStore,
+    getEffectiveSettings,
     saveChatStore,
 } from '../foundation/state.js';
 import { repairGhostingForRange } from './ghosting.js';
@@ -141,7 +142,11 @@ function hasGhostingWork(chat, range) {
  * @returns {boolean}
  */
 function shouldRepairLoadedMessage(msg) {
-    if (!msg || !msg.mes?.trim() || isUserHidden(msg)) {
+    if (!msg || isUserHidden(msg)) {
+        return false;
+    }
+    const hideNonText = getEffectiveSettings().hideNonTextMessages !== false;
+    if (!hideNonText && !msg.mes?.trim()) {
         return false;
     }
 

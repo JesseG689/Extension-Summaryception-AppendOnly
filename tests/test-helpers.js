@@ -73,7 +73,7 @@ export function makeSummarySettings(overrides = {}) {
         customMemoryRole: 'system',
         customMemoryDepth: 0,
         applyRegexScripts: false,
-        minSummaryTurns: 2,
+        hideNonTextMessages: true,
         maxSummaryTurns: 5,
         minSummaryBudget: 6000,
         verbatimTokenBudget: 16000,

@@ -179,6 +179,7 @@ function bindToggleHandlers() {
         { selector: '#sc_prompt_input_log_mode', key: 'promptInputLogMode' },
         { selector: '#sc_prompt_output_log_mode', key: 'promptOutputLogMode' },
         { selector: '#sc_apply_regex_scripts', key: 'applyRegexScripts' },
+        { selector: '#sc_hide_non_text_messages', key: 'hideNonTextMessages' },
         { selector: '#sc_strip_chinese_ideographs', key: 'stripChineseIdeographs' },
         {
             selector: '#sc_inject_current_state',
@@ -746,6 +747,7 @@ function onResetDefaults() {
     s.promptInputLogMode = defaultSettings.promptInputLogMode;
     s.promptOutputLogMode = defaultSettings.promptOutputLogMode;
     s.applyRegexScripts = defaultSettings.applyRegexScripts;
+    s.hideNonTextMessages = defaultSettings.hideNonTextMessages;
     s.stripChineseIdeographs = defaultSettings.stripChineseIdeographs;
     s.injectCurrentState = defaultSettings.injectCurrentState;
     s.maskUserRoleAsAssistant = defaultSettings.maskUserRoleAsAssistant;

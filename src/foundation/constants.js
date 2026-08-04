@@ -154,6 +154,10 @@ export const defaultSettings = Object.freeze({
     promotionPromptPreset: 'narrative', // 'narrative' | 'custom'
     promotionRepairPromptPreset: 'narrative', // 'narrative' | 'custom'
     applyRegexScripts: true, // true = apply ST's regex scripts to passage text before summarizing
+    // true = also hide text-less messages (images, tool calls) inside the summarized
+    // range. They carry no text to summarize, so without this they stay visible to the
+    // model and leave gaps in the hidden range that still cost context.
+    hideNonTextMessages: true,
     stripChineseIdeographs: true, // true = strip Han ideographs from summarizer responses
     maskUserRoleAsAssistant: false, // true = rewrite outgoing user-role request blocks as assistant
     maskUserRoleMode: MASK_USER_ROLE_MODES.MARKER_FIRST,
