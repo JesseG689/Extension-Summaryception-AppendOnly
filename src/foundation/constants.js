@@ -132,7 +132,7 @@ export const defaultSettings = Object.freeze({
     stateCatLocation: true,
     minSummaryTurns: 3,
     maxSummaryTurns: 8,
-    layer0SummaryTokenTarget: 200,
+    layer0SummaryTokenTarget: 280,
     maxL0SourceTokens: 24000,
     advancedModelContext: 48000,
     minSummaryBudget: 16000,

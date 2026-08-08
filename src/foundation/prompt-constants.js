@@ -12,24 +12,24 @@ export const ANTI_RUN_ON_RULE =
     'Write in short, direct sentences. Prefer periods over commas and semicolons; do not chain actions together with commas, semicolons, or conjunctions into run-on sentences. Limit each sentence to roughly two actions or events.';
 
 export const STATE_SNAPSHOT_MODE = 'snapshot-v1';
-export const STATE_SNAPSHOT_SOFT_TARGET_TOKENS = 500;
-export const STATE_SNAPSHOT_MAX_TOKENS = 600;
+export const STATE_SNAPSHOT_SOFT_TARGET_TOKENS = 700;
+export const STATE_SNAPSHOT_MAX_TOKENS = 1000;
 /**
  * Highest [STATE] token count still eligible for deterministic compaction
  * before falling back to a full LLM retry. Overshoots up to this ceiling are
  * trimmed in-process; anything larger is treated as unrepairable and retried.
- * Scaled with the raised hard cap (600): 1000 holds the ~1.67× ceiling ratio
+ * Scaled with the raised hard cap (1000): 1667 holds the ~1.67× ceiling ratio
  * so modular multi-category overshoots still land in-process.
  */
-export const STATE_SNAPSHOT_REPAIR_CEILING_TOKENS = 1000;
+export const STATE_SNAPSHOT_REPAIR_CEILING_TOKENS = 1667;
 /**
  * Char budget the deterministic state compactor aims for. Kept below the
  * hard max so accepted trims land comfortably under STATE_SNAPSHOT_MAX_TOKENS
  * even for denser scripts (Cyrillic averages ~3.5 chars/token vs ~4.2 English).
- * Scaled with the soft target (500/200 = 2.5× from the legacy 1056).
+ * Scaled with the hard cap (1000/600 = 1.67× from the previous 2640).
  */
-export const STATE_SNAPSHOT_COMPACTION_TARGET_CHARS = 2640;
-export const STATE_SNAPSHOT_MAX_CHARS = 3000;
+export const STATE_SNAPSHOT_COMPACTION_TARGET_CHARS = 4400;
+export const STATE_SNAPSHOT_MAX_CHARS = 5000;
 export const LAYER0_DURABILITY_RULES =
     'Preserve each major durable beat once. Collapse repeated actions, physical interaction, or dialogue loops into one outcome sentence. Omit brands, shopping routes, meals, clothing, poses, body mechanics, ordinary props, and temporary physical conditions unless they create a lasting decision, rule, resource, injury, or unresolved hook.';
 

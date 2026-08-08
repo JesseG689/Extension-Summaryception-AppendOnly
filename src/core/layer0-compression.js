@@ -22,7 +22,7 @@ import {
 } from './token-budget/budget-hint-builder.js';
 
 const MIN_LAYER0_TARGET_TOKENS = 80;
-const MAX_LAYER0_TARGET_TOKENS = 500;
+const MAX_LAYER0_TARGET_TOKENS = 700;
 
 /**
  * Check whether a summarizer call should receive runtime compression controls.

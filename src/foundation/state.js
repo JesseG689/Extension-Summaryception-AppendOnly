@@ -272,7 +272,7 @@ function normalizeVerbatimWindowSettings(settings) {
     );
     settings.minSummaryTurns = clampInteger(settings.minSummaryTurns, 2, 10);
     settings.maxSummaryTurns = clampInteger(settings.maxSummaryTurns, 3, 20);
-    settings.layer0SummaryTokenTarget = clampInteger(settings.layer0SummaryTokenTarget, 80, 500);
+    settings.layer0SummaryTokenTarget = clampInteger(settings.layer0SummaryTokenTarget, 80, 700);
     settings.maxL0SourceTokens = clampToStep(
         settings.maxL0SourceTokens,
         L0_SOURCE_LIMITS.MIN,
@@ -421,7 +421,7 @@ export function deriveAdvancedEngineTuning(settings) {
     settings.layer0SummaryTokenTarget = clampToStep(
         Number(settings.memoryTokenBudget) * 0.02,
         80,
-        500,
+        700,
         10,
     );
 }

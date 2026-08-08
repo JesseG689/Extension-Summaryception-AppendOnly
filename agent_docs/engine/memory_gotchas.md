@@ -9,7 +9,7 @@
 
 ## Snapshot Compaction
 
-- The state snapshot targets 500 tokens and hard-caps at 600.
+- The state snapshot targets 700 tokens and hard-caps at 1000.
 - Compaction runs deterministically in process. It is not a model call and must stay that way.
 - Compaction runs once per assembly. Never add a second pass; the trim is already applied.
 - Per-category character budgets apply independently. The current date and time category is exempt and is carried verbatim.

@@ -11,7 +11,7 @@ const ANY_SECTION_HEADER_RE = /^\s*\[[^\]]+\]\s*$/;
 const NULLIFY_VALUES = new Set(['none', 'empty', 'null', 'cleared', 'resolved', 'removed']);
 const UNCLASSIFIED_NOTES_MAX = 3;
 const STATE_ENTRY_LIMIT = 10;
-const STATE_VALUE_LENGTH_CEILING = 1000;
+const STATE_VALUE_LENGTH_CEILING = 1667;
 const LEGACY_STATE_WINDOW = 3;
 const COMPOSITE_MERGE_KEYS = new Set(['characters', 'inventory', 'counters', 'dynamics', 'hooks']);
 const IGNORED_STATE_KEYS = new Set(['timeline_start', 'timeline_end', 'start_time', 'end_time']);
@@ -81,16 +81,16 @@ const SNAPSHOT_STATE_KEYS = Object.freeze([
 // Per-category soft char budgets. Internal-only — never surfaced to the
 // model. Bound each category's serialized length so one runaway category
 // cannot monopolize the global budget. current_date_time is exempt from
-// per-category trim (priorityRank -1 = carried verbatim). Sum ≈ 1060 chars
-// (≈265 tokens) leaves headroom under the 600-token hard cap for the [STATE]
+// per-category trim (priorityRank -1 = carried verbatim). Sum ≈ 1780 chars
+// (≈445 tokens) leaves headroom under the 1000-token hard cap for the [STATE]
 // wrapper and key labels.
 const STATE_CATEGORY_CHAR_BUDGET = Object.freeze({
-    current_date_time: 120,
-    bonds: 260,
-    chekhov: 260,
-    gm_notes: 200,
-    inventory: 160,
-    location: 60,
+    current_date_time: 200,
+    bonds: 440,
+    chekhov: 440,
+    gm_notes: 340,
+    inventory: 260,
+    location: 100,
 });
 /**
  * Check whether text contains an explicit [STATE] section.
