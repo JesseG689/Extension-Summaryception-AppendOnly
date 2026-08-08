@@ -839,6 +839,14 @@ function bindClickHandlers() {
         $('#sc_injection_template').val(RECALL_REPEAT_INJECTION_TEMPLATE).trigger('change');
         toastr.success('Recall-repeat template inserted.', 'Summaryception');
     });
+
+    $(document).on('click', '#sc_restore_injection_template', function () {
+        if (!confirm('Restore the default Injection Wrapper Template?')) {
+            return;
+        }
+        $('#sc_injection_template').val(defaultSettings.injectionTemplate).trigger('change');
+        toastr.success('Default injection template restored.', 'Summaryception');
+    });
 }
 
 /**

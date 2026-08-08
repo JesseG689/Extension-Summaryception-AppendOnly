@@ -117,15 +117,16 @@ export const defaultSettings = Object.freeze({
     customMemoryPosition: MEMORY_POSITIONS.IN_PROMPT,
     customMemoryRole: MEMORY_ROLES.SYSTEM,
     customMemoryDepth: 0,
-    injectCurrentState: true, // true = include the [CURRENT STATE] block in injected memory
+    injectCurrentState: false, // false = omit the [CURRENT STATE] block from injected memory
     // ─── Modular STATE categories (stateCat*) ─────────────────────────
-    // All categories ship enabled: the extension's [CURRENT STATE] injection
+    // Most categories ship enabled: the extension's [CURRENT STATE] injection
     // is meant to be the sole carrier, so users should disable the equivalent
     // blocks in their RP preset. stateCatDateTime is informational only —
-    // alwaysOn forces true at runtime regardless of this flag.
+    // alwaysOn forces true at runtime regardless of this flag. Chekhov ships
+    // off: it needs matching FIRE-decision logic in the preset CoT to be useful.
     stateCatDateTime: true,
     stateCatBonds: true,
-    stateCatChekhov: true,
+    stateCatChekhov: false,
     stateCatGmNotes: true,
     stateCatInventory: true,
     stateCatLocation: true,

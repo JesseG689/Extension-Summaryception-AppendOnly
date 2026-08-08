@@ -30,7 +30,7 @@ import { countTextTokens } from './token-count.js';
 export function buildEffectiveMemoryText(layers, settings = getEffectiveSettings()) {
     const memory = buildMemoryInjectionParts(layers, {
         compactAnchors: true,
-        injectCurrentState: settings.injectCurrentState !== false,
+        injectCurrentState: Boolean(settings.injectCurrentState),
     }).memoryText;
     if (!memory) {
         return '';
@@ -50,7 +50,7 @@ export function buildEffectiveMemoryText(layers, settings = getEffectiveSettings
 export async function getEffectiveMemoryUsage(layers, settings = getEffectiveSettings()) {
     const injectionParts = buildMemoryInjectionParts(layers, {
         compactAnchors: true,
-        injectCurrentState: settings.injectCurrentState !== false,
+        injectCurrentState: Boolean(settings.injectCurrentState),
     });
     const text = injectionParts.memoryText
         ? String(settings.injectionTemplate || '{{summary}}').replaceAll(

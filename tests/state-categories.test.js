@@ -96,9 +96,14 @@ describe('state-categories catalog', () => {
         expect(getActiveLineCap(legacy)).toBe(2);
     });
 
-    it('ships with every category enabled by default', () => {
+    it('ships every category enabled by default except chekhov', () => {
         expect(getEnabledStateKeys(defaultSettings)).toStrictEqual(
-            STATE_CATEGORIES.map((c) => c.key),
+            STATE_CATEGORIES.map((c) => c.key).filter((key) => key !== 'chekhov'),
         );
+        expect(defaultSettings.stateCatChekhov).toBe(false);
+    });
+
+    it('ships with the [CURRENT STATE] injection off by default', () => {
+        expect(defaultSettings.injectCurrentState).toBe(false);
     });
 });

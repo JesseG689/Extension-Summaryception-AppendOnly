@@ -608,6 +608,16 @@
     gap: 4px;
     margin-top: 6px;
 }
+.sc-button-row-split {
+    flex-wrap: nowrap;
+}
+.sc-settings .sc-button-row-split .menu_button {
+    flex: 1 1 0;
+    min-width: 0;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
 .sc-settings .menu_button {
     display: inline-flex;
     align-items: center;
