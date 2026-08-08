@@ -56,21 +56,43 @@ function markRepomixComplete(head) {
 }
 
 /**
+ * Run one Repomix command. Output is captured rather than inherited so the
+ * verbose per-file progress never reaches the terminal; on failure the full
+ * captured output is dumped so the cause is still visible.
  * @param {string} command
+ * @returns {boolean} whether the command succeeded
  */
 function runRepomix(command) {
-    execFileSync(process.execPath, [npmCli, 'run', command], {
-        cwd: REPO_ROOT,
-        encoding: 'utf8',
-        env: process.env,
-        stdio: 'inherit',
-    });
+    try {
+        execFileSync(process.execPath, [npmCli, 'run', command, '--silent'], {
+            cwd: REPO_ROOT,
+            encoding: 'utf8',
+            env: process.env,
+            stdio: ['ignore', 'pipe', 'pipe'],
+        });
+        return true;
+    } catch (error) {
+        process.stderr.write(`✗ repomix ${command} failed\n`);
+        if (error.stdout) {
+            process.stderr.write(error.stdout);
+        }
+        if (error.stderr) {
+            process.stderr.write(error.stderr);
+        }
+        return false;
+    }
 }
 
 function runRepomixCommands() {
+    const done = [];
     for (const command of REPOMIX_CMDS) {
-        runRepomix(command);
+        if (!runRepomix(command)) {
+            process.exitCode = 1;
+            return;
+        }
+        done.push(command.replace('repomix:', ''));
     }
+    process.stdout.write(`✔ repomix refreshed: ${done.join(', ')}\n`);
 }
 
 const currentHead = getCurrentHead();
