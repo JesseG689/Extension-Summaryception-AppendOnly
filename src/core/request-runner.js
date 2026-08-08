@@ -465,7 +465,10 @@ function getAttemptPromptContext({ series, useRepairPrompt, repairFeedback = '' 
 }
 
 /**
- *
+ * Append repair feedback before the L0 execution trigger.
+ * @param {string} prompt
+ * @param {string} repairFeedback
+ * @returns {string}
  */
 export function appendRepairFeedback(prompt, repairFeedback) {
     const feedback = String(repairFeedback || '').trim();

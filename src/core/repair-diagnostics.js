@@ -25,30 +25,7 @@ export function buildRepairDiagnostics({
     sections = [],
     rejectedDraft = '',
 }) {
-    const normalizedSections = sections.map((section) => {
-        const actualTokens = normalizeCount(section.actualTokens);
-        const targetTokens = normalizeCount(section.targetTokens);
-        const hardMaxTokens = normalizeCount(section.hardMaxTokens);
-        const minimumTokens = normalizeCount(section.minimumTokens);
-        const tooShort = minimumTokens > 0 && actualTokens < minimumTokens;
-        const tooLong = hardMaxTokens > 0 && actualTokens > hardMaxTokens;
-        const violation = tooShort || tooLong;
-        return {
-            id: String(section.id || section.name || 'section'),
-            label: String(section.label || section.id || section.name || 'Section'),
-            actualTokens,
-            targetTokens,
-            hardMaxTokens,
-            minimumTokens,
-            violation,
-            reason: tooShort ? 'below-minimum' : tooLong ? 'above-hard-maximum' : '',
-            reductionGuidance:
-                tooLong && targetTokens > 0 ? getReductionGuidance(actualTokens, targetTokens) : '',
-            text: String(section.text || ''),
-            repairInstruction: String(section.repairInstruction || ''),
-            preservationInstruction: String(section.preservationInstruction || ''),
-        };
-    });
+    const normalizedSections = sections.map(normalizeRepairSection);
 
     return {
         scope: String(scope),
@@ -94,32 +71,72 @@ export function formatRepairDiagnostics(
     { wrapperTag = 'summaryception_repair_feedback', rejectedSectionTagPrefix = 'rejected_' } = {},
 ) {
     const wrapper = String(wrapperTag);
-    const failing = (diagnostics?.violations || []).filter(Boolean);
-    const passing = (diagnostics?.sections || []).filter((section) => !section.violation);
+    const source = diagnostics || {};
+    const failing = (source.violations || []).filter(Boolean);
+    const passing = (source.sections || []).filter((section) => !section.violation);
     const lines = [
         `<${wrapper}>`,
-        `The previous ${diagnostics?.scope || 'compression'} draft failed output validation.`,
+        `The previous ${source.scope || 'compression'} draft failed output validation.`,
     ];
 
+    appendFailingRepairInstructions(lines, failing);
+    appendRejectedSectionBlocks(lines, failing, rejectedSectionTagPrefix);
+    appendPassingSectionGuidance(lines, passing);
+    appendRejectedDraftFallback(lines, source, failing);
+
+    lines.push('</' + wrapper + '>');
+    return lines.join('\n');
+}
+
+function normalizeCount(value) {
+    const count = Number(value);
+    return Number.isFinite(count) && count > 0 ? Math.round(count) : 0;
+}
+
+function normalizeRepairSection(section) {
+    const actualTokens = normalizeCount(section.actualTokens);
+    const targetTokens = normalizeCount(section.targetTokens);
+    const hardMaxTokens = normalizeCount(section.hardMaxTokens);
+    const minimumTokens = normalizeCount(section.minimumTokens);
+    const tooShort = minimumTokens > 0 && actualTokens < minimumTokens;
+    const tooLong = hardMaxTokens > 0 && actualTokens > hardMaxTokens;
+    const violation = tooShort || tooLong;
+    return {
+        ...resolveSectionIdentity(section),
+        actualTokens,
+        targetTokens,
+        hardMaxTokens,
+        minimumTokens,
+        violation,
+        reason: tooShort ? 'below-minimum' : tooLong ? 'above-hard-maximum' : '',
+        reductionGuidance:
+            tooLong && targetTokens > 0 ? getReductionGuidance(actualTokens, targetTokens) : '',
+        text: String(section.text || ''),
+        repairInstruction: String(section.repairInstruction || ''),
+        preservationInstruction: String(section.preservationInstruction || ''),
+    };
+}
+
+function appendFailingRepairInstructions(lines, failing) {
     for (const section of failing) {
         lines.push(`${section.label}: rejected.`);
         if (section.repairInstruction) {
             lines.push(`${section.label} repair: ${section.repairInstruction}`);
         }
     }
+}
 
+function appendRejectedSectionBlocks(lines, failing, prefix) {
     for (const section of failing) {
         const text = section.text.trim();
         if (!text) {
             continue;
         }
-        lines.push(
-            `<${rejectedSectionTagPrefix}${section.id}>`,
-            text,
-            `</${rejectedSectionTagPrefix}${section.id}>`,
-        );
+        lines.push(`<${prefix}${section.id}>`, text, `</${prefix}${section.id}>`);
     }
+}
 
+function appendPassingSectionGuidance(lines, passing) {
     for (const section of passing) {
         const text = section.text.trim();
         if (!text && !section.preservationInstruction) {
@@ -132,16 +149,17 @@ export function formatRepairDiagnostics(
             lines.push(`<preserve_${section.id}>`, text, `</preserve_${section.id}>`);
         }
     }
-
-    if (diagnostics?.rejectedDraft && failing.length === 0) {
-        lines.push('<rejected_draft>', diagnostics.rejectedDraft.trim(), '</rejected_draft>');
-    }
-
-    lines.push('</' + wrapper + '>');
-    return lines.join('\n');
 }
 
-function normalizeCount(value) {
-    const count = Number(value);
-    return Number.isFinite(count) && count > 0 ? Math.round(count) : 0;
+function resolveSectionIdentity(section) {
+    return {
+        id: String(section.id || section.name || 'section'),
+        label: String(section.label || section.id || section.name || 'Section'),
+    };
+}
+
+function appendRejectedDraftFallback(lines, source, failing) {
+    if (source.rejectedDraft && failing.length === 0) {
+        lines.push('<rejected_draft>', source.rejectedDraft.trim(), '</rejected_draft>');
+    }
 }

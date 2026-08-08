@@ -478,81 +478,25 @@ async function validatePromotionCandidate({
     const minTokens = getPromotionSummaryTokenTarget({ layerIndex, targetTokens });
     const hardMaxTokens = getPromotionSummaryTokenHardMax({ layerIndex, targetTokens });
     if (outputTokens.count > hardMaxTokens) {
-        const diagnostics = buildRepairDiagnostics({
-            scope: 'Layer 1+ promotion',
-            totalTokens: outputTokens.count,
-            sections: [
-                {
-                    id: 'draft',
-                    label: '[NARRATIVE]',
-                    actualTokens: outputTokens.count,
-                    targetTokens: minTokens,
-                    hardMaxTokens,
-                    text: promotedSnippet.text,
-                    repairInstruction:
-                        'rewrite as macro-level prose only; remove dialogue, scene replay, micro-actions, and transient detail',
-                    preservationInstruction:
-                        'retain only macro-level durable chronology and continuity',
-                },
-            ],
-            rejectedDraft: promotedSnippet.text,
-        });
-        warn(
-            `Promotion L${layerIndex} rejected: output exceeded the compression hard maximum ` +
-                `(${formatTokenValue(sourceTokens.count, sourceTokens.estimated)}->` +
-                `${formatTokenValue(outputTokens.count, outputTokens.estimated)} tokens; ` +
-                `target ${formatTokenValue(minTokens, sourceTokens.estimated)}, ` +
-                `hard maximum ${formatTokenValue(hardMaxTokens, sourceTokens.estimated)}).`,
-        );
-        return {
-            valid: false,
-            reason: 'compression-ratio',
+        return rejectPromotionOverHardMax({
+            layerIndex,
+            promotedSnippet,
             sourceTokens,
             outputTokens,
-            targetTokens: minTokens,
+            minTokens,
             hardMaxTokens,
-            requiredMaxTokens: hardMaxTokens,
-            diagnostics,
-        };
+        });
     }
 
     if (outputTokens.count < minTokens) {
-        const diagnostics = buildRepairDiagnostics({
-            scope: 'Layer 1+ promotion',
-            totalTokens: outputTokens.count,
-            sections: [
-                {
-                    id: 'draft',
-                    label: '[NARRATIVE]',
-                    actualTokens: outputTokens.count,
-                    targetTokens: minTokens,
-                    hardMaxTokens,
-                    minimumTokens: minTokens,
-                    text: promotedSnippet.text,
-                    repairInstruction:
-                        'expand the fold: it over-merged; restore the dropped durable beats',
-                    preservationInstruction:
-                        'retain only macro-level durable chronology and continuity',
-                },
-            ],
-            rejectedDraft: promotedSnippet.text,
-        });
-        warn(
-            `Promotion L${layerIndex} rejected: output under the over-merge floor ` +
-                `(${formatTokenValue(sourceTokens.count, sourceTokens.estimated)}->` +
-                `${formatTokenValue(outputTokens.count, outputTokens.estimated)} tokens; ` +
-                `minimum ${formatTokenValue(minTokens, sourceTokens.estimated)}).`,
-        );
-        return {
-            valid: false,
-            reason: 'too-short',
+        return rejectPromotionBelowMin({
+            layerIndex,
+            promotedSnippet,
             sourceTokens,
             outputTokens,
-            targetTokens: minTokens,
+            minTokens,
             hardMaxTokens,
-            requiredMaxTokens: hardMaxTokens,
-            diagnostics,
-        };
+        });
     }
 
     const store = getChatStore();
@@ -594,6 +538,98 @@ function isPromotionSummarySafe({ layerIndex, promotedSnippet, sourceTokens }) {
 
     warn(`Promotion L${layerIndex} rejected: ${integrityResult.error.message}.`);
     return false;
+}
+
+function rejectPromotionOverHardMax({
+    layerIndex,
+    promotedSnippet,
+    sourceTokens,
+    outputTokens,
+    minTokens,
+    hardMaxTokens,
+}) {
+    const diagnostics = buildRepairDiagnostics({
+        scope: 'Layer 1+ promotion',
+        totalTokens: outputTokens.count,
+        sections: [
+            {
+                id: 'draft',
+                label: '[NARRATIVE]',
+                actualTokens: outputTokens.count,
+                targetTokens: minTokens,
+                hardMaxTokens,
+                text: promotedSnippet.text,
+                repairInstruction:
+                    'rewrite as macro-level prose only; remove dialogue, scene replay, micro-actions, and transient detail',
+                preservationInstruction:
+                    'retain only macro-level durable chronology and continuity',
+            },
+        ],
+        rejectedDraft: promotedSnippet.text,
+    });
+    warn(
+        `Promotion L${layerIndex} rejected: output exceeded the compression hard maximum ` +
+            `(${formatTokenValue(sourceTokens.count, sourceTokens.estimated)}->` +
+            `${formatTokenValue(outputTokens.count, outputTokens.estimated)} tokens; ` +
+            `target ${formatTokenValue(minTokens, sourceTokens.estimated)}, ` +
+            `hard maximum ${formatTokenValue(hardMaxTokens, sourceTokens.estimated)}).`,
+    );
+    return {
+        valid: false,
+        reason: 'compression-ratio',
+        sourceTokens,
+        outputTokens,
+        targetTokens: minTokens,
+        hardMaxTokens,
+        requiredMaxTokens: hardMaxTokens,
+        diagnostics,
+    };
+}
+
+function rejectPromotionBelowMin({
+    layerIndex,
+    promotedSnippet,
+    sourceTokens,
+    outputTokens,
+    minTokens,
+    hardMaxTokens,
+}) {
+    const diagnostics = buildRepairDiagnostics({
+        scope: 'Layer 1+ promotion',
+        totalTokens: outputTokens.count,
+        sections: [
+            {
+                id: 'draft',
+                label: '[NARRATIVE]',
+                actualTokens: outputTokens.count,
+                targetTokens: minTokens,
+                hardMaxTokens,
+                minimumTokens: minTokens,
+                text: promotedSnippet.text,
+                repairInstruction:
+                    'expand the fold: it over-merged; restore the dropped durable beats',
+                preservationInstruction:
+                    'retain only macro-level durable chronology and continuity',
+            },
+        ],
+        rejectedDraft: promotedSnippet.text,
+    });
+    warn(
+        `Promotion L${layerIndex} rejected: output under the over-merge floor ` +
+            `(${formatTokenValue(sourceTokens.count, sourceTokens.estimated)}->` +
+            `${formatTokenValue(outputTokens.count, outputTokens.estimated)} tokens; ` +
+            `minimum ${formatTokenValue(minTokens, sourceTokens.estimated)}).`,
+    );
+    return {
+        valid: false,
+        reason: 'too-short',
+        sourceTokens,
+        outputTokens,
+        targetTokens: minTokens,
+        hardMaxTokens,
+        requiredMaxTokens: hardMaxTokens,
+        diagnostics,
+    };
 }
 
 function buildHypotheticalPromotionLayers(layers, layerIndex, mergeCount, promotedSnippet) {

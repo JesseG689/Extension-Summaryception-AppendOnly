@@ -34,7 +34,12 @@ export function maskUserRoleAsAssistantInGenerateData(generateData, settings = {
         }
     }
     if (userMessages.length === 0) {
-        logRoleMaskDebug(settings, normalizeMaskMode(settings.maskUserRoleMode), [], null, 0);
+        logRoleMaskDebug(settings, {
+            mode: normalizeMaskMode(settings.maskUserRoleMode),
+            userMessages: [],
+            preservedMessage: null,
+            rewritten: 0,
+        });
         return 0;
     }
 
@@ -67,7 +72,7 @@ export function maskUserRoleAsAssistantInGenerateData(generateData, settings = {
         });
     }
 
-    logRoleMaskDebug(settings, mode, userMessages, preservedMessage, rewritten);
+    logRoleMaskDebug(settings, { mode, userMessages, preservedMessage, rewritten });
 
     return rewritten;
 }
@@ -78,7 +83,7 @@ function normalizeMaskMode(value) {
     return validModes.includes(mode) ? mode : MASK_USER_ROLE_MODES.MARKER_FIRST;
 }
 
-function logRoleMaskDebug(settings, mode, userMessages, preservedMessage, rewritten) {
+function logRoleMaskDebug(settings, { mode, userMessages, preservedMessage, rewritten }) {
     if (!settings.debugMode) {
         return;
     }
