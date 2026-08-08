@@ -59,6 +59,7 @@ export async function updateUI() {
         $('#sc_prompt_output_log_mode').prop('checked', s.promptOutputLogMode);
         $('#sc_apply_regex_scripts').prop('checked', s.applyRegexScripts);
         $('#sc_hide_non_text_messages').prop('checked', s.hideNonTextMessages !== false);
+        $('#sc_strip_chinese_ideographs').prop('checked', s.stripChineseIdeographs !== false);
         $('#sc_inject_current_state').prop('checked', Boolean(s.injectCurrentState));
         // alwaysOn category: the input is disabled in markup, so reflect it as
         // permanently ticked rather than reading the (ignored) persisted flag.
