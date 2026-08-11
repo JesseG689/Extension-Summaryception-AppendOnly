@@ -26,6 +26,14 @@ the prefix = MISS. Same-role adjacent messages are merged upstream, so any
 layout producing consecutive user-role or assistant-role messages is
 re-keyed at the provider regardless of what ST sends.
 
+**R10 — the fork-point rule (critical).** A longer request extends a stored
+entry **iff the first appended message is `role: assistant`**. Appending
+`system` or `user` as the first new message MISSes — even with a clean
+role boundary, even when the parent is confirmed warm. System/user
+messages are fine *after* the opening assistant. This is the strongest
+predictor of cache extension, stricter than the same-role merge rule.
+Empirical evidence: `CACHING.md` R10 suffix matrix, lines 108-117.
+
 ## The position argument (why this is hard)
 
 For chat `[greet, u₁, a₁, u₂]`, compare turn N vs turn N+1 payloads with WI
@@ -50,7 +58,47 @@ only property that produces HITs under a strict message-list cache.
 Rows 5 and 6 both cache. Row 5 (system narrator message) is the chosen
 strategy: cleaner separation, native ST support, easier flush/undo. Row 6
 (mutate user message text) is kept as a fallback if row 5 turns out to be
-infeasible.
+
+### R10 constraint — why row 5 works and what breaks it
+
+Row 5 places the narrator message **after the assistant reply, before the
+new user message**: `…, a_N, S_{N+1}(sys), u_{N+1}`. Each turn's extension
+opens with `a_N` (assistant), satisfying R10. This is the only splice
+position that works:
+
+| Splice position                  | Turn extension opens with | R10  | Cache |
+| -------------------------------- | ------------------------- | ---- | ----- |
+| `a_N, S, u_{N+1}` (our design)   | `a_N` (assistant)         | ✓    | HIT   |
+| `S, a_N, u_{N+1}` (system first) | `S` (system)              | ✗    | MISS  |
+| `a_N, u_{N+1}, S` (after user)   | `a_N` (assistant)         | ✓    | HIT   |
+| `S` at start of chat             | — (cold, no parent)       | n/a  | MISS  |
+
+The third row (`a_N, u_{N+1}, S`) also satisfies R10 but puts the lore
+after the user message — semantically wrong (lore should precede the
+user's input it informs). Row 1 is the only correct choice.
+
+**Already empirically validated.** `CACHING.md` lines 119-131 report a
+3-turn frozen-narrator chain (`cache_design.py` Part B) using this exact
+layout. Results: turn 1 cold MISS, turns 2-3 PREFIX at 73-79% cached.
+The provider has already confirmed this pattern caches.
+
+**What would break R10:**
+- Moving the narrator message before `a_N` in the payload (system-first
+  extension → MISS).
+- Adding a non-assistant message at the start of the turn extension
+  (e.g., a depth-0 system injection that re-computes per turn).
+- Removing `a_N` from the visible window (summarization flush that
+  hides `a_N` but keeps `S_{N+1}` and `u_{N+1}` — the extension would
+  open with `S` or `u`, MISS).
+
+**Flush interaction with R10.** When Summaryception hides a range that
+includes `a_N` but the following `S_{N+1}` and `u_{N+1}` remain visible,
+the first visible message of the extension changes from assistant to
+system/user. R10 is violated. Mitigation: the flush boundary must always
+fall between `u_N` and `a_N` (at the user/assistant pair boundary), never
+mid-pair. This is already how ST chat works — messages hide as
+contiguous ranges, and our narrator messages fall inside those ranges
+naturally. But the invariant must be verified during implementation.
 
 ## Mode redesign — clean cut, no legacy
 
@@ -157,6 +205,12 @@ This is the load-bearing intercept. Register a second listener on
 - Both mutations must land the message at the equivalent position
   (before the latest user message) so the API payload and ST storage
   agree on ordering.
+- **R10 constraint:** the splice MUST place the narrator message after
+  the last assistant reply (`a_N, S_{N+1}, u_{N+1}`), never before it.
+  The message before the last user entry is, by chat structure, always
+  `a_N` (the previous turn's assistant reply). If the last user message
+  is not preceded by an assistant message (first turn, or edge case),
+  skip the bake — placing `S` first would violate R10.
 
 Message object (note `is_system: false` — see Step 0 findings):
 
@@ -342,6 +396,14 @@ messages by index range. Narrator messages fall in those ranges
 automatically. No special handling needed unless we want to filter them
 out of the summarizer input explicitly.
 
+**R10 flush invariant.** When the flush hides messages, the visible
+window must still open every turn extension with an assistant message.
+If a flush boundary splits an `a_N, S_{N+1}, u_{N+1}` triple — hiding
+`a_N` but keeping the narrator and user message — the next turn's
+extension opens with `S` or `u` (R10 violation → MISS). The flush
+boundary must always fall at a user/assistant pair boundary (between
+`u_N` and `a_{N-1}`), never inside a triple. See open question Q9.
+
 ### Mask user role — no race
 
 `assistant-role-mask.js` rewrites roles on `generateData.prompt.messages`
@@ -439,6 +501,13 @@ to ensure our splice lands first.
   without false positives (e.g., user sends two messages in quick
   succession).
 
+- **Q9.** (new) Flush/R10 invariant: verify that ST's message hiding
+  (Summaryception flush) always produces contiguous ranges bounded at
+  user/assistant pair boundaries. If a flush hides `a_N` but keeps the
+  following `S_{N+1}` and `u_{N+1}`, the turn extension opens with
+  system/user → R10 violation → MISS. Must confirm the flush boundary
+  never splits an `a_N, S_{N+1}, u_{N+1}` triple.
+
 ## Non-goals (explicit)
 
 - Real-time cache-hit telemetry from `usage.prompt_tokens_details`. ST
@@ -492,6 +561,7 @@ End state: Bake works end-to-end with manual WI setup. Cache HIT pattern verifie
 - /sc-migrate-wi slash command (bulk-move entries to outlet).
 - /sc-unbake-wi slash command (cleanup).
 - Resolve open Q2 (token budget post-splice — does provider reject overflow?).
-- Resolve open Q3 (dryRun flag reliability across API sources).
+- Resolve open Q9 (flush/R10 invariant — verify flush boundary never
+  splits an a_N, S_{N+1}, u_{N+1} triple).
 - Edge case hardening (continue/retry, Quick Reply).
 - Mode help text, compact toggle (Q5).
