@@ -29,7 +29,8 @@ re-keyed at the provider regardless of what ST sends.
 ## The position argument (why this is hard)
 
 For chat `[greet, u₁, a₁, u₂]`, compare turn N vs turn N+1 payloads with WI
-injected four ways:
+injected six ways:
+
 
 | Injection site              | Turn N                                                          | Turn N+1                                                                              | Result            |
 | --------------------------- | --------------------------------------------------------------- | ------------------------------------------------------------------------------------- | ----------------- |
@@ -37,10 +38,19 @@ injected four ways:
 | depth = 1                   | `[sys, greet, u₁, a₁, INJ_N, u₂]`                               | `[sys, greet, u₁, a₁, u₂, a₂, INJ_{N+1}, u₃]`                                         | **always MISS**   |
 | depth = 0                   | `[sys, greet, u₁, a₁, u₂, INJ_N]`                               | `[sys, greet, u₁, a₁, u₂, a₂, u₃, INJ_{N+1}]`                                         | **always MISS**   |
 | Merged into latest user     | `[…, u₂ + INJ_N]` (last msg)                                    | `[…, u₂ (history, no INJ), a₂, u₃ + INJ_{N+1}]`                                       | **always MISS**   |
-| **Baked into user msg text**| `[…, u₂ + INJ_N]` (stored in chat)                              | `[…, u₂ + INJ_N (history unchanged), a₂, u₃ + INJ_{N+1}]`                             | **HIT**           |
+| **Baked as system message** | `[…, a₁, S_N(sys), u₂]` (frozen in chat)                        | `[…, a₁, S_N(sys), u₂, a₂, S_{N+1}(sys), u₃]`                                         | **HIT**           |
+| Baked into user msg text    | `[…, u₂ + INJ_N]` (stored in chat)                              | `[…, u₂ + INJ_N (history unchanged), a₂, u₃ + INJ_{N+1}]`                             | **HIT**           |
 
-Only the last row preserves the prefix. The bake must land in `chat[i].mes`
-as persistent chat state, not as a prompt-time injection.
+Rows 1–4 re-inject each turn at a fixed relative position — that position
+shifts as chat grows, so the byte at slot $L{-}1$ changes between turns.
+Rows 5–6 **freeze** the lore as persistent chat state. Once placed, the
+message is never recomputed; future turns only append after it. That is the
+only property that produces HITs under a strict message-list cache.
+
+Rows 5 and 6 both cache. Row 5 (system narrator message) is the chosen
+strategy: cleaner separation, native ST support, easier flush/undo. Row 6
+(mutate user message text) is kept as a fallback if row 5 turns out to be
+infeasible.
 
 ## Mode redesign — clean cut, no legacy
 
@@ -78,9 +88,22 @@ export const MEMORY_MODES = Object.freeze({
 
 ## APPEND_ONLY mode — the bake strategy
 
-Dynamic WI content is **baked into the user message text in chat storage**
-so that historical messages stay byte-identical across turns. Constant WI
-entries stay where they are (system blob, byte-stable, free).
+Dynamic WI content is **baked as a system narrator message inserted into
+chat storage** before the latest user message, so historical messages stay
+byte-identical across turns. Constant WI entries stay where they are
+(system blob, byte-stable, free).
+
+The mechanism is ST's native `/sys` command (`sendNarratorMessage`,
+`slash-commands.js:6019`). It splices a message with
+`extra.type = system_message_types.NARRATOR` into `chat[]` at a chosen
+position. `setOpenAIMessages` (`openai.js:581`) maps that type to
+`role: 'system'` in the API payload. No source patch, no monkey-patch.
+
+Why this beats baking into user message text (the previous draft strategy):
+clean separation (no mutation of user-typed text), native ST support,
+compact UI display via `isSmallSys`, trivial flush cleanup (delete the
+messages), trivial undo (delete one message). User-text baking is kept as
+a fallback if the narrator-message approach turns out to be infeasible.
 
 ### What gets baked
 
@@ -107,94 +130,169 @@ entries stay where they are (system blob, byte-stable, free).
 A `/sc-migrate-wi` slash command can bulk-rewrite entries; tracked as
 optional polish, not a v1 requirement.
 
-**2. Per-turn capture.** Register an `eventSource.on` listener on
-`WORLD_INFO_ACTIVATED`. On fire (skip dry-run scans):
+**2. Per-turn capture (listener on `WORLD_INFO_ACTIVATED`).** Stash only.
+Register an `eventSource.on` listener on `WORLD_INFO_ACTIVATED`. On fire:
 - Read `getContext().extensionPrompts['customWIOutlet_sc_bake']?.value`.
-- Stash in a module-local `_pendingBake`.
+- Stash in a module-local `_pendingBake`. Do NOT splice here.
+- (This event fires during WI scan, which runs *before* prompt assembly
+  snapshots `coreChat`. Splicing into `chat[]` here is invisible to the
+  current turn's API payload — see *Step 0 findings* below.)
 
-**3. Bake into the latest user message.** Same handler, synchronously:
-- Find `chat[chat.length - 1]` (the message just sent).
-- Wrap bake text in HTML comments to keep chat UI clean (see *Bake
-  presentation* below).
-- Mutate `chat[i].mes = original + '\n\n' + bakeBlock`.
-- The mutation lands during WI scan (which runs *inside* prompt assembly,
-  before `populateChatHistory` reads `chat`). Subsequent assembly steps
-  see the baked text and ship it to the API. ST persists the mutation on
-  the next `saveChatConditional`. No explicit save needed.
+**3. Dual-mutation inject (listener on `CHAT_COMPLETION_PROMPT_READY`).**
+This is the load-bearing intercept. Register a second listener on
+`CHAT_COMPLETION_PROMPT_READY`. On fire (skip `dryRun`):
+- If `_pendingBake` is empty/whitespace — skip (no lore activated).
+- Idempotency guard: skip if `chat[chat.length - 2]?.extra?.sc_wi` exists
+  (already baked for this send — continue/retry case).
+- Token budget check: if `_pendingBake` exceeds `memoryTokenBudget`,
+  truncate (highest `order` entries first).
+- **Mutation A — API payload.** Splice the system message into
+  `eventData.chat` before the last `{role: 'user'}` entry. This is the
+  array that becomes `generate_data.prompt` (`openai.js:1607-1614`). The
+  provider sees the system message this turn.
+- **Mutation B — ST chat storage.** Splice the narrator message object
+  into `chat[chat.length - 1]` (ST's `chat[]`, via `getContext().chat`).
+  This persists on ST's end-of-turn `saveChatConditional`. Next turn's
+  `coreChat` picks it up.
+- Both mutations must land the message at the equivalent position
+  (before the latest user message) so the API payload and ST storage
+  agree on ordering.
 
-**4. Track + undo.** For each baked message, record in
-`chat_metadata.sc_wi_bakes`:
+Message object (note `is_system: false` — see Step 0 findings):
 
 ```js
 {
-  [messageIndex]: {
-    uids: number[],          // WI entry uids that fired this turn
-    baked_text: string,      // exact bytes appended
-    original_mes: string,    // user's typed text, for undo
-    timestamp: string,
-  }
+  name: 'SC-WI',
+  is_user: false,
+  is_system: false,  // MUST be false — see coreChat filter below
+  send_date: getMessageTimeStamp(),
+  mes: _pendingBake,
+  force_avatar: system_avatar,
+  extra: {
+    type: system_message_types.NARRATOR,  // forces role='system' in API
+    gen_id: Date.now(),
+    isSmallSys: true,
+    api: 'summaryception',
+    model: 'sc_wi_bake',
+    sc_wi: { uids: capturedUids, version: 1 },
+  },
 }
 ```
 
-A `/sc-unbake-wi` slash command walks the map, restores `original_mes`,
-clears the record. Useful if the user wants to migrate off the mode or
-recover from a runaway bake.
+**Why `is_system: false`:** ST filters `is_system: true` messages out of
+`coreChat` (`script.js:4437`), which feeds `setOpenAIMessages`, which
+builds the API payload. An `is_system: true` message never reaches the
+API. `sendNarratorMessage` sets `is_system: false` for messages with
+visible text for exactly this reason. The `extra.type = NARRATOR` flag
+is what maps to `role: 'system'` in the API (`openai.js:581`), not the
+`is_system` boolean.
+
+### Step 0 findings — investigation results (resolved)
+
+**Q3: Is `chat.splice` during `WORLD_INFO_ACTIVATED` visible to the API
+payload? — NO.**
+
+Call order (`script.js`): `coreChat = chat.filter(...)` (L4437) →
+`chatForWI = coreChat.map(...)` (L4565) → `getWorldInfoPrompt(chatForWI)`
+(L4576, fires `WORLD_INFO_ACTIVATED`) → `setOpenAIMessages(coreChat)`
+(L4775) → `prepareOpenAIMessages` → API call.
+
+`coreChat` is snapshotted before WI scan. Splicing into `chat[]` during
+`WORLD_INFO_ACTIVATED` mutates the source array but not the snapshot.
+The narrator message appears in `chat[]` (persisted for next turn) but
+NOT in the current turn's `coreChat` / API payload. Result: the message
+shows up one turn late, shifting the prefix every turn — permanent MISS.
+
+**Fix:** intercept at `CHAT_COMPLETION_PROMPT_READY` (`openai.js:1610`),
+which fires after the payload is built but before it ships. Mutate
+`eventData.chat` (the payload) AND `chat[]` (storage) in the same
+listener. Both see the message this turn; next turn's `coreChat`
+includes it from storage.
+
+**Q2: Does WI scan read narrator messages? — YES.**
+
+`getScanningChat()` (`world-info.js:1057`):
+`chat.filter(x => !x.is_system).map(x => x.mes)`. Our messages have
+`is_system: false`, so they survive the filter. WI scan sees their
+keywords. **Cascade is real.** Baked lore permanently lives in scan
+scope. Decision: accept (approximates sticky=9999 for free, bounded by
+`memoryTokenBudget` cap) or filter (monkey-patch `getScanningChat` to
+also exclude `extra.sc_wi`). Default: accept. Revisit if runaway
+activation becomes a problem.
+
+**Q9: Does the summarizer read narrator messages? — YES.**
+
+The summarizer reads `chat[]` directly via `getChat()` →
+`buildPassageFromRangeWithStats` (`chatutils.js:182`). It filters on
+`is_system` (e.g., `isPromptVisibleLiveMessage`: `!message.is_system`,
+L237). Our messages have `is_system: false`, so they pass the filter
+and are included in passage text — the summary would parrot lore.
+
+**Required integration:** add `&& !message.extra?.sc_wi` to the
+filter predicates in:
+- `chatutils.js`: `isPromptVisibleLiveMessage` (L237),
+  `isUserHiddenMessage` (L249), `buildAssistantTurnsFromChat` (L103),
+  `getPromptDepthsByChatIndex` (L143)
+- `partition-planner.js` (L221), `cache-planner.js` (L237),
+  `verbatim-window.js` (L237)
+- `slop-breaker.js` (L106)
+
+This is mechanical: one extra clause per predicate. No architectural
+change.
 
 ### Activation tracking — short answer
 
 We do not run a parallel WI scan. We consume ST's. `WORLD_INFO_ACTIVATED`
-is the single source of truth; we are a sink. Per-message persistence in
-`chat_metadata.sc_wi_bakes` is for undo and audit, not for re-evaluation.
+is the single source of truth; we are a sink. Per-message persistence
+(the `extra.sc_wi` marker on each baked narrator message) is for undo
+and audit, not for re-evaluation.
 
-### Bake ordering — clarify
+### Bake ordering — revised after Step 0
 
-User asked: "first we bake lorebook shit inside prompt THEN send to LLM,
-right?" — Yes. Sequence per turn:
+Sequence per turn (corrected):
 
 1. User presses send.
 2. `MESSAGE_SENT` fires.
-3. Slash commands run; `GENERATION_AFTER_COMMANDS` fires with `generateData`.
-4. Prompt assembly begins. WI scan runs as part of assembly.
-5. **WI scan completes → `WORLD_INFO_ACTIVATED` fires.**
-6. **Our handler runs synchronously: capture + mutate `chat[i].mes`.**
-7. Assembly continues (`populateChatHistory`, `populationInjectionPrompts`,
-   mask user role) — reads the already-baked `chat[i].mes`.
-8. `CHAT_COMPLETION_PROMPT_READY` fires. Mask has already run by this point.
-9. API call. Provider sees baked text. Cache stores the full message list.
-10. Response. ST persists `chat[i]` with baked text intact.
+3. Slash commands run; `GENERATION_AFTER_COMMANDS` fires.
+4. `coreChat = chat.filter(...)` snapshots the chat array (`script.js:4437`).
+5. WI scan runs on `chatForWI` (derived from `coreChat`) →
+   `WORLD_INFO_ACTIVATED` fires → **our capture listener stashes
+   `_pendingBake`.**
+6. `setOpenAIMessages(coreChat)` builds API message list from snapshot.
+7. `prepareOpenAIMessages` assembles the full prompt.
+8. `CHAT_COMPLETION_PROMPT_READY` fires (`openai.js:1610`) → **our inject
+   listener runs: splice `eventData.chat` (payload) + splice `chat[]`
+   (storage).**
+9. API call. Provider sees the system message in the payload. Cache
+   stores the full list.
+10. Response. ST saves `chat[]` — narrator message persists.
 
-Future turns: `chat[i]` is byte-stable in history. Latest user message is
-the only thing that changes. Prefix extends → HIT.
+Turn N+1: `coreChat` snapshot (step 4) includes the narrator message from
+storage. `setOpenAIMessages` maps `NARRATOR` → `role: 'system'`. The
+message list `[…, S_N, u_N, a_N, …]` matches turn N's payload exactly up
+to the tail → HIT.
 
-### Bake presentation — HTML comments
+### Bake presentation — system narrator message
 
-Bake block wrapped in HTML comments so the rendered chat UI does not show
-raw WI text to the user:
+The baked lore is its own message in `chat[]`, not text appended to a
+user message. ST's chat renderer already knows how to display narrator
+messages: small block, system avatar, optional compact layout. We set
+`isSmallSys: true` and `name: 'SC-WI'` so the user sees a compact
+"SC-WI" line per bake — visible enough to audit, unobtrusive enough to
+ignore. No HTML comment tricks needed.
 
-```
-<!--SC-WI-BAKE-START-->
-[outlet content here]
-<!--SC-WI-BAKE-END-->
-```
+The message content is the formatted WI text from the outlet (after ST's
+`wi_format` template is applied). The user sees the same text the model
+sees, in the same chat stream. If they want it more compact, ST's
+existing compact narrator display handles it.
 
-ST's chat renderer passes HTML through (markdown → HTML). HTML comments are
-invisible in the rendered DOM. The bake is present in `chat[i].mes` (for
-the API and the cache) but absent from what the user sees.
-
-`<details><summary>WI</summary>…</details>` is the alternative — visible
-but collapsed. Heavier and more visually intrusive. HTML comments preferred
-for v1; `<details>` could be a user toggle later.
-
-**Open question — WI scan re-entry.** WI scan reads `chat[i].mes` to find
-keywords. If our baked content contains those keywords, future scans see
-them permanently. This causes cascading activation (bake makes everything
-stickier than sticky). Two possible fixes; need to investigate which ST
-supports:
-- HTML comments may be stripped by ST's WI scan input pre-processing. If
-  so, putting bake in comments hides it from the scan as a side effect.
-- If not, we need to filter `chat[i].mes` before WI scan sees it, which
-  means intercepting the scan input. Likely requires a small monkey-patch
-  on `getWorldInfoPrompt` or `WorldInfoBuffer`. **Investigate first.**
+**WI scan cascade — resolved.** WI scan reads our narrator messages
+(`world-info.js:1057`: `chat.filter(x => !x.is_system)` — our messages
+have `is_system: false`, so they survive). Baked lore keywords
+permanently live in scan scope. Decision for v1: **accept the cascade.**
+It approximates sticky=9999 for free. Bounded by `memoryTokenBudget`
+cap on bake size. If runaway activation becomes measurable, add a
+monkey-patch on `getScanningChat()` to filter `extra.sc_wi`.
 
 ### Settings reuse — no new sliders
 
@@ -230,79 +328,116 @@ otherwise it just moves the instability. Default `IN_PROMPT`.
 ### Flush interaction — what happens to baked WI
 
 User clarification: when Summaryception flushes (hides old messages), the
-baked WI in those hidden messages is **deleted from the visible prompt**.
-No preservation logic. The summary captures what the summarizer sees; if
-it does not see baked WI (it does not, because the summarizer uses
-`generateRaw` and bypasses WI), the summary does not contain it.
+baked narrator messages in that range are hidden along with them. They
+leave the visible prompt. No preservation logic. The summarizer does not
+see them either (it uses `generateRaw`, bypasses WI, and must also filter
+`extra.sc_wi` when reading `chat[]` directly — see *Open questions*).
 
-This is the desired behavior. Old context (including its baked WI) ages
+This is the desired behavior. Old context (including its baked lore) ages
 out of the visible window. New turns get fresh bakes from current WI
 activations.
+
+Implementation note: Summaryception's existing flush already hides
+messages by index range. Narrator messages fall in those ranges
+automatically. No special handling needed unless we want to filter them
+out of the summarizer input explicitly.
 
 ### Mask user role — no race
 
 `assistant-role-mask.js` rewrites roles on `generateData.prompt.messages`
-(the in-flight prompt), not on `chat[i].mes`. The mask reads the assembled
-messages, which were built from our already-baked `chat[i].mes`. So the
-mask sees baked text and rewrites roles consistently.
+(the in-flight prompt), not on `chat[]`. The mask runs in its
+`GENERATION_AFTER_COMMANDS` listener, which fires *before* prompt
+assembly. Our inject listener runs later, at
+`CHAT_COMPLETION_PROMPT_READY`. By then, the mask has already finished.
+Our splice into `eventData.chat` adds a `{role: 'system'}` entry — the
+mask only touches `{role: 'user'}` entries, so it would not have
+touched our message even if it ran later.
 
-No persisted-state race. The only ordering constraint is the existing one:
-the mask runs in its `GENERATION_AFTER_COMMANDS` listener; WI scan and our
-bake run during prompt assembly, which fires later. So by the time the
-mask runs, the bake is already in place. Safe.
-
-If the mask is ever rewritten to operate on `chat[i]` directly, this
-reasoning needs revisiting.
+No race. If the mask is ever rewritten to operate on `eventData.chat`
+at `CHAT_COMPLETION_PROMPT_READY`, register with `eventSource.makeLast`
+to ensure our splice lands first.
 
 ## Edge cases & decisions log
 
 1. **Existing chat history cannot be retroactively baked.** Prefix
    stability starts from the moment the user enables `APPEND_ONLY`. Old
    messages stay bare. Documented; not a bug.
-2. **WI keyword cascade from baked content.** See *Bake presentation —
-   open question*. Must be resolved before implementation.
+2. **WI keyword cascade from baked content.** **Resolved (Step 0).** WI
+   scan reads our narrator messages (`world-info.js:1057`). Cascade is
+   real. v1 decision: accept (bounded by `memoryTokenBudget`). Revisit
+   if runaway activation is measurable.
 3. **Token budget reuse.** `memoryTokenBudget` caps bake size. Truncation
    policy: highest `order` first. Documented in mode help.
-4. **Edit/regen.** Editing a baked message preserves the bake (it is just
-   text in `chat[i].mes`). Regen affects assistant messages, not user
-   message text — bake is unaffected.
+4. **Edit/regen.** Editing a user message does not affect adjacent
+   narrator messages — they are independent chat entries. Regen affects
+   assistant messages; the narrator message before the user message is
+   untouched. If the user deletes a baked narrator message manually,
+   prefix stability breaks for that turn only (one MISS); subsequent
+   turns re-stabilize on the new prefix.
 5. **Quick Reply / bot-initiated sends.** Out of scope for v1. May silently
    skip the bake. Document as known limitation.
 6. **Group chats.** Out of scope for v1. Behavior undefined.
-7. **UI display.** HTML comments for v1. `<details>` as future option.
+7. **UI display.** Compact narrator message (`isSmallSys: true`,
+   `name: 'SC-WI'`) for v1. ST's native narrator rendering. No custom
+   HTML.
 8. **First turn after enable.** Bake lands during current turn's WI scan.
-   Current turn's prompt sees baked text. Cache stores it. Next turn
-   extends cleanly. No special first-turn handling.
+   Current turn's prompt sees the narrator message. Cache stores it.
+   Next turn extends cleanly. No special first-turn handling.
 9. **Provider generality.** `APPEND_ONLY` is for list-cache providers.
    Using it on a `cache_control`-capable provider is wasteful (we pay
    full price for baked tokens that native cache would handle). The mode
    name and description must communicate this without naming specific
    providers.
+10. **Summarizer input filtering.** **Resolved (Step 0).** Summarizer
+    reads `chat[]` directly (`chatutils.js:182`). Our narrator messages
+    (`is_system: false`) pass existing filters. **Required integration:**
+    add `&& !message.extra?.sc_wi` to filter predicates in
+    `chatutils.js` (L237, L249, L103, L143), `partition-planner.js`
+    (L221), `cache-planner.js` (L237), `verbatim-window.js` (L237),
+    `slop-breaker.js` (L106). Mechanical, no architectural change.
 
 ## Open questions for next session
 
+**Resolved by Step 0 investigation:**
+- Q2 (WI scan reads narrator messages?) → **YES.** `world-info.js:1057`.
+  Cascade accepted for v1.
+- Q3 (chat.splice visible during WORLD_INFO_ACTIVATED?) → **NO.**
+  coreChat snapshotted before WI scan. Fixed: intercept at
+  `CHAT_COMPLETION_PROMPT_READY` with dual mutation.
+- Q9 (summarizer reads chat[] directly?) → **YES.** `chatutils.js:182`.
+  Required: add `extra.sc_wi` filter to 7 predicates (listed in edge
+  case #10).
+
+**Still open:**
+
 - **Q1.** Final mode names: `BALANCED` vs `DEFAULT` vs `STANDARD` for the
   small-saw mode. Bikeshed.
-- **Q2.** Does ST's WI scan strip HTML comments from its keyword input?
-  Determines whether the cascade problem solves itself or needs an
-  intercept. **Blocking — investigate before any code.**
-- **Q3.** Does `WORLD_INFO_ACTIVATED` fire synchronously enough that our
-  `chat[i].mes` mutation is visible to subsequent prompt-assembly steps?
-  Verify on first integration. If not, fall back to a
-  `CHAT_COMPLETION_PROMPT_READY` listener with `makeLast`.
+- **Q2.** (new) Token budget for bake: `memoryTokenBudget` is consumed
+  AFTER token budgeting runs (we splice at `CHAT_COMPLETION_PROMPT_READY`,
+  post-budget). Does the provider reject the request if the bake pushes
+  total tokens over `openai_max_context`? Need to verify whether the
+  freed budget from moving WI to outlet (tokens not consumed in system
+  blob) offsets the bake tokens added post-budget. If not, we need a
+  pre-budget reservation.
+- **Q3.** (new) `CHAT_COMPLETION_PROMPT_READY` fires for dry runs (token
+  counting) and non-chat APIs. Confirm the `dryRun` flag is reliably set
+  and filter on it. Also confirm the event fires for all OpenAI-compatible
+  APIs (not just `openai` source — custom sources, OOAI, etc.).
 - **Q4.** Should the migration to outlet position be a one-click command
   in v1, or a documented manual step? Manual is KISS; command is UX.
-- **Q5.** Does the bake text need a leading/trailing separator beyond the
-  HTML comment markers? E.g., a blank line before/after for visual
-  cleanliness in the API payload. Cosmetic but worth deciding.
+- **Q5.** Should the narrator message use `isSmallSys: true` (compact)
+  or `false` (full-width)? Compact default; toggle later.
 - **Q6.** When `memoryTokenBudget` is shared between bake and memory
-  injection, does the bake consume budget first or does memory? Or are
+  injection, does the bake consume budget first or memory? Or are
   they independent caps on independent injections? Needs a clear rule.
 - **Q7.** Should `APPEND_ONLY` be selectable from the Easy mode picker, or
-  Advanced only? It is opinionated and not always the right choice.
-- **Q8.** How does the bake interact with continuing an interrupted
-  generation? `Continue` re-sends the same user message; bake should be
-  idempotent on second fire (do not double-bake).
+  Advanced only?
+- **Q8.** Continue/retry idempotency: `CHAT_COMPLETION_PROMPT_READY` may
+  fire multiple times for the same user message (continue, retry,
+  multi-step tool calls). The idempotency guard checks
+  `chat[chat.length - 2]?.extra?.sc_wi`. Verify this handles all cases
+  without false positives (e.g., user sends two messages in quick
+  succession).
 
 ## Non-goals (explicit)
 
@@ -315,3 +450,48 @@ reasoning needs revisiting.
 - Preserving baked WI through summarization flush. Bakes are deleted with
   the messages that hold them.
 - Group chat support in v1.
+
+## Roadmap
+
+### Session 1 — Foundation + diagnostic (no behavior change)
+
+Mode enum cleanup:
+- Remove MEMORY_MODES.CACHE. Add APPEND_ONLY. Rename STANDARD → BALANCED.
+- Settings migration: mode: 'cache' → mode: 'balanced'.
+- Update mode picker UI, help text.
+
+Diagnostic tool (build first, use to verify everything else):
+- Hash each prompt section per turn (system blob, each chat message, each injection).
+- Log hash + diff against previous turn's hash.
+- This is how we prove the bake works and catch any remaining prefix-instability sources.
+
+End state: Modes renamed, diagnostic reports per-turn hash deltas. No bake code. Extension works exactly as before with new mode names.
+
+### Session 2 — Core bake + summarizer filter
+
+Summarizer filter (do this FIRST — it's mechanical and blocks safe testing):
+- Add && !message.extra?.sc_wi to 7 filter predicates:
+  - chatutils.js: L237, L249, L103, L143
+  - partition-planner.js: L221
+  - cache-planner.js: L237
+  - verbatim-window.js: L237
+  - slop-breaker.js: L106
+
+Bake mechanism:
+- Listener 1: WORLD_INFO_ACTIVATED → read outlet content into _pendingBake.
+- Listener 2: CHAT_COMPLETION_PROMPT_READY → dual-mutation splice (payload + storage).
+- Token budget cap (memoryTokenBudget), idempotency guard, dry-run skip.
+- Manual WI book migration (user moves entries to outlet position).
+
+Proof: Send chats, watch diagnostic confirm prefix hash stable, tail extends. Watch proxy logs confirm cache reuse.
+
+End state: Bake works end-to-end with manual WI setup. Cache HIT pattern verified via diagnostic.
+
+### Session 3 — Polish + hardening
+
+- /sc-migrate-wi slash command (bulk-move entries to outlet).
+- /sc-unbake-wi slash command (cleanup).
+- Resolve open Q2 (token budget post-splice — does provider reject overflow?).
+- Resolve open Q3 (dryRun flag reliability across API sources).
+- Edge case hardening (continue/retry, Quick Reply).
+- Mode help text, compact toggle (Q5).
