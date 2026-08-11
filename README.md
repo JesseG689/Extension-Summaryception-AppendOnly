@@ -64,6 +64,8 @@ Then pick a memory style:
 - Standard keeps the main prompt smaller and summarizes overflow continuously.
 - Cache Friendly keeps a larger live window and a stable memory prefix for providers with prompt caching discounts.
 
+Cache Friendly is now split into 2 modes: 1) prefix that most providers support. Example, AB -> AC works fine. It just find biggest stable start chunk and cache. Lore book works fine here too. And restrictive append only. AB -> AC will give you 0% cache hit. Only A -> AB -> ABC works
+
 The defaults are intentionally conservative: 22k recent verbatim tokens, 10k injected memory, 200 token Layer 0 targets, and promotion after old memories stack up.
 
 ## Controls you will actually use
@@ -125,6 +127,7 @@ If something looks off, use Clear or `/sc-clear`. That removes Summaryception's 
 
 Switch branches in SillyTavern if you prefer an older major version.
 
+- **v21:** New provider https://hapuppy.com/register?invite=CKxDPfUL support. Model "kimi-k3" is dirt cheap but requires special append only mode. If you keep around 40k context you will get around 20 000 messages for $20.
 - **v20:** Stop now pauses. Modular [STATE] experiment
 - **v19:** Changed prompts so less repair needed (second LLM pass).
 - **v18:** Improved UI + tooltip.
