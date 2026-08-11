@@ -128,6 +128,7 @@ If something looks off, use Clear or `/sc-clear`. That removes Summaryception's 
 Switch branches in SillyTavern if you prefer an older major version.
 
 <img width="1001" height="261" alt="{928C66D9-1057-40BE-B244-637870BA1211}" src="https://github.com/user-attachments/assets/adc8380f-0bc1-4140-ae3f-e61c68178121" />
+
 - **v21:** New provider https://hapuppy.com/register?invite=CKxDPfUL support. Model "kimi-k3" is dirt cheap but requires special append only mode. If you keep around 40k context you will get around 20 000 messages for $20. It requires special preset without any macros, dynamic inject position! https://gist.githubusercontent.com/vadash/e1e801688c68fb468e41d760881f3e87/raw/2bef10797e76ee35e88ce26528184d1d5ef949bf/FF_APPEND_ONLY_5.1.5.json based on FF 5.0
 - **v20:** Stop now pauses. Modular [STATE] experiment
 - **v19:** Changed prompts so less repair needed (second LLM pass).
