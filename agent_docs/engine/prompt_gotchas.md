@@ -20,3 +20,8 @@
 
 - An ideograph output filter strips unwanted script from summaries.
 - Configurable strip patterns run over model output before parsing.
+
+## Prompt Diagnostics
+
+- Prompt-ready dry runs can mark either the event payload or a separate argument. Ignore both forms before updating comparison state.
+- Report one contiguous-prefix verdict per real request. Per-section logs obscure duplicate events and make cache failures difficult to identify.

@@ -19,13 +19,20 @@ import { updateUI } from './ui.js';
 let previousPromptSectionHashes = [];
 
 /**
- * Log stable hashes for the final chat-completion prompt and mark sections that changed.
+ * Log one prefix-stability verdict for each final, non-dry-run chat prompt.
  * @param {...unknown} args - CHAT_COMPLETION_PROMPT_READY event arguments.
  * @returns {void}
  */
 export function onChatCompletionPromptReady(...args) {
     const [eventData, dryRun = false] = args;
-    if (dryRun === true || !eventData || typeof eventData !== 'object') {
+    if (
+        dryRun === true ||
+        (eventData &&
+            typeof eventData === 'object' &&
+            /** @type {{ dryRun?: unknown }} */ (eventData).dryRun === true) ||
+        !eventData ||
+        typeof eventData !== 'object'
+    ) {
         return;
     }
     const chat = /** @type {{ chat?: unknown }} */ (eventData).chat;
@@ -34,24 +41,37 @@ export function onChatCompletionPromptReady(...args) {
     }
 
     const nextHashes = chat.map((section) => hashPromptSection(section));
-    for (let index = 0; index < nextHashes.length; index++) {
-        const section = chat[index];
-        const role =
-            section && typeof section === 'object' && 'role' in section
-                ? String(section.role)
-                : 'unknown';
-        const change =
-            previousPromptSectionHashes[index] === undefined
-                ? 'added'
-                : previousPromptSectionHashes[index] === nextHashes[index]
-                  ? 'stable'
-                  : 'changed';
-        debug(`Prompt section ${index} (${role}): ${nextHashes[index]} [${change}]`);
+    const stablePrefixLength = countStablePrefix(previousPromptSectionHashes, nextHashes);
+    const previousLength = previousPromptSectionHashes.length;
+    const prefixBroken = previousLength > 0 && stablePrefixLength < previousLength;
+
+    if (previousLength === 0) {
+        debug(`Prompt prefix baseline: ${nextHashes.length} blocks`);
+    } else if (prefixBroken) {
+        debug(
+            `Prompt prefix BROKEN at block ${stablePrefixLength}: previous ${previousLength}, current ${nextHashes.length}`,
+        );
+    } else {
+        const addedRoles = chat
+            .slice(previousLength)
+            .map((section) => String(section?.role || 'unknown'))
+            .join(', ');
+        const added = nextHashes.length - previousLength;
+        debug(
+            `Prompt prefix OK: ${stablePrefixLength} stable blocks, ${added} added${addedRoles ? ` (${addedRoles})` : ''}`,
+        );
     }
-    for (let index = nextHashes.length; index < previousPromptSectionHashes.length; index++) {
-        debug(`Prompt section ${index}: ${previousPromptSectionHashes[index]} [removed]`);
-    }
+
     previousPromptSectionHashes = nextHashes;
+}
+
+function countStablePrefix(previousHashes, nextHashes) {
+    const limit = Math.min(previousHashes.length, nextHashes.length);
+    let index = 0;
+    while (index < limit && previousHashes[index] === nextHashes[index]) {
+        index++;
+    }
+    return index;
 }
 
 function hashPromptSection(section) {
