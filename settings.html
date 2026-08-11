@@ -142,21 +142,29 @@
                                 <span>Memory Style</span>
                             </div>
                             <div class="sc-radio-grid" role="radiogroup" aria-label="Easy Memory Style">
-                                <label class="checkbox_label sc-toggle-row" for="sc_easy_memory_mode_standard">
+                                <label class="checkbox_label sc-toggle-row" for="sc_easy_memory_mode_balanced">
                                     <span class="sc-toggle-icon fa-solid fa-layer-group"></span>
                                     <span class="sc-toggle-copy">
-                                        <span class="sc-toggle-title">Standard</span>
-                                        <small class="sc-hint">Summarizes overflow continuously, which keeps the main prompt smaller and steadier.</small>
+                                        <span class="sc-toggle-title">Balanced</span>
+                                        <small class="sc-hint">Summarizes overflow continuously to keep the main prompt smaller and steadier.</small>
                                     </span>
-                                    <input type="radio" id="sc_easy_memory_mode_standard" name="sc_easy_memory_mode" value="standard" />
+                                    <input type="radio" id="sc_easy_memory_mode_balanced" name="sc_easy_memory_mode" value="balanced" />
                                 </label>
-                                <label class="checkbox_label sc-toggle-row" for="sc_easy_memory_mode_cache">
+                                <label class="checkbox_label sc-toggle-row" for="sc_easy_memory_mode_prefix_cache">
                                     <span class="sc-toggle-icon fa-solid fa-box-archive"></span>
                                     <span class="sc-toggle-copy">
-                                        <span class="sc-toggle-title">Cache Friendly</span>
-                                        <small class="sc-hint">Uses a larger 32k live window, which pays off on providers that discount cached input.</small>
+                                        <span class="sc-toggle-title">Prefix Cache</span>
+                                        <small class="sc-hint">Uses a larger 32k live window for providers that discount cached input.</small>
                                     </span>
-                                    <input type="radio" id="sc_easy_memory_mode_cache" name="sc_easy_memory_mode" value="cache" />
+                                    <input type="radio" id="sc_easy_memory_mode_prefix_cache" name="sc_easy_memory_mode" value="prefix_cache" />
+                                </label>
+                                <label class="checkbox_label sc-toggle-row" for="sc_easy_memory_mode_append_only">
+                                    <span class="sc-toggle-icon fa-solid fa-arrow-down-long"></span>
+                                    <span class="sc-toggle-copy">
+                                        <span class="sc-toggle-title">Append Only</span>
+                                        <small class="sc-hint">Prepares the stable-prefix mode; bake behavior arrives in the next implementation session.</small>
+                                    </span>
+                                    <input type="radio" id="sc_easy_memory_mode_append_only" name="sc_easy_memory_mode" value="append_only" />
                                 </label>
                             </div>
                         </div>
@@ -526,31 +534,43 @@
                     </div>
                     <div class="sc-row sc-memory-mode-row">
                         <div class="sc-mode-grid" role="radiogroup" aria-label="Memory Mode">
-                            <label class="checkbox_label sc-mode-card" for="sc_memory_mode_standard">
+                            <label class="checkbox_label sc-mode-card" for="sc_memory_mode_balanced">
                                 <span class="sc-toggle-icon fa-solid fa-layer-group"></span>
                                 <span class="sc-toggle-copy">
-                                    <span class="sc-toggle-title">Standard</span>
-                                <small class="sc-hint">Summarizes overflow continuously, which keeps the main prompt smaller and steadier.</small>
+                                    <span class="sc-toggle-title">Balanced</span>
+                                    <small class="sc-hint">Summarizes overflow continuously to keep the main prompt smaller and steadier.</small>
                                 </span>
-                                <input type="radio" id="sc_memory_mode_standard" name="sc_memory_mode" value="standard" />
+                                <input type="radio" id="sc_memory_mode_balanced" name="sc_memory_mode" value="balanced" />
                             </label>
-                            <label class="checkbox_label sc-mode-card" for="sc_memory_mode_cache">
+                            <label class="checkbox_label sc-mode-card" for="sc_memory_mode_prefix_cache">
                                 <span class="sc-toggle-icon fa-solid fa-box-archive"></span>
                                 <span class="sc-toggle-copy">
-                                    <span class="sc-toggle-title">Cache Friendly</span>
-                                <small class="sc-hint">Uses a larger 32k live window, which pays off on providers that discount cached input.</small>
+                                    <span class="sc-toggle-title">Prefix Cache</span>
+                                    <small class="sc-hint">Uses a larger 32k live window for providers that discount cached input.</small>
                                 </span>
-                                <input type="radio" id="sc_memory_mode_cache" name="sc_memory_mode" value="cache" />
+                                <input type="radio" id="sc_memory_mode_prefix_cache" name="sc_memory_mode" value="prefix_cache" />
+                            </label>
+                            <label class="checkbox_label sc-mode-card" for="sc_memory_mode_append_only">
+                                <span class="sc-toggle-icon fa-solid fa-arrow-down-long"></span>
+                                <span class="sc-toggle-copy">
+                                    <span class="sc-toggle-title">Append Only</span>
+                                    <small class="sc-hint">Prepares the stable-prefix mode; bake behavior arrives in the next implementation session.</small>
+                                </span>
+                                <input type="radio" id="sc_memory_mode_append_only" name="sc_memory_mode" value="append_only" />
                             </label>
                         </div>
                     </div>
-                    <div id="sc_memory_help_standard" class="sc-note">
+                    <div id="sc_memory_help_balanced" class="sc-note">
                         <span class="fa-solid fa-circle-info"></span>
-                        <small>Standard keeps raw chat near the live window by summarizing overflow continuously. It avoids large context spikes and usually gives steadier quality when prompt caching is unavailable or weak.</small>
+                        <small>Balanced keeps raw chat near the live window by summarizing overflow continuously. It avoids large context spikes and usually gives steadier quality when prompt caching is unavailable or weak.</small>
                     </div>
-                    <div id="sc_memory_help_cache" class="sc-note" style="display: none;">
+                    <div id="sc_memory_help_prefix_cache" class="sc-note" style="display: none;">
                         <span class="fa-solid fa-circle-info"></span>
-                        <small>Cache Friendly freezes the memory prefix and lets live chat grow to a 32k budget, protecting a 4k-8k tail and flushing older chat in one commit. On cached-input providers this is much cheaper per turn, but total context is larger (memory + 32k).</small>
+                        <small>Prefix Cache lets live chat grow to a 32k budget, protects a 4k-8k tail, and flushes older chat in one commit. On cached-input providers this can be cheaper per turn, but total context is larger.</small>
+                    </div>
+                    <div id="sc_memory_help_append_only" class="sc-note" style="display: none;">
+                        <span class="fa-solid fa-circle-info"></span>
+                        <small>Append Only currently uses Balanced summarization behavior. Stable-prefix bake behavior is not enabled in this session.</small>
                     </div>
                 </section>
                 <section class="sc-section">

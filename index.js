@@ -27,6 +27,7 @@ import {
     bindPromptFreezeRecoveryEvents,
     onChatChanged,
     onAppReady,
+    onChatCompletionPromptReady,
     onGenerateAfterData,
     onGenerationEnded,
     onGenerationStarted,
@@ -71,6 +72,9 @@ import { registerSlashCommands } from './src/entry/commands.js';
     }
     if (eventTypes.GENERATION_STOPPED) {
         eventSource.on(eventTypes.GENERATION_STOPPED, onGenerationEnded);
+    }
+    if (eventTypes.CHAT_COMPLETION_PROMPT_READY) {
+        eventSource.on(eventTypes.CHAT_COMPLETION_PROMPT_READY, onChatCompletionPromptReady);
     }
 
     registerSlashCommands();

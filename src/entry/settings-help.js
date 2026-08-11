@@ -35,20 +35,26 @@ const basicHelp = ({ selector, title, short, controls, controlsText, when, risk 
 });
 
 const MEMORY_MODE_HELP = Object.freeze({
-    standard: {
-        title: 'Standard',
+    balanced: {
+        title: 'Balanced',
         short: 'Summarizes overflow as it comes, so the main prompt stays smaller and steadier.',
-        controlsText: 'Toggles the rolling verbatim window plus continuous summaries on or off.',
-        when: 'Turn it on when you want steadier context size and higher recall in a smaller total context, or when your provider has no real prompt caching.',
-        risk: 'You pay full input price for the changing prompt on every turn.',
+        controlsText: 'Uses the rolling verbatim window with continuous summaries.',
+        when: 'Use it for steadier context size or when prompt caching is unavailable or weak.',
+        risk: 'The changing prompt may be billed at full input price on every turn.',
     },
-    cache: {
-        title: 'Cache Friendly',
+    prefix_cache: {
+        title: 'Prefix Cache',
         short: 'Uses a bigger 32k live window for providers that discount cached input.',
-        controlsText:
-            'Locks a stable memory prefix in place and holds off flushing until the live cache window fills.',
-        when: 'Use it when your provider supports prompt caching and bills cached tokens at a steep discount.',
-        risk: 'Total context grows larger (memory plus 32k), and a manual summarize run can wipe your cache savings.',
+        controlsText: 'Holds off flushing until the larger live window fills.',
+        when: 'Use it when your provider supports prompt caching and discounts cached tokens.',
+        risk: 'Total context grows larger, and a manual summary can reset cache savings.',
+    },
+    append_only: {
+        title: 'Append Only',
+        short: 'Selects the future stable-prefix workflow.',
+        controlsText: 'Currently uses Balanced summarization behavior without prompt baking.',
+        when: 'Use it only to prepare or diagnose the append-only workflow in this release.',
+        risk: 'Stable-prefix bake behavior is not enabled yet.',
     },
 });
 
@@ -133,8 +139,7 @@ const HELP_ENTRIES = [
                 'How much recent chat stays word-for-word before older turns get summarized into Layer 0.',
             higher: 'keeps more exact recent chat but eats more context.',
             lower: 'summarizes sooner and frees up room for memory.',
-            defaultText:
-                '22k; Cache Friendly bumps this to 32k and can save ~70% per turn on caching providers.',
+            defaultText: '22k; Prefix Cache bumps this to 32k for caching providers.',
         }),
     ],
     [
@@ -282,19 +287,27 @@ const HELP_ENTRIES = [
         }),
     ],
     [
-        'memory_mode_standard',
+        'memory_mode_balanced',
         memoryModeHelp({
-            selector: selectorFor('sc_memory_mode_standard'),
-            controls: [controlFor('sc_memory_mode_standard')],
-            mode: 'standard',
+            selector: selectorFor('sc_memory_mode_balanced'),
+            controls: [controlFor('sc_memory_mode_balanced')],
+            mode: 'balanced',
         }),
     ],
     [
-        'memory_mode_cache',
+        'memory_mode_prefix_cache',
         memoryModeHelp({
-            selector: selectorFor('sc_memory_mode_cache'),
-            controls: [controlFor('sc_memory_mode_cache')],
-            mode: 'cache',
+            selector: selectorFor('sc_memory_mode_prefix_cache'),
+            controls: [controlFor('sc_memory_mode_prefix_cache')],
+            mode: 'prefix_cache',
+        }),
+    ],
+    [
+        'memory_mode_append_only',
+        memoryModeHelp({
+            selector: selectorFor('sc_memory_mode_append_only'),
+            controls: [controlFor('sc_memory_mode_append_only')],
+            mode: 'append_only',
         }),
     ],
     [
@@ -415,19 +428,27 @@ const HELP_ENTRIES = [
     ],
     ...CONNECTION_HELP_ENTRIES,
     [
-        'easy_memory_mode_standard',
+        'easy_memory_mode_balanced',
         memoryModeHelp({
-            selector: selectorFor('sc_easy_memory_mode_standard'),
-            controls: [controlFor('sc_easy_memory_mode_standard')],
-            mode: 'standard',
+            selector: selectorFor('sc_easy_memory_mode_balanced'),
+            controls: [controlFor('sc_easy_memory_mode_balanced')],
+            mode: 'balanced',
         }),
     ],
     [
-        'easy_memory_mode_cache',
+        'easy_memory_mode_prefix_cache',
         memoryModeHelp({
-            selector: selectorFor('sc_easy_memory_mode_cache'),
-            controls: [controlFor('sc_easy_memory_mode_cache')],
-            mode: 'cache',
+            selector: selectorFor('sc_easy_memory_mode_prefix_cache'),
+            controls: [controlFor('sc_easy_memory_mode_prefix_cache')],
+            mode: 'prefix_cache',
+        }),
+    ],
+    [
+        'easy_memory_mode_append_only',
+        memoryModeHelp({
+            selector: selectorFor('sc_easy_memory_mode_append_only'),
+            controls: [controlFor('sc_easy_memory_mode_append_only')],
+            mode: 'append_only',
         }),
     ],
     [

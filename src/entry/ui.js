@@ -349,15 +349,16 @@ async function getVisibleBacklogCount(s, store) {
 }
 
 function syncMemoryModeControls(s) {
-    const isCache = s.memoryMode === MEMORY_MODES.CACHE;
+    const isPrefixCache = s.memoryMode === MEMORY_MODES.PREFIX_CACHE;
     const isMacroOnly = s.customMemoryPosition === MEMORY_POSITIONS.MACRO_ONLY;
 
     $('#sc_custom_memory_depth_row').toggle(s.customMemoryPosition === MEMORY_POSITIONS.IN_CHAT);
     $('#sc_custom_memory_role_row').toggle(!isMacroOnly);
     $('#sc_macro_memory_note').toggle(isMacroOnly);
-    $('#sc_memory_help_standard').toggle(s.memoryMode === MEMORY_MODES.STANDARD);
-    $('#sc_memory_help_cache').toggle(isCache);
-    $('#sc_manual_cache_warning').toggle(isCache);
+    $('#sc_memory_help_balanced').toggle(s.memoryMode === MEMORY_MODES.BALANCED);
+    $('#sc_memory_help_prefix_cache').toggle(isPrefixCache);
+    $('#sc_memory_help_append_only').toggle(s.memoryMode === MEMORY_MODES.APPEND_ONLY);
+    $('#sc_manual_cache_warning').toggle(isPrefixCache);
     $('#sc_min_summary_turns, #sc_max_summary_turns').prop('disabled', false);
     $('#sc_min_summary_turns, #sc_max_summary_turns').closest('.sc-row').removeClass('sc-disabled');
     $('#sc_min_summary_budget_hint').text(SETTINGS_HELP.min_summary_budget.short);

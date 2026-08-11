@@ -36,6 +36,16 @@ describe('getSettings', () => {
         // …while the originally-provided key survived unchanged.
         expect(settings.enabled).toBe(true);
     });
+    it('migrates persisted cache modes to balanced', () => {
+        installSummaryContext({
+            settings: { memoryMode: 'cache', easyMemoryMode: 'cache' },
+        });
+
+        const settings = getSettings();
+
+        expect(settings.memoryMode).toBe('balanced');
+        expect(settings.easyMemoryMode).toBe('balanced');
+    });
 });
 
 describe('getEffectiveSettings', () => {
@@ -65,6 +75,14 @@ describe('getEffectiveSettings', () => {
         const effective = getEffectiveSettings();
         expect(typeof effective).toBe('object');
         expect(effective.enabled).toBe(true);
+    });
+
+    it('projects the selected Easy memory mode into runtime settings', () => {
+        installSummaryContext({
+            settings: { uiMode: UI_MODES.EASY, easyMemoryMode: 'append_only' },
+        });
+
+        expect(getEffectiveSettings().memoryMode).toBe('append_only');
     });
 });
 

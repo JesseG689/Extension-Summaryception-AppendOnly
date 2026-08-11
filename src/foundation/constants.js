@@ -14,8 +14,9 @@ export const MODULE_NAME = 'summaryception';
 export const LOG_PREFIX = '[Summaryception]';
 
 export const MEMORY_MODES = Object.freeze({
-    STANDARD: 'standard',
-    CACHE: 'cache',
+    BALANCED: 'balanced',
+    PREFIX_CACHE: 'prefix_cache',
+    APPEND_ONLY: 'append_only',
     CUSTOM: 'custom',
 });
 
@@ -108,12 +109,12 @@ export const defaultSettings = Object.freeze({
     uiMode: UI_MODES.EASY,
     easySummarizerContextTokens: 16000,
     easyMemoryTokenBudget: 10000,
-    easyMemoryMode: MEMORY_MODES.STANDARD,
+    easyMemoryMode: MEMORY_MODES.BALANCED,
     easyConnectionSource: 'default', // 'default' | 'profile'
     easyConnectionProfileId: '',
     easyMergeConnectionSource: 'inherit', // 'inherit' | 'profile'
     easyMergeConnectionProfileId: '',
-    memoryMode: MEMORY_MODES.STANDARD,
+    memoryMode: MEMORY_MODES.BALANCED,
     customMemoryPosition: MEMORY_POSITIONS.IN_PROMPT,
     customMemoryRole: MEMORY_ROLES.SYSTEM,
     customMemoryDepth: 0,

@@ -42,7 +42,7 @@ const LAYER0_PHASE = /** @type {'layer0'} */ ('layer0');
  * @returns {Promise<SummaryRoutePlan>}
  */
 export async function buildAutoSummaryRoutePlan(chat, store, settings) {
-    if (settings.memoryMode === MEMORY_MODES.CACHE) {
+    if (settings.memoryMode === MEMORY_MODES.PREFIX_CACHE) {
         return await buildCacheAutoRoutePlan(chat, store, settings);
     }
     return await buildStandardAutoRoutePlan(chat, store, settings);

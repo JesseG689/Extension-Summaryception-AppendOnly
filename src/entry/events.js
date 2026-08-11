@@ -16,6 +16,67 @@ import { updateInjection } from '../features/injection.js';
 import { repairOrphanedMessages } from '../features/maintenance.js';
 import { updateUI } from './ui.js';
 
+let previousPromptSectionHashes = [];
+
+/**
+ * Log stable hashes for the final chat-completion prompt and mark sections that changed.
+ * @param {...unknown} args - CHAT_COMPLETION_PROMPT_READY event arguments.
+ * @returns {void}
+ */
+export function onChatCompletionPromptReady(...args) {
+    const [eventData, dryRun = false] = args;
+    if (dryRun === true || !eventData || typeof eventData !== 'object') {
+        return;
+    }
+    const chat = /** @type {{ chat?: unknown }} */ (eventData).chat;
+    if (!Array.isArray(chat)) {
+        return;
+    }
+
+    const nextHashes = chat.map((section) => hashPromptSection(section));
+    for (let index = 0; index < nextHashes.length; index++) {
+        const section = chat[index];
+        const role =
+            section && typeof section === 'object' && 'role' in section
+                ? String(section.role)
+                : 'unknown';
+        const change =
+            previousPromptSectionHashes[index] === undefined
+                ? 'added'
+                : previousPromptSectionHashes[index] === nextHashes[index]
+                  ? 'stable'
+                  : 'changed';
+        debug(`Prompt section ${index} (${role}): ${nextHashes[index]} [${change}]`);
+    }
+    for (let index = nextHashes.length; index < previousPromptSectionHashes.length; index++) {
+        debug(`Prompt section ${index}: ${previousPromptSectionHashes[index]} [removed]`);
+    }
+    previousPromptSectionHashes = nextHashes;
+}
+
+function hashPromptSection(section) {
+    const text = stableSerialize(section);
+    let hash = 0x811c9dc5;
+    for (let index = 0; index < text.length; index++) {
+        hash ^= text.charCodeAt(index);
+        hash = Math.imul(hash, 0x01000193);
+    }
+    return (hash >>> 0).toString(16).padStart(8, '0');
+}
+
+function stableSerialize(value) {
+    if (value === null || typeof value !== 'object') {
+        return JSON.stringify(value);
+    }
+    if (Array.isArray(value)) {
+        return `[${value.map(stableSerialize).join(',')}]`;
+    }
+    return `{${Object.keys(value)
+        .sort()
+        .map((key) => `${JSON.stringify(key)}:${stableSerialize(value[key])}`)
+        .join(',')}}`;
+}
+
 // ─── Event Handlers ──────────────────────────────────────────────────
 
 let reconcileTimer = null;

@@ -20,7 +20,7 @@ describe('buildAutoSummaryRoutePlan', () => {
         installSummaryContext();
         const chat = makeSizedChat(6, { userLength: 500, assistantLength: 2000 });
         const settings = makeSummarySettings({
-            memoryMode: MEMORY_MODES.CACHE,
+            memoryMode: MEMORY_MODES.PREFIX_CACHE,
             verbatimTokenBudget: 6000,
             minSummaryBudget: 6000,
             maxL0SourceTokens: 24000,
@@ -42,7 +42,7 @@ describe('buildAutoSummaryRoutePlan', () => {
         installSummaryContext();
         const chat = makeSizedChat(2, { userLength: 50, assistantLength: 50 });
         const settings = makeSummarySettings({
-            memoryMode: MEMORY_MODES.CACHE,
+            memoryMode: MEMORY_MODES.PREFIX_CACHE,
             verbatimTokenBudget: 16000,
         });
 
@@ -58,7 +58,7 @@ describe('buildAutoSummaryRoutePlan', () => {
         installSummaryContext();
         const chat = makeSizedChat(3, { userLength: 500, assistantLength: 2000 });
         const settings = makeSummarySettings({
-            memoryMode: MEMORY_MODES.STANDARD,
+            memoryMode: MEMORY_MODES.BALANCED,
             verbatimTokenBudget: 4000,
             minSummaryBudget: 5000,
             maxL0SourceTokens: 24000,
@@ -74,6 +74,24 @@ describe('buildAutoSummaryRoutePlan', () => {
         expect(plan.ready).toBe(true);
         expect(plan.totalBatches).toBe(1);
         expect(plan.batchTurns.map((turn) => turn.index)).toEqual([1, 3]);
+    });
+
+    it('dispatches Append Only through the Balanced route before baking exists', async () => {
+        installSummaryContext();
+        const chat = makeSizedChat(3, { userLength: 500, assistantLength: 2000 });
+        const settings = makeSummarySettings({
+            memoryMode: MEMORY_MODES.APPEND_ONLY,
+            verbatimTokenBudget: 4000,
+            minSummaryBudget: 5000,
+            maxL0SourceTokens: 24000,
+            minSummaryTurns: 2,
+            maxSummaryTurns: 5,
+        });
+
+        const plan = await buildAutoSummaryRoutePlan(chat, makeSummaryStore(), settings);
+
+        expect(plan.route).toBe(SUMMARY_ROUTES.STANDARD_AUTO);
+        expect(plan.commitMode).toBe(SUMMARY_COMMIT_MODES.TURNS);
     });
 
     it('dispatches the standard route on the max-turns branch', async () => {

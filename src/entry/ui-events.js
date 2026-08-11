@@ -239,7 +239,15 @@ function bindMemoryModeHandlers() {
 function bindEasyMemoryModeHandler() {
     $(document).on('change', 'input[name="sc_easy_memory_mode"]', function () {
         const mode = String($(this).val());
-        if (mode !== MEMORY_MODES.STANDARD && mode !== MEMORY_MODES.CACHE) {
+        if (
+            !(
+                /** @type {string[]} */ ([
+                    MEMORY_MODES.BALANCED,
+                    MEMORY_MODES.PREFIX_CACHE,
+                    MEMORY_MODES.APPEND_ONLY,
+                ]).includes(mode)
+            )
+        ) {
             return;
         }
 
@@ -258,7 +266,15 @@ function bindEasyMemoryModeHandler() {
 function bindAdvancedMemoryModeHandler() {
     $(document).on('change', 'input[name="sc_memory_mode"]', function () {
         const mode = String($(this).val());
-        if (mode !== MEMORY_MODES.STANDARD && mode !== MEMORY_MODES.CACHE) {
+        if (
+            !(
+                /** @type {string[]} */ ([
+                    MEMORY_MODES.BALANCED,
+                    MEMORY_MODES.PREFIX_CACHE,
+                    MEMORY_MODES.APPEND_ONLY,
+                ]).includes(mode)
+            )
+        ) {
             return;
         }
 
@@ -268,7 +284,7 @@ function bindAdvancedMemoryModeHandler() {
         }
 
         s.memoryMode = mode;
-        s.verbatimTokenBudget = mode === MEMORY_MODES.CACHE ? 32000 : 22000;
+        s.verbatimTokenBudget = mode === MEMORY_MODES.PREFIX_CACHE ? 32000 : 22000;
         saveSettings();
         updateInjection();
         updateUI();
@@ -604,7 +620,7 @@ async function onSlopBreaker() {
 }
 
 function showManualCacheWarning(settings) {
-    if (settings.memoryMode !== MEMORY_MODES.CACHE) {
+    if (settings.memoryMode !== MEMORY_MODES.PREFIX_CACHE) {
         return;
     }
     toastr.info(
@@ -730,7 +746,9 @@ function onResetDefaults() {
     s.maxL0SourceTokens = defaultSettings.maxL0SourceTokens;
     s.minSummaryBudget = defaultSettings.minSummaryBudget;
     s.verbatimTokenBudget =
-        preservedMemoryMode === MEMORY_MODES.CACHE ? 32000 : defaultSettings.verbatimTokenBudget;
+        preservedMemoryMode === MEMORY_MODES.PREFIX_CACHE
+            ? 32000
+            : defaultSettings.verbatimTokenBudget;
     s.memoryTokenBudget = defaultSettings.memoryTokenBudget;
     s.layer0SummaryTokenTarget = defaultSettings.layer0SummaryTokenTarget;
     s.snippetsPerLayer = defaultSettings.snippetsPerLayer;

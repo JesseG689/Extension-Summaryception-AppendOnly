@@ -190,11 +190,23 @@ function normalizeChatStore(store) {
  */
 function normalizeMemorySettings(settings) {
     let changed = false;
-    if (!isSettingValue([MEMORY_MODES.STANDARD, MEMORY_MODES.CACHE], settings.memoryMode)) {
+    const migrateMode = (mode) => (mode === 'cache' ? MEMORY_MODES.BALANCED : mode);
+    const migratedMemoryMode = migrateMode(settings.memoryMode);
+    const migratedEasyMemoryMode = migrateMode(settings.easyMemoryMode);
+    if (settings.memoryMode !== migratedMemoryMode) {
+        settings.memoryMode = migratedMemoryMode;
+        changed = true;
+    }
+    if (settings.easyMemoryMode !== migratedEasyMemoryMode) {
+        settings.easyMemoryMode = migratedEasyMemoryMode;
+        changed = true;
+    }
+    const validModes = [MEMORY_MODES.BALANCED, MEMORY_MODES.PREFIX_CACHE, MEMORY_MODES.APPEND_ONLY];
+    if (!isSettingValue(validModes, settings.memoryMode)) {
         settings.memoryMode = defaultSettings.memoryMode;
         changed = true;
     }
-    if (!isSettingValue([MEMORY_MODES.STANDARD, MEMORY_MODES.CACHE], settings.easyMemoryMode)) {
+    if (!isSettingValue(validModes, settings.easyMemoryMode)) {
         settings.easyMemoryMode = defaultSettings.easyMemoryMode;
         changed = true;
     }
@@ -378,7 +390,7 @@ function buildEasyEffectiveSettings(settings) {
     effective.minSummaryBudget = sourceCap;
     effective.memoryMode = settings.easyMemoryMode;
     effective.verbatimTokenBudget =
-        settings.easyMemoryMode === MEMORY_MODES.CACHE
+        settings.easyMemoryMode === MEMORY_MODES.PREFIX_CACHE
             ? 32000
             : defaultSettings.verbatimTokenBudget;
     effective.memoryTokenBudget = settings.easyMemoryTokenBudget;
