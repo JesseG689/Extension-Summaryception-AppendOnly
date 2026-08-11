@@ -154,4 +154,14 @@ describe('countSourceRangeTokens', () => {
 
         expect(stats.finalTokens).toBe(2 * messageLineTokens(false, 100));
     });
+
+    it('skips baked WI narrator messages', async () => {
+        installSummaryContext();
+        const baked = makeMessage({ mes: 'x'.repeat(100) });
+        baked.extra.sc_wi = { uids: [1], version: 1 };
+
+        const stats = await countSourceRangeTokens([baked], 0, 0, makeSummarySettings());
+
+        expect(stats.finalTokens).toBe(0);
+    });
 });

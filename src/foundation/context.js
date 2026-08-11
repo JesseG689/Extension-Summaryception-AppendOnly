@@ -81,6 +81,42 @@ export async function saveChat() {
 }
 
 /**
+ * Render a message already inserted into the active chat and keep DOM ids aligned.
+ * @param {ChatMessage} message
+ * @param {number} index
+ * @returns {unknown}
+ */
+export function renderInsertedChatMessage(message, index) {
+    for (const element of document.querySelectorAll('#chat .mes')) {
+        const messageId = Number(element.getAttribute('mesid'));
+        if (Number.isInteger(messageId) && messageId >= index) {
+            element.setAttribute('mesid', String(messageId + 1));
+            const label = element.querySelector('.mesIDDisplay');
+            if (label) {
+                label.textContent = `#${messageId + 1}`;
+            }
+        }
+    }
+
+    const addOneMessage = getContext().addOneMessage;
+    return typeof addOneMessage === 'function'
+        ? addOneMessage(message, { forceId: index, insertAfter: index - 1, scroll: false })
+        : null;
+}
+
+/**
+ * Shift existing rendered message ids after an inserted chat index.
+ * @param {number} index
+ * @returns {void}
+ */
+export function shiftRenderedMessageIds(index) {
+    const shift = getContext().updateViewMessageIds;
+    if (typeof shift === 'function') {
+        shift(index);
+    }
+}
+
+/**
  * Execute a slash command through SillyTavern's command parser.
  * @param {string} command - The slash command string
  * @param {Record<string, unknown>} [options] - Command options

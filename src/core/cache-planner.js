@@ -234,5 +234,5 @@ function isPromptVisibleLiveMessage(message) {
     if (message.extra?.sc_ghosted) {
         return false;
     }
-    return !message.is_system && !message.is_hidden;
+    return !message.extra?.sc_wi && !message.is_system && !message.is_hidden;
 }

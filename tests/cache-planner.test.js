@@ -158,4 +158,22 @@ describe('getCacheFriendlyPlan', () => {
         expect(plan.tailStartIdx).toBe(9);
         expect(plan.flushEndIdx).toBe(7);
     });
+
+    it('excludes baked WI from the live cache window', async () => {
+        installSummaryContext();
+        const chat = makeSizedChat(2, { userLength: 50, assistantLength: 50 });
+        const baked = makeMessage({ mes: 'x'.repeat(1000) });
+        baked.extra.sc_wi = { uids: [1], version: 1 };
+        chat.splice(2, 0, baked);
+
+        const plan = await getCacheFriendlyPlan(
+            chat,
+            makeSummaryStore(),
+            makeSummarySettings({ verbatimTokenBudget: 16000 }),
+        );
+
+        expect(plan.liveTokens).toBe(
+            2 * messageLineTokens(true, 50) + 2 * messageLineTokens(false, 50),
+        );
+    });
 });

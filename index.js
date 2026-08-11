@@ -11,6 +11,7 @@
 import { LOG_PREFIX } from './src/foundation/constants.js';
 import { getContext } from './src/foundation/context.js';
 import { getSettings } from './src/foundation/state.js';
+import { captureWorldInfoBake, injectPendingWorldInfoBake } from './src/core/world-info-bake.js';
 import { setInjectionUpdater, setUiUpdater } from './src/core/summarizer.js';
 import { setUiRefresher } from './src/features/persist.js';
 import { updateUI } from './src/entry/ui.js';
@@ -61,6 +62,9 @@ import { registerSlashCommands } from './src/entry/commands.js';
     initConnectionUI();
     await registerSummaryceptionMemoryMacro();
 
+    if (eventTypes.WORLD_INFO_ACTIVATED) {
+        eventSource.on(eventTypes.WORLD_INFO_ACTIVATED, captureWorldInfoBake);
+    }
     eventSource.on(eventTypes.MESSAGE_RECEIVED, onMessageReceived);
     eventSource.on(eventTypes.CHAT_CHANGED, onChatChanged);
     eventSource.on(eventTypes.GENERATION_STARTED, onGenerationStarted);
@@ -74,6 +78,7 @@ import { registerSlashCommands } from './src/entry/commands.js';
         eventSource.on(eventTypes.GENERATION_STOPPED, onGenerationEnded);
     }
     if (eventTypes.CHAT_COMPLETION_PROMPT_READY) {
+        eventSource.on(eventTypes.CHAT_COMPLETION_PROMPT_READY, injectPendingWorldInfoBake);
         eventSource.on(eventTypes.CHAT_COMPLETION_PROMPT_READY, onChatCompletionPromptReady);
     }
 

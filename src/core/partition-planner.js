@@ -218,5 +218,8 @@ function isPassageCountableMessage(message) {
     if (!message?.mes || !String(message.mes).trim()) {
         return false;
     }
-    return !(message.is_system || message.is_hidden) || message.extra?.sc_ghosted;
+    return (
+        !message.extra?.sc_wi &&
+        (!(message.is_system || message.is_hidden) || message.extra?.sc_ghosted)
+    );
 }

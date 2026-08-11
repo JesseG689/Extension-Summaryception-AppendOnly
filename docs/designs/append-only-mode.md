@@ -1,6 +1,6 @@
 # Append-Only Mode (Cache Strategy Redesign)
 
-Status: **Draft — brainstorm output, not approved for implementation.**
+Status: **Sessions 1–2 implemented; Session 3 remains planned.**
 Last revised: 2026-08-11.
 
 This is a working document. Open questions are first-class citizens; nothing
@@ -180,20 +180,22 @@ optional polish, not a v1 requirement.
 
 **2. Per-turn capture (listener on `WORLD_INFO_ACTIVATED`).** Stash only.
 Register an `eventSource.on` listener on `WORLD_INFO_ACTIVATED`. On fire:
-- Read `getContext().extensionPrompts['customWIOutlet_sc_bake']?.value`.
-- Stash in a module-local `_pendingBake`. Do NOT splice here.
-- (This event fires during WI scan, which runs *before* prompt assembly
-  snapshots `coreChat`. Splicing into `chat[]` here is invisible to the
-  current turn's API payload — see *Step 0 findings* below.)
+- Retain the activated entries for `outletName = 'sc_bake'`, ordered by
+  descending `order`.
+- Do NOT read the formatted outlet yet. ST populates
+  `extension_prompts['customWIOutlet_sc_bake']` after this event returns.
+- Do NOT splice here. `coreChat` was snapshotted before the WI scan.
 
 **3. Dual-mutation inject (listener on `CHAT_COMPLETION_PROMPT_READY`).**
 This is the load-bearing intercept. Register a second listener on
 `CHAT_COMPLETION_PROMPT_READY`. On fire (skip `dryRun`):
-- If `_pendingBake` is empty/whitespace — skip (no lore activated).
+- Read the newly populated formatted outlet from
+  `extension_prompts['customWIOutlet_sc_bake']`.
+- If the outlet is empty/whitespace or no matching entries activated — skip.
 - Idempotency guard: skip if `chat[chat.length - 2]?.extra?.sc_wi` exists
   (already baked for this send — continue/retry case).
-- Token budget check: if `_pendingBake` exceeds `memoryTokenBudget`,
-  truncate (highest `order` entries first).
+- Token budget check: if the formatted outlet exceeds `memoryTokenBudget`,
+  retain its highest-order prefix under the budget.
 - **Mutation A — API payload.** Splice the system message into
   `eventData.chat` before the last `{role: 'user'}` entry. This is the
   array that becomes `generate_data.prompt` (`openai.js:1607-1614`). The
@@ -310,13 +312,13 @@ Sequence per turn (corrected):
 3. Slash commands run; `GENERATION_AFTER_COMMANDS` fires.
 4. `coreChat = chat.filter(...)` snapshots the chat array (`script.js:4437`).
 5. WI scan runs on `chatForWI` (derived from `coreChat`) →
-   `WORLD_INFO_ACTIVATED` fires → **our capture listener stashes
-   `_pendingBake`.**
+   `WORLD_INFO_ACTIVATED` fires → **our capture listener stashes the
+   activated `sc_bake` entries.**
 6. `setOpenAIMessages(coreChat)` builds API message list from snapshot.
 7. `prepareOpenAIMessages` assembles the full prompt.
-8. `CHAT_COMPLETION_PROMPT_READY` fires (`openai.js:1610`) → **our inject
-   listener runs: splice `eventData.chat` (payload) + splice `chat[]`
-   (storage).**
+8. ST populates the formatted outlet, then `CHAT_COMPLETION_PROMPT_READY`
+   fires (`openai.js:1610`) → **our inject listener reads the outlet and
+   splices `eventData.chat` (payload) + `chat[]` (storage).**
 9. API call. Provider sees the system message in the payload. Cache
    stores the full list.
 10. Response. ST saves `chat[]` — narrator message persists.
@@ -536,7 +538,7 @@ Diagnostic tool (build first, use to verify everything else):
 
 End state: Modes renamed, diagnostic reports per-turn hash deltas. No bake code. Extension works exactly as before with new mode names.
 
-### Session 2 — Core bake + summarizer filter
+### Session 2 — Core bake + summarizer filter — Complete
 
 Summarizer filter (do this FIRST — it's mechanical and blocks safe testing):
 - Add && !message.extra?.sc_wi to 7 filter predicates:

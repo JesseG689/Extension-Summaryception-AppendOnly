@@ -11,6 +11,9 @@
 - All runtime calls to SillyTavern globals pass through the foundation context module.
 - Missing optional host APIs return null, false, or a safe fallback. Callers must not assume the API exists.
 - Changing facade exports also requires an update to the global test setup.
+- Dynamic lore for append-only caching is stored as native narrator messages with stable markers.
+- The bake path updates the API payload and chat storage in the same prompt-ready event.
+- Baked lore is excluded from summarizer accounting but remains visible in the chat UI.
 
 ## State Ownership
 

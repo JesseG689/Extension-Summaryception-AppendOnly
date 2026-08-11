@@ -32,6 +32,7 @@ const foundationMocks = vi.hoisted(() => {
         saveSettingsDebounced: vi.fn(),
         saveMetadata: vi.fn(),
         saveChat: vi.fn(),
+        renderInsertedChatMessage: vi.fn(),
         executeSlashCommandsWithOptions: vi.fn(),
         setExtensionPrompt: vi.fn(),
         registerMacro: vi.fn(),

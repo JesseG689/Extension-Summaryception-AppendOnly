@@ -36,6 +36,13 @@ describe('getAssistantTurns', () => {
         expect(plain).toHaveLength(0);
     });
 
+    it('excludes baked WI narrator messages from assistant turns', () => {
+        const baked = makeMessage({ mes: 'formatted lore' });
+        baked.extra.sc_wi = { uids: [1], version: 1 };
+
+        expect(getAssistantTurns([baked])).toEqual([]);
+    });
+
     it('skips empty/whitespace messages and defaults a missing name', () => {
         // Whitespace-only assistant message is dropped.
         const whitespace = getAssistantTurns([makeMessage({ mes: '   ' })]);
@@ -114,6 +121,18 @@ describe('getPromptDepthsByChatIndex', () => {
         expect(depths.get(3)).toBe(0);
         expect(depths.get(2)).toBe(1);
         expect(depths.get(0)).toBe(2);
+    });
+
+    it('excludes baked WI narrator messages from prompt depth', () => {
+        const baked = makeMessage({ mes: 'formatted lore' });
+        baked.extra.sc_wi = { uids: [1], version: 1 };
+        const depths = getPromptDepthsByChatIndex([
+            makeMessage({ isUser: true, mes: 'user' }),
+            baked,
+            makeMessage({ mes: 'assistant' }),
+        ]);
+
+        expect([...depths.keys()]).toEqual([0, 2]);
     });
 });
 

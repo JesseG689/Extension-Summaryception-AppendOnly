@@ -100,7 +100,7 @@ export function getAssistantTurns(chat) {
     for (let i = 0; i < chat.length; i++) {
         const m = chat[i];
         const isOurGhost = m.extra?.sc_ghosted === true;
-        const isAssistant = !m.is_user && (!m.is_system || isOurGhost);
+        const isAssistant = !m.is_user && !m.extra?.sc_wi && (!m.is_system || isOurGhost);
         if (isAssistant && m.mes && m.mes.trim().length > 0) {
             turns.push({ index: i, mes: m.mes, name: m.name || 'Assistant' });
         }
@@ -140,7 +140,7 @@ export function getPromptDepthsByChatIndex(chat) {
     const depths = new Map();
 
     for (let i = 0; i < chat.length; i++) {
-        if (!chat[i]?.is_system) {
+        if (!chat[i]?.is_system && !chat[i]?.extra?.sc_wi) {
             promptIndexes.push(i);
         }
     }
@@ -246,7 +246,10 @@ function isMessagePassageEligible(message) {
 }
 
 function isUserHiddenMessage(message) {
-    return (message.is_system || message.is_hidden) && !message.extra?.sc_ghosted;
+    return (
+        (message.is_system || message.is_hidden || message.extra?.sc_wi) &&
+        !message.extra?.sc_ghosted
+    );
 }
 
 async function getPassageFinalText({ message, rawText, depth, applyRegexScripts }) {
