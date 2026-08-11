@@ -290,13 +290,17 @@ function formatSliderChipValue(value, slider) {
 }
 
 /**
- * Show and enable the role-mask mode control only while masking is enabled.
+ * Sync role-mask controls with masking and append-only compatibility.
  * @param {boolean} enabled
+ * @param {boolean} [appendOnly]
  * @returns {void}
  */
-export function syncRoleMaskModeControl(enabled) {
+export function syncRoleMaskModeControl(enabled, appendOnly = false) {
     $('#sc_mask_user_role_mode_row').toggle(enabled);
     $('#sc_mask_user_role_mode').prop('disabled', !enabled);
+    $(
+        '#sc_mask_user_role_mode option[value="marker_last"], #sc_mask_user_role_mode option[value="keep_last_user"]',
+    ).prop('disabled', appendOnly);
 }
 
 /**

@@ -627,7 +627,7 @@
                             <div class="sc-setting-row">
                                 <label for="sc_mask_user_role_mode">
                                     <span>Compatibility mode</span>
-                                    <small class="sc-hint">Some providers reject a request with no user message, so the marker modes add one throwaway user line. Keep-last is for when another extension (like Rabbit-Response-Team) already injects its instruction as your final user turn.</small>
+                                    <small class="sc-hint">Some providers reject a request with no user message, so the marker modes add one throwaway user line. Append Only disables modes that change the cached prefix between turns.</small>
                                 </label>
                                 <select id="sc_mask_user_role_mode" class="text_pole" disabled>
                                     <option value="marker_first">Marker first (for APIs that need a user message)</option>

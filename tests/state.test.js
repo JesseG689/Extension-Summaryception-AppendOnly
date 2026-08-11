@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 
-import { UI_MODES } from '../src/foundation/constants.js';
+import { MASK_USER_ROLE_MODES, UI_MODES } from '../src/foundation/constants.js';
 import {
     bumpSummaryStoreMutationEpoch,
     calculateContiguousSummarizedUpTo,
@@ -45,6 +45,56 @@ describe('getSettings', () => {
 
         expect(settings.memoryMode).toBe('balanced');
         expect(settings.easyMemoryMode).toBe('balanced');
+    });
+
+    it.each([MASK_USER_ROLE_MODES.MARKER_LAST, MASK_USER_ROLE_MODES.KEEP_LAST_USER])(
+        'repairs prefix-breaking mask mode %s when Append Only is selected',
+        (maskUserRoleMode) => {
+            installSummaryContext({
+                settings: { memoryMode: 'append_only', maskUserRoleMode },
+            });
+
+            expect(getSettings().maskUserRoleMode).toBe(MASK_USER_ROLE_MODES.MARKER_FIRST);
+        },
+    );
+
+    it('keeps Rewrite All with Append Only because its prefix remains stable', () => {
+        installSummaryContext({
+            settings: {
+                memoryMode: 'append_only',
+                maskUserRoleMode: MASK_USER_ROLE_MODES.REWRITE_ALL,
+            },
+        });
+
+        expect(getSettings().maskUserRoleMode).toBe(MASK_USER_ROLE_MODES.REWRITE_ALL);
+    });
+
+    it('repairs an Advanced setting after switching from a forbidden mask mode to Append Only', () => {
+        installSummaryContext({
+            settings: {
+                uiMode: UI_MODES.ADVANCED,
+                memoryMode: 'balanced',
+                maskUserRoleMode: MASK_USER_ROLE_MODES.MARKER_LAST,
+            },
+        });
+        const settings = getSettings();
+        settings.memoryMode = 'append_only';
+
+        expect(getSettings().maskUserRoleMode).toBe(MASK_USER_ROLE_MODES.MARKER_FIRST);
+    });
+
+    it('repairs an Easy setting after switching from a forbidden mask mode to Append Only', () => {
+        installSummaryContext({
+            settings: {
+                uiMode: UI_MODES.EASY,
+                easyMemoryMode: 'balanced',
+                maskUserRoleMode: MASK_USER_ROLE_MODES.KEEP_LAST_USER,
+            },
+        });
+        const settings = getSettings();
+        settings.easyMemoryMode = 'append_only';
+
+        expect(getSettings().maskUserRoleMode).toBe(MASK_USER_ROLE_MODES.MARKER_FIRST);
     });
 });
 

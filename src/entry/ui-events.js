@@ -193,7 +193,11 @@ function bindToggleHandlers() {
         {
             selector: '#sc_mask_user_role_as_assistant',
             key: 'maskUserRoleAsAssistant',
-            afterSave: (_settings, value) => syncRoleMaskModeControl(Boolean(value)),
+            afterSave: (_settings, value) =>
+                syncRoleMaskModeControl(
+                    Boolean(value),
+                    getEffectiveSettings().memoryMode === MEMORY_MODES.APPEND_ONLY,
+                ),
         },
         { selector: '#sc_state_cat_bonds', key: 'stateCatBonds' },
         { selector: '#sc_state_cat_chekhov', key: 'stateCatChekhov' },
@@ -219,7 +223,15 @@ function bindToggleHandlers() {
         read: readString,
         beforeSave: (settings, value, $source) => {
             const mode = String(value);
-            if (!(/** @type {string[]} */ (Object.values(MASK_USER_ROLE_MODES)).includes(mode))) {
+            const appendOnly = getEffectiveSettings().memoryMode === MEMORY_MODES.APPEND_ONLY;
+            const prefixBreakingMode = /** @type {string[]} */ ([
+                MASK_USER_ROLE_MODES.MARKER_LAST,
+                MASK_USER_ROLE_MODES.KEEP_LAST_USER,
+            ]).includes(mode);
+            if (
+                !(/** @type {string[]} */ (Object.values(MASK_USER_ROLE_MODES)).includes(mode)) ||
+                (appendOnly && prefixBreakingMode)
+            ) {
                 settings.maskUserRoleMode = defaultSettings.maskUserRoleMode;
                 $source.val(defaultSettings.maskUserRoleMode);
             }
@@ -251,8 +263,10 @@ function bindEasyMemoryModeHandler() {
         ) {
             return;
         }
-
         const s = getSettings();
+        if (mode === MEMORY_MODES.APPEND_ONLY) {
+            s.maskUserRoleMode = MASK_USER_ROLE_MODES.MARKER_FIRST;
+        }
         if (s.easyMemoryMode === mode) {
             return;
         }
@@ -278,8 +292,10 @@ function bindAdvancedMemoryModeHandler() {
         ) {
             return;
         }
-
         const s = getSettings();
+        if (mode === MEMORY_MODES.APPEND_ONLY) {
+            s.maskUserRoleMode = MASK_USER_ROLE_MODES.MARKER_FIRST;
+        }
         if (s.memoryMode === mode) {
             return;
         }

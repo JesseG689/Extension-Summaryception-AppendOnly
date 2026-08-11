@@ -72,7 +72,10 @@ export async function updateUI() {
         $('#sc_state_cat_location').prop('checked', s.stateCatLocation);
         $('#sc_mask_user_role_as_assistant').prop('checked', s.maskUserRoleAsAssistant);
         $('#sc_mask_user_role_mode').val(s.maskUserRoleMode);
-        syncRoleMaskModeControl(s.maskUserRoleAsAssistant);
+        syncRoleMaskModeControl(
+            s.maskUserRoleAsAssistant,
+            effectiveSettings.memoryMode === MEMORY_MODES.APPEND_ONLY,
+        );
         $('#sc_strip_patterns').val((s.stripPatterns || []).join('\n'));
         $('#sc_summarizer_response_length').val(s.summarizerResponseLength || 0);
         syncConnectionInputs(s);

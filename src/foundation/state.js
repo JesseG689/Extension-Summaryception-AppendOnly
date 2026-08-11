@@ -241,7 +241,16 @@ function normalizeMemorySettings(settings) {
  * @returns {boolean} Whether settings were changed.
  */
 function normalizeRoleMaskSettings(settings, hadMode) {
-    if (hadMode && isSettingValue(Object.values(MASK_USER_ROLE_MODES), settings.maskUserRoleMode)) {
+    const validMode =
+        hadMode && isSettingValue(Object.values(MASK_USER_ROLE_MODES), settings.maskUserRoleMode);
+    const appendOnly =
+        (settings.uiMode === UI_MODES.EASY ? settings.easyMemoryMode : settings.memoryMode) ===
+        MEMORY_MODES.APPEND_ONLY;
+    const prefixBreakingMode = /** @type {string[]} */ ([
+        MASK_USER_ROLE_MODES.MARKER_LAST,
+        MASK_USER_ROLE_MODES.KEEP_LAST_USER,
+    ]).includes(String(settings.maskUserRoleMode));
+    if (validMode && !(appendOnly && prefixBreakingMode)) {
         return false;
     }
     settings.maskUserRoleMode = defaultSettings.maskUserRoleMode;
