@@ -14,6 +14,9 @@
 - Dynamic lore for append-only caching is stored as native narrator messages with stable markers.
 - The bake path updates the API payload and chat storage in the same prompt-ready event.
 - Baked lore is excluded from summarizer accounting but remains visible in the chat UI.
+- Cap a bake against the complete final payload after reserving response tokens. Skip the bake when final token measurement is unavailable.
+- Lore migration moves only dynamic entries and records their original placement. Cleanup restores placement and uses native chat deletion.
+- Summary flushes end on an assistant message. Keep the following baked narrator and user message visible as one tail extension.
 
 ## State Ownership
 

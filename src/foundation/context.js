@@ -105,6 +105,62 @@ export function renderInsertedChatMessage(message, index) {
 }
 
 /**
+ * Delete one persistent chat message through SillyTavern's native path.
+ * @param {number} index
+ * @returns {Promise<boolean>}
+ */
+export async function deleteChatMessage(index) {
+    const remove = getContext().deleteMessage;
+    if (typeof remove !== 'function') {
+        return false;
+    }
+    await remove(index, undefined, false);
+    return true;
+}
+
+/**
+ * Load a SillyTavern World Info book.
+ * @param {string} name
+ * @returns {Promise<Record<string, unknown> | null>}
+ */
+export async function loadWorldInfo(name) {
+    const load = getContext().loadWorldInfo;
+    return typeof load === 'function' ? await load(name) : null;
+}
+
+/**
+ * Save a SillyTavern World Info book immediately.
+ * @param {string} name
+ * @param {Record<string, unknown>} data
+ * @returns {Promise<boolean>}
+ */
+export async function saveWorldInfo(name, data) {
+    const save = getContext().saveWorldInfo;
+    if (typeof save !== 'function') {
+        return false;
+    }
+    await save(name, data, true);
+    return true;
+}
+
+/** @returns {string[]} */
+export function getWorldInfoNames() {
+    const getNames = getContext().getWorldInfoNames;
+    return typeof getNames === 'function' ? getNames() : [];
+}
+
+/**
+ * Return the current provider prompt capacity after reserving response tokens.
+ * @returns {number | null}
+ */
+export function getPromptTokenCapacity() {
+    const ctx = getContext();
+    const total = Number(ctx.chatCompletionSettings?.openai_max_context ?? ctx.maxContext);
+    const response = Number(ctx.chatCompletionSettings?.openai_max_tokens ?? 0);
+    return Number.isFinite(total) && total > 0 ? Math.max(0, total - Math.max(0, response)) : null;
+}
+
+/**
  * Shift existing rendered message ids after an inserted chat index.
  * @param {number} index
  * @returns {void}
@@ -448,7 +504,12 @@ function extractPromptPayload(generateData) {
     return null;
 }
 
-async function countPromptPayloadTokens(payload) {
+/**
+ * Count a prompt payload with SillyTavern's provider tokenizer.
+ * @param {unknown} payload
+ * @returns {Promise<number | null>}
+ */
+export async function countPromptPayloadTokens(payload) {
     if (Array.isArray(payload)) {
         const endpointCount = await countChatPromptTokensViaEndpoint(payload);
         if (endpointCount !== null) {

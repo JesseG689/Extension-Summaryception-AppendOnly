@@ -1,6 +1,11 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 
-import { captureWorldInfoBake, injectPendingWorldInfoBake } from '../src/core/world-info-bake.js';
+import {
+    captureWorldInfoBake,
+    injectPendingWorldInfoBake,
+    migrateWorldInfoToBakeOutlet,
+    unbakeWorldInfo,
+} from '../src/core/world-info-bake.js';
 import { installSummaryContext, makeMessage } from './test-helpers.js';
 
 const { context } = globalThis.summaryceptionFoundationMocks;
@@ -23,6 +28,8 @@ function installBakeContext({ chat, outlet = 'formatted lore', budget = 10000 } 
     });
     context.getChat.mockImplementation(() => runtime.chat);
     context.getContext.mockImplementation(() => runtime);
+    context.getPromptTokenCapacity.mockReturnValue(null);
+    context.countPromptPayloadTokens.mockResolvedValue(null);
     return runtime;
 }
 
@@ -125,6 +132,61 @@ describe('world info bake', () => {
         expect(prompt.filter((message) => message.role === 'system')).toHaveLength(1);
     });
 
+    it('caps the post-splice bake to remaining provider prompt capacity', async () => {
+        const runtime = installBakeContext({ outlet: 'x'.repeat(100), budget: 4000 });
+        const prompt = [
+            { role: 'assistant', content: 'assistant reply' },
+            { role: 'user', content: 'latest user' },
+        ];
+        context.getPromptTokenCapacity.mockReturnValue(1000);
+        context.countPromptPayloadTokens.mockImplementation(async (messages) => {
+            const bake = messages.find((message) => message.role === 'system');
+            return 970 + (bake?.content.length || 0);
+        });
+        activateBakeEntries();
+
+        expect(await injectPendingWorldInfoBake({ chat: prompt })).toBe(true);
+        expect(prompt.at(-2)?.content).toBe('x'.repeat(30));
+        expect(runtime.chat.at(-2)?.mes).toBe('x'.repeat(30));
+    });
+
+    it('skips retry, continue, and rapid-user tails that lack one assistant/user fork', async () => {
+        const tails = [
+            [
+                makeMessage({ mes: 'assistant reply' }),
+                { ...makeMessage({ mes: 'old bake' }), extra: { sc_wi: { version: 1 } } },
+                makeMessage({ isUser: true, mes: 'latest user' }),
+            ],
+            [makeMessage({ isUser: true, mes: 'latest user' }), makeMessage({ mes: 'continue' })],
+            [
+                makeMessage({ mes: 'assistant reply' }),
+                makeMessage({ isUser: true, mes: 'first quick reply' }),
+                makeMessage({ isUser: true, mes: 'second quick reply' }),
+            ],
+        ];
+
+        for (const chat of tails) {
+            const runtime = installBakeContext({ chat });
+            activateBakeEntries();
+            expect(
+                await injectPendingWorldInfoBake({
+                    chat: [{ role: 'user', content: chat.at(-1)?.mes }],
+                }),
+            ).toBe(false);
+            expect(runtime.chat).toHaveLength(chat.length);
+        }
+    });
+
+    it('uses the full-width narrator style when compact bakes are disabled', async () => {
+        const runtime = installBakeContext();
+        runtime.extensionSettings.summaryception.compactBakes = false;
+        activateBakeEntries();
+
+        await injectPendingWorldInfoBake({ chat: [{ role: 'user', content: 'latest user' }] });
+
+        expect(runtime.chat.at(-2)?.extra?.isSmallSys).toBe(false);
+    });
+
     it('skips dry runs and tails that do not satisfy the assistant fork rule', async () => {
         const dryRuntime = installBakeContext();
         const dryPrompt = [{ role: 'user', content: 'latest user' }];
@@ -140,5 +202,51 @@ describe('world info bake', () => {
             await injectPendingWorldInfoBake({ chat: [{ role: 'user', content: 'first user' }] }),
         ).toBe(false);
         expect(firstTurn.chat).toHaveLength(1);
+    });
+});
+
+describe('world info migration', () => {
+    it('moves dynamic entries and restores their exact positions during unbake', async () => {
+        const chat = [
+            makeMessage({ mes: 'assistant reply' }),
+            { ...makeMessage({ mes: 'baked lore' }), extra: { sc_wi: { version: 1 } } },
+            makeMessage({ isUser: true, mes: 'latest user' }),
+        ];
+        installBakeContext({ chat });
+        const book = {
+            entries: {
+                1: { uid: 1, constant: false, position: 0 },
+                2: { uid: 2, constant: false, position: 4, outletName: 'other' },
+                3: { uid: 3, constant: true, position: 0 },
+                4: { uid: 4, constant: false, position: 7, outletName: 'existing' },
+            },
+        };
+        context.getWorldInfoNames.mockReturnValue(['book', 'missing']);
+        context.loadWorldInfo.mockImplementation(async (name) => (name === 'book' ? book : null));
+        context.saveWorldInfo.mockResolvedValue(true);
+        context.deleteChatMessage.mockImplementation(async (index) => {
+            chat.splice(index, 1);
+            return true;
+        });
+
+        await expect(migrateWorldInfoToBakeOutlet()).resolves.toEqual({ books: 1, entries: 2 });
+        expect(book.entries[1]).toMatchObject({
+            position: 7,
+            outletName: 'sc_bake',
+            extensions: { summaryceptionBake: { position: 0 } },
+        });
+        expect(book.entries[2].extensions.summaryceptionBake).toEqual({
+            position: 4,
+            outletName: 'other',
+        });
+        expect(book.entries[3].position).toBe(0);
+        expect(book.entries[4].outletName).toBe('existing');
+
+        await expect(unbakeWorldInfo()).resolves.toEqual({ books: 1, entries: 2, messages: 1 });
+        expect(book.entries[1].position).toBe(0);
+        expect(book.entries[1]).not.toHaveProperty('outletName');
+        expect(book.entries[2]).toMatchObject({ position: 4, outletName: 'other' });
+        expect(book.entries[1].extensions).not.toHaveProperty('summaryceptionBake');
+        expect(chat.map((message) => message.mes)).toEqual(['assistant reply', 'latest user']);
     });
 });

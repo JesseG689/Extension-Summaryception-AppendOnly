@@ -51,10 +51,10 @@ const MEMORY_MODE_HELP = Object.freeze({
     },
     append_only: {
         title: 'Append Only',
-        short: 'Selects the future stable-prefix workflow.',
-        controlsText: 'Currently uses Balanced summarization behavior without prompt baking.',
-        when: 'Use it only to prepare or diagnose the append-only workflow in this release.',
-        risk: 'Stable-prefix bake behavior is not enabled yet.',
+        short: 'Bakes activated World Info into an append-only chat tail for stable prompt prefixes.',
+        controlsText: 'Use /sc-migrate-wi once to move dynamic lore entries to the sc_bake outlet.',
+        when: 'Use it with providers that discount stable cached input.',
+        risk: 'Depth-positioned lore and group chats are not supported; /sc-unbake-wi restores migrated entries.',
     },
 });
 

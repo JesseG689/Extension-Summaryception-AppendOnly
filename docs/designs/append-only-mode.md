@@ -1,6 +1,6 @@
 # Append-Only Mode (Cache Strategy Redesign)
 
-Status: **Sessions 1–2 implemented; Session 3 remains planned.**
+Status: **Sessions 1–3 implemented.**
 Last revised: 2026-08-11.
 
 This is a working document. Open questions are first-class citizens; nothing
@@ -549,7 +549,7 @@ Summarizer filter (do this FIRST — it's mechanical and blocks safe testing):
   - slop-breaker.js: L106
 
 Bake mechanism:
-- Listener 1: WORLD_INFO_ACTIVATED → read outlet content into _pendingBake.
+- Listener 1: WORLD_INFO_ACTIVATED → retain activated `sc_bake` entries; formatted outlet content is read later.
 - Listener 2: CHAT_COMPLETION_PROMPT_READY → dual-mutation splice (payload + storage).
 - Token budget cap (memoryTokenBudget), idempotency guard, dry-run skip.
 - Manual WI book migration (user moves entries to outlet position).
@@ -558,12 +558,11 @@ Proof: Send chats, watch diagnostic confirm prefix hash stable, tail extends. Wa
 
 End state: Bake works end-to-end with manual WI setup. Cache HIT pattern verified via diagnostic.
 
-### Session 3 — Polish + hardening
+### Session 3 — Polish + hardening — Complete
 
-- /sc-migrate-wi slash command (bulk-move entries to outlet).
-- /sc-unbake-wi slash command (cleanup).
-- Resolve open Q2 (token budget post-splice — does provider reject overflow?).
-- Resolve open Q9 (flush/R10 invariant — verify flush boundary never
-  splits an a_N, S_{N+1}, u_{N+1} triple).
-- Edge case hardening (continue/retry, Quick Reply).
-- Mode help text, compact toggle (Q5).
+- Added `/sc-migrate-wi` to move non-constant entries in every available lorebook to `position = outlet`, `outletName = 'sc_bake'`; original placement is stored for exact reversal.
+- Added `/sc-unbake-wi` to restore migrated entries and remove persisted `SC-WI` narrator messages through SillyTavern's native delete path.
+- Post-assembly baking now measures the complete candidate payload, including the inserted system-message envelope, and truncates to remaining provider capacity as well as `memoryTokenBudget`.
+- Retry, Continue, Quick Reply, dry-run, malformed-tail, and repeated prompt-ready paths remain idempotent through the assistant/user fork guard.
+- Added the `compactBakes` setting and UI control; compact narrator display is enabled by default.
+- Verified flush ranges end before the baked narrator/user pair, preserving the R10 boundary.

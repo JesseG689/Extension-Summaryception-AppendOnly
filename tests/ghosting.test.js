@@ -73,4 +73,33 @@ describe('hide non-text messages in summarized range', () => {
         expect(isHidden(calls, 1)).toBe(true);
         expect(isHidden(calls, 3)).toBe(true);
     });
+
+    it('ends a flush before the following baked narrator and user pair', async () => {
+        resetCommitStateForTests();
+        const calls = [];
+        const narrator = makeMessage({ mes: 'baked lore', name: 'SC-WI' });
+        narrator.extra.sc_wi = { version: 1 };
+        installSummaryContext({
+            chat: [
+                makeMessage({ isUser: true, mes: 'old user' }),
+                makeMessage({ mes: 'old assistant' }),
+                narrator,
+                makeMessage({ isUser: true, mes: 'current user' }),
+            ],
+            metadata: {
+                summaryception: makeSummaryStore({
+                    summarizedUpTo: 1,
+                    layers: [[{ text: 'summary snippet', turnRange: [0, 1] }]],
+                }),
+            },
+            settings: { hideNonTextMessages: true },
+            executeSlashCommandsWithOptions: async (command) => calls.push(String(command)),
+        });
+
+        await repairMissingGhostingForSummaries();
+
+        expect(calls).toContain('/hide 0-1');
+        expect(isHidden(calls, 2)).toBe(false);
+        expect(isHidden(calls, 3)).toBe(false);
+    });
 });

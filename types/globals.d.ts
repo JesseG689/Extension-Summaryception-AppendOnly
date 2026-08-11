@@ -66,6 +66,7 @@ interface ExtensionSettings {
     customMemoryRole: string;
     customMemoryDepth: number;
     injectCurrentState: boolean;
+    compactBakes: boolean;
     stateCatDateTime: boolean;
     stateCatBonds: boolean;
     stateCatChekhov: boolean;
@@ -198,8 +199,22 @@ interface SillyTavernContext {
     extensionSettings: Record<string, ExtensionSettings>;
     addOneMessage?: (message: ChatMessage, options?: Record<string, unknown>) => unknown;
     updateViewMessageIds?: (startIndex?: number | null) => void;
+    deleteMessage?: (
+        index: number,
+        swipeIndex?: number,
+        askConfirmation?: boolean,
+    ) => Promise<unknown>;
     extensionPrompts?: Record<string, { value?: unknown }>;
     chatMetadata: Record<string, SummaryceptionStore>;
+    maxContext?: number;
+    chatCompletionSettings?: { openai_max_context?: number; openai_max_tokens?: number };
+    loadWorldInfo?: (name: string) => Promise<Record<string, unknown> | null>;
+    saveWorldInfo?: (
+        name: string,
+        data: Record<string, unknown>,
+        immediately?: boolean,
+    ) => Promise<void>;
+    getWorldInfoNames?: () => string[];
     setExtensionPrompt(
         id: string,
         text: string,

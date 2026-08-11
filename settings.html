@@ -162,7 +162,7 @@
                                     <span class="sc-toggle-icon fa-solid fa-arrow-down-long"></span>
                                     <span class="sc-toggle-copy">
                                         <span class="sc-toggle-title">Append Only</span>
-                                        <small class="sc-hint">Prepares the stable-prefix mode; bake behavior arrives in the next implementation session.</small>
+                                        <small class="sc-hint">Bakes activated lore into the chat tail to preserve a stable provider-cache prefix.</small>
                                     </span>
                                     <input type="radio" id="sc_easy_memory_mode_append_only" name="sc_easy_memory_mode" value="append_only" />
                                 </label>
@@ -554,7 +554,7 @@
                                 <span class="sc-toggle-icon fa-solid fa-arrow-down-long"></span>
                                 <span class="sc-toggle-copy">
                                     <span class="sc-toggle-title">Append Only</span>
-                                    <small class="sc-hint">Prepares the stable-prefix mode; bake behavior arrives in the next implementation session.</small>
+                                    <small class="sc-hint">Bakes activated lore into the chat tail to preserve a stable provider-cache prefix.</small>
                                 </span>
                                 <input type="radio" id="sc_memory_mode_append_only" name="sc_memory_mode" value="append_only" />
                             </label>
@@ -570,7 +570,17 @@
                     </div>
                     <div id="sc_memory_help_append_only" class="sc-note" style="display: none;">
                         <span class="fa-solid fa-circle-info"></span>
-                        <small>Append Only currently uses Balanced summarization behavior. Stable-prefix bake behavior is not enabled in this session.</small>
+                        <small>Append Only stores activated <code>sc_bake</code> outlet lore between the assistant and current user. Run <code>/sc-migrate-wi</code> once to move dynamic lore entries; <code>/sc-unbake-wi</code> restores them and removes baked chat messages.</small>
+                    </div>
+                    <div class="sc-toggle-list">
+                        <label class="checkbox_label sc-toggle-row" for="sc_compact_bakes">
+                            <span class="sc-toggle-icon fa-solid fa-compress"></span>
+                            <span class="sc-toggle-copy">
+                                <span class="sc-toggle-title">Compact Baked Lore</span>
+                                <small class="sc-hint">Show SC-WI narrator messages in SillyTavern's compact system style.</small>
+                            </span>
+                            <input id="sc_compact_bakes" type="checkbox" />
+                        </label>
                     </div>
                 </section>
                 <section class="sc-section">
