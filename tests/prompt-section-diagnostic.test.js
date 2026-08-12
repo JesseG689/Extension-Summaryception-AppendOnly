@@ -1,4 +1,4 @@
-import { beforeEach, describe, expect, it } from 'vitest';
+import { beforeEach, describe, expect, it, vi } from 'vitest';
 
 import { onChatCompletionPromptReady } from '../src/entry/events.js';
 
@@ -7,6 +7,10 @@ const { logger } = globalThis.summaryceptionFoundationMocks;
 describe('onChatCompletionPromptReady', () => {
     beforeEach(() => {
         logger.debug.mockClear();
+        logger.isDebugEnabled.mockReturnValue(true);
+        vi.spyOn(console, 'groupCollapsed').mockImplementation(() => {});
+        vi.spyOn(console, 'groupEnd').mockImplementation(() => {});
+        vi.spyOn(console, 'log').mockImplementation(() => {});
     });
 
     it('reports one prefix summary per real prompt', () => {
@@ -26,10 +30,17 @@ describe('onChatCompletionPromptReady', () => {
             ],
         });
 
-        expect(logger.debug).toHaveBeenCalledTimes(1);
-        expect(logger.debug.mock.calls[0][0]).toContain(
-            'Prompt prefix BROKEN at block 1: previous 2, current 3',
+        expect(console.groupCollapsed).toHaveBeenCalledWith(
+            '[Summaryception] [DEBUG] Prompt prefix BROKEN at block 1: previous 2, current 3',
         );
+        expect(JSON.parse(console.log.mock.calls[0][0])).toEqual({
+            type: 'summaryception.prompt.prefix-broken.v1',
+            block: 1,
+            previousLength: 2,
+            currentLength: 3,
+            newBlock: { role: 'user', content: 'second' },
+        });
+        expect(console.groupEnd).toHaveBeenCalledTimes(1);
     });
 
     it('ignores dry-run prompt events in either event signature', () => {

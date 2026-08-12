@@ -1,5 +1,5 @@
 import { getChat } from '../foundation/context.js';
-import { debug, info, warn } from '../foundation/logger.js';
+import { debug, info, isDebugEnabled, warn } from '../foundation/logger.js';
 import { getChatStore, getEffectiveSettings } from '../foundation/state.js';
 import { repairIfBranched, repairMissingGhostingForSummaries } from '../core/ghosting-reconcile.js';
 import { maskUserRoleAsAssistantInGenerateData } from '../core/assistant-role-mask.js';
@@ -48,9 +48,14 @@ export function onChatCompletionPromptReady(...args) {
     if (previousLength === 0) {
         debug(`Prompt prefix baseline: ${nextHashes.length} blocks`);
     } else if (prefixBroken) {
-        debug(
-            `Prompt prefix BROKEN at block ${stablePrefixLength}: previous ${previousLength}, current ${nextHashes.length}`,
-        );
+        if (isDebugEnabled()) {
+            logBrokenPromptPrefix({
+                stablePrefixLength,
+                previousLength,
+                currentLength: nextHashes.length,
+                block: chat[stablePrefixLength],
+            });
+        }
     } else {
         const addedRoles = chat
             .slice(previousLength)
@@ -63,6 +68,28 @@ export function onChatCompletionPromptReady(...args) {
     }
 
     previousPromptSectionHashes = nextHashes;
+}
+
+function logBrokenPromptPrefix({ stablePrefixLength, previousLength, currentLength, block }) {
+    const title = `Prompt prefix BROKEN at block ${stablePrefixLength}: previous ${previousLength}, current ${currentLength}`;
+    console.groupCollapsed(`[Summaryception] [DEBUG] ${title}`);
+    try {
+        console.log(
+            JSON.stringify(
+                {
+                    type: 'summaryception.prompt.prefix-broken.v1',
+                    block: stablePrefixLength,
+                    previousLength,
+                    currentLength,
+                    newBlock: block ?? null,
+                },
+                null,
+                2,
+            ),
+        );
+    } finally {
+        console.groupEnd();
+    }
 }
 
 function countStablePrefix(previousHashes, nextHashes) {

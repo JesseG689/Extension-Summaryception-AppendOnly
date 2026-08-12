@@ -25,6 +25,7 @@
 
 - Prompt-ready dry runs can mark either the event payload or a separate argument. Ignore both forms before updating comparison state.
 - Report one contiguous-prefix verdict per real request. Per-section logs obscure duplicate events and make cache failures difficult to identify.
+- A broken-prefix verdict includes the complete first changed block in a collapsed, copyable JSON payload.
 - SillyTavern can omit the system flag on normal assistant messages. Treat only an explicit true value as a system message.
 
 ## World Info Bakes
