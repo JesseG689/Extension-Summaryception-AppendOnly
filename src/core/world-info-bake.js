@@ -1,4 +1,5 @@
 import { MEMORY_MODES } from '../foundation/constants.js';
+import { debug } from '../foundation/logger.js';
 import {
     countPromptPayloadTokens,
     deleteChatMessage,
@@ -46,19 +47,41 @@ export async function injectPendingWorldInfoBake(eventData, dryRun = false) {
     try {
         const isDryRun = dryRun === true || getEventDryRun(eventData);
         const settings = getEffectiveSettings();
-        if (isDryRun || settings.memoryMode !== MEMORY_MODES.APPEND_ONLY) {
+        if (isDryRun) {
+            debug('WI bake skipped: dry run');
             return false;
         }
-
+        if (settings.memoryMode !== MEMORY_MODES.APPEND_ONLY) {
+            debug(`WI bake skipped: effective mode is ${settings.memoryMode}`);
+            return false;
+        }
         const prompt = getPromptChat(eventData);
         const chat = getChat();
-        if (!prompt || !hasAssistantUserTail(chat)) {
+
+        if (!prompt) {
+            debug('WI bake skipped: prompt-ready payload has no chat array');
+            return false;
+        }
+        if (!hasAssistantUserTail(chat)) {
+            debug(
+                'WI bake skipped: stored chat tail is not assistant/user',
+                describeChatTail(chat),
+            );
             return false;
         }
 
         const userPromptIndex = findLastUserPromptIndex(prompt);
         const outletText = getBakeOutletText();
-        if (userPromptIndex < 0 || !outletText.trim() || pendingUids.length === 0) {
+        if (userPromptIndex < 0) {
+            debug('WI bake skipped: final prompt has no user message');
+            return false;
+        }
+        if (!outletText.trim()) {
+            debug('WI bake skipped: sc_bake outlet is empty');
+            return false;
+        }
+        if (pendingUids.length === 0) {
+            debug('WI bake skipped: no activated sc_bake entries were captured');
             return false;
         }
 
@@ -69,6 +92,7 @@ export async function injectPendingWorldInfoBake(eventData, dryRun = false) {
             userPromptIndex,
         );
         if (!content.trim()) {
+            debug('WI bake skipped: no provider token capacity remains');
             return false;
         }
 
@@ -77,6 +101,9 @@ export async function injectPendingWorldInfoBake(eventData, dryRun = false) {
         const narrator = createNarratorMessage(content, marker, settings.compactBakes);
         chat.splice(chat.length - 1, 0, narrator);
         renderInsertedChatMessage(narrator, chat.length - 2);
+        debug(
+            `WI bake inserted: ${marker.uids.length} entries, ${content.length} characters, prompt block ${userPromptIndex}`,
+        );
         return true;
     } finally {
         pendingUids = [];
@@ -201,9 +228,21 @@ function hasAssistantUserTail(chat) {
         chat.length >= 2 &&
         chat.at(-1)?.is_user === true &&
         chat.at(-2)?.is_user === false &&
-        chat.at(-2)?.is_system === false &&
+        chat.at(-2)?.is_system !== true &&
         !chat.at(-2)?.extra?.sc_wi
     );
+}
+
+function describeChatTail(chat) {
+    return Array.isArray(chat)
+        ? chat.slice(-3).map((message) => ({
+              name: message?.name,
+              is_user: message?.is_user,
+              is_system: message?.is_system,
+              type: message?.extra?.type,
+              sc_wi: Boolean(message?.extra?.sc_wi),
+          }))
+        : chat;
 }
 
 function findLastUserPromptIndex(prompt) {

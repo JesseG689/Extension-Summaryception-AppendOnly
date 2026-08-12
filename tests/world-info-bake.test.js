@@ -203,6 +203,22 @@ describe('world info bake', () => {
         ).toBe(false);
         expect(firstTurn.chat).toHaveLength(1);
     });
+
+    it('accepts normal SillyTavern assistant messages that omit is_system', async () => {
+        const runtime = installBakeContext();
+        delete runtime.chat.at(-2).is_system;
+        activateBakeEntries();
+
+        expect(
+            await injectPendingWorldInfoBake({
+                chat: [
+                    { role: 'assistant', content: 'assistant reply' },
+                    { role: 'user', content: 'latest user' },
+                ],
+            }),
+        ).toBe(true);
+        expect(runtime.chat.at(-2)?.extra?.sc_wi).toEqual({ uids: [1, 3], version: 1 });
+    });
 });
 
 describe('world info migration', () => {
