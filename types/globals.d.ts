@@ -66,7 +66,6 @@ interface ExtensionSettings {
     customMemoryRole: string;
     customMemoryDepth: number;
     injectCurrentState: boolean;
-    compactBakes: boolean;
     maxBakedWorldInfoEntries: number;
     bakedWorldInfoTokenBudget: number;
     stateCatDateTime: boolean;

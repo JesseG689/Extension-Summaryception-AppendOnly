@@ -399,7 +399,6 @@ function buildEasyEffectiveSettings(settings) {
         stateCatGmNotes: settings.stateCatGmNotes ?? defaultSettings.stateCatGmNotes,
         stateCatInventory: settings.stateCatInventory ?? defaultSettings.stateCatInventory,
         stateCatLocation: settings.stateCatLocation ?? defaultSettings.stateCatLocation,
-        compactBakes: settings.compactBakes,
         maxBakedWorldInfoEntries: settings.maxBakedWorldInfoEntries,
         bakedWorldInfoTokenBudget: settings.bakedWorldInfoTokenBudget,
     });

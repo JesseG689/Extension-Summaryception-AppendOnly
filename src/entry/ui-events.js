@@ -181,7 +181,6 @@ function bindToggleHandlers() {
         { selector: '#sc_apply_regex_scripts', key: 'applyRegexScripts' },
         { selector: '#sc_hide_non_text_messages', key: 'hideNonTextMessages' },
         { selector: '#sc_strip_chinese_ideographs', key: 'stripChineseIdeographs' },
-        { selector: '#sc_compact_bakes', key: 'compactBakes' },
         {
             selector: '#sc_inject_current_state',
             key: 'injectCurrentState',

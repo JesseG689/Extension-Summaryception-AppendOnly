@@ -103,7 +103,7 @@ export async function injectPendingWorldInfoBake(eventData, dryRun = false) {
             version: 2,
         };
         prompt.splice(userPromptIndex, 0, { role: 'system', content });
-        const narrator = createNarratorMessage(content, marker, settings.compactBakes);
+        const narrator = createNarratorMessage(content, marker);
         chat.splice(chat.length - 1, 0, narrator);
         renderInsertedChatMessage(narrator, chat.length - 2);
         debug(
@@ -323,7 +323,7 @@ function wrapBakeBlocks(blocks) {
     return `${BAKE_ENVELOPE_OPEN}${blocks.join('\n')}${BAKE_ENVELOPE_CLOSE}`;
 }
 
-function createNarratorMessage(content, marker, compact) {
+function createNarratorMessage(content, marker) {
     return {
         name: 'SC-WI',
         is_user: false,
@@ -334,7 +334,7 @@ function createNarratorMessage(content, marker, compact) {
         extra: {
             type: 'narrator',
             gen_id: Date.now(),
-            isSmallSys: compact !== false,
+            isSmallSys: true,
             api: 'summaryception',
             model: 'sc_wi_bake',
             sc_wi: marker,

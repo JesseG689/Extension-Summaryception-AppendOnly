@@ -270,16 +270,6 @@ describe('world info bake', () => {
         }
     });
 
-    it('uses the full-width narrator style when compact bakes are disabled', async () => {
-        const runtime = installBakeContext();
-        runtime.extensionSettings.summaryception.compactBakes = false;
-        activateBakeEntries();
-
-        await injectPendingWorldInfoBake({ chat: [{ role: 'user', content: 'latest user' }] });
-
-        expect(runtime.chat.at(-2)?.extra?.isSmallSys).toBe(false);
-    });
-
     it('skips dry runs and tails that do not satisfy the assistant fork rule', async () => {
         const dryRuntime = installBakeContext();
         const dryPrompt = [{ role: 'user', content: 'latest user' }];

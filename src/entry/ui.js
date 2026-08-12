@@ -61,7 +61,6 @@ export async function updateUI() {
         $('#sc_hide_non_text_messages').prop('checked', s.hideNonTextMessages !== false);
         $('#sc_strip_chinese_ideographs').prop('checked', s.stripChineseIdeographs !== false);
         $('#sc_inject_current_state').prop('checked', Boolean(s.injectCurrentState));
-        $('#sc_compact_bakes').prop('checked', s.compactBakes !== false);
         // alwaysOn category: the input is disabled in markup, so reflect it as
         // permanently ticked rather than reading the (ignored) persisted flag.
         $('#sc_state_cat_date_time').prop('checked', true);

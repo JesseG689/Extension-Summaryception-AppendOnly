@@ -34,4 +34,5 @@
 - Suppress an entry only while its bake marker is visible. Hidden markers permit a later bake.
 - Apply World Info regex processing before wrapping each entry.
 - Add only complete entry blocks that fit the entry, bake-token, and provider limits.
+- Always render baked lore with the host compact narrator style. Do not expose a presentation setting.
 - Frame baked lore as background reference. Its presence must not change the established scene, location, character, or scenario.

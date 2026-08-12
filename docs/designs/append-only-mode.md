@@ -321,11 +321,10 @@ to the tail → HIT.
 ### Bake presentation — system narrator message
 
 The baked lore is its own message in `chat[]`, not text appended to a
-user message. ST's chat renderer already knows how to display narrator
-messages: small block, system avatar, optional compact layout. We set
-`isSmallSys: true` and `name: 'SC-WI'` so the user sees a compact
-"SC-WI" line per bake — visible enough to audit, unobtrusive enough to
-ignore. No HTML comment tricks needed.
+user message. ST's chat renderer displays it as a compact narrator message.
+We always set `isSmallSys: true` and `name: 'SC-WI'`, so each bake remains
+visible for audit without taking the space of a full chat message. No
+presentation toggle or custom HTML is needed.
 
 Each baked entry is wrapped in a compact `<wi>...</wi>` boundary inside a
 stable `<world_info>` reference envelope. The envelope states that entries are
@@ -469,8 +468,8 @@ to ensure our splice lands first.
   APIs (not just `openai` source — custom sources, OOAI, etc.).
 - **Q4.** Should the migration to outlet position be a one-click command
   in v1, or a documented manual step? Manual is KISS; command is UX.
-- **Q5.** Should the narrator message use `isSmallSys: true` (compact)
-  or `false` (full-width)? Compact default; toggle later.
+- **Q5. Resolved.** Narrator messages always use `isSmallSys: true`. Compact
+  presentation is fixed and has no user setting.
 - **Q6.** When `memoryTokenBudget` is shared between bake and memory
   injection, does the bake consume budget first or memory? Or are
   they independent caps on independent injections? Needs a clear rule.
@@ -544,6 +543,6 @@ End state: Bake works end-to-end with manual WI setup. Cache HIT pattern verifie
 - Added `/sc-unbake-wi` to restore migrated entries and remove persisted `SC-WI` narrator messages through SillyTavern's native delete path.
 - Post-assembly baking measures the complete candidate payload, including the inserted system-message envelope, and respects remaining provider capacity plus the dedicated bake limits.
 - Retry, Continue, Quick Reply, dry-run, malformed-tail, and repeated prompt-ready paths remain idempotent through the assistant/user fork guard.
-- Added the `compactBakes` setting and UI control; compact narrator display is enabled by default.
+- Compact narrator display is always enabled for baked lore.
 - Verified flush ranges end before the baked narrator/user pair, preserving the R10 boundary.
 - Added independent controls for baked entry count and baked token size.
