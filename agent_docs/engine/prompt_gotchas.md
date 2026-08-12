@@ -26,3 +26,10 @@
 - Prompt-ready dry runs can mark either the event payload or a separate argument. Ignore both forms before updating comparison state.
 - Report one contiguous-prefix verdict per real request. Per-section logs obscure duplicate events and make cache failures difficult to identify.
 - SillyTavern can omit the system flag on normal assistant messages. Treat only an explicit true value as a system message.
+
+## World Info Bakes
+
+- Track baked entries by lorebook and UID. A UID alone is not globally unique.
+- Suppress an entry only while its bake marker is visible. Hidden markers permit a later bake.
+- Apply World Info regex processing before wrapping each entry.
+- Add only complete entry blocks that fit the memory and provider budgets.

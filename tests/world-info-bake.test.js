@@ -33,12 +33,14 @@ function installBakeContext({ chat, outlet = 'formatted lore', budget = 10000 } 
     return runtime;
 }
 
-function activateBakeEntries() {
-    captureWorldInfoBake([
-        { uid: 2, order: 10, outletName: 'other' },
-        { uid: 3, order: 20, outletName: 'sc_bake' },
-        { uid: 1, order: 30, outletName: 'sc_bake' },
-    ]);
+function activateBakeEntries(entries) {
+    captureWorldInfoBake(
+        entries || [
+            { uid: 2, world: 'book', order: 10, outletName: 'other', content: 'ignored' },
+            { uid: 3, world: 'book', order: 20, outletName: 'sc_bake', content: 'lore three' },
+            { uid: 1, world: 'book', order: 30, outletName: 'sc_bake', content: 'lore one' },
+        ],
+    );
 }
 
 describe('world info bake', () => {
@@ -58,14 +60,15 @@ describe('world info bake', () => {
 
         await expect(injectPendingWorldInfoBake({ chat: prompt })).resolves.toBe(true);
 
+        const content = '<wi>\nlore one\n</wi>\n<wi>\nlore three\n</wi>';
         expect(prompt.slice(-3)).toEqual([
             { role: 'assistant', content: 'assistant reply' },
-            { role: 'system', content: 'formatted lore' },
+            { role: 'system', content },
             { role: 'user', content: 'latest user' },
         ]);
         expect(runtime.chat.slice(-3).map((message) => message.mes)).toEqual([
             'assistant reply',
-            'formatted lore',
+            content,
             'latest user',
         ]);
         expect(runtime.chat.at(-2)).toMatchObject({
@@ -78,7 +81,13 @@ describe('world info bake', () => {
                 isSmallSys: true,
                 api: 'summaryception',
                 model: 'sc_wi_bake',
-                sc_wi: { uids: [1, 3], version: 1 },
+                sc_wi: {
+                    entries: [
+                        { world: 'book', uid: 1 },
+                        { world: 'book', uid: 3 },
+                    ],
+                    version: 2,
+                },
             },
         });
         expect(context.renderInsertedChatMessage).toHaveBeenCalledWith(
@@ -87,8 +96,8 @@ describe('world info bake', () => {
         );
     });
 
-    it('preserves the prior payload as the next turn prefix', async () => {
-        const runtime = installBakeContext({ outlet: 'turn one lore' });
+    it('does not rebake entries already present in visible chat history', async () => {
+        const runtime = installBakeContext();
         const firstPrompt = [
             { role: 'user', content: 'old user' },
             { role: 'assistant', content: 'assistant reply' },
@@ -99,41 +108,87 @@ describe('world info bake', () => {
 
         runtime.chat.push(makeMessage({ mes: 'new assistant' }));
         runtime.chat.push(makeMessage({ isUser: true, mes: 'next user' }));
-        runtime.extensionPrompts.customWIOutlet_sc_bake.value = 'turn two lore';
         const secondPrompt = [
             ...firstPrompt,
             { role: 'assistant', content: 'new assistant' },
             { role: 'user', content: 'next user' },
         ];
         activateBakeEntries();
-        await injectPendingWorldInfoBake({ chat: secondPrompt });
 
-        expect(secondPrompt.slice(0, firstPrompt.length)).toEqual(firstPrompt);
-        expect(secondPrompt.slice(-3)).toEqual([
+        expect(await injectPendingWorldInfoBake({ chat: secondPrompt })).toBe(false);
+        expect(secondPrompt).toEqual([
+            ...firstPrompt,
             { role: 'assistant', content: 'new assistant' },
-            { role: 'system', content: 'turn two lore' },
             { role: 'user', content: 'next user' },
         ]);
     });
 
-    it('caps oversized outlet text and skips repeated prompt-ready events', async () => {
-        const runtime = installBakeContext({ outlet: 'x'.repeat(5000), budget: 4000 });
+    it('scopes duplicate identities by lorebook and reads legacy UID markers', async () => {
+        const runtime = installBakeContext();
+        runtime.chat.unshift(
+            {
+                ...makeMessage({ mes: 'existing composite bake' }),
+                extra: { sc_wi: { entries: [{ world: 'other-book', uid: 1 }], version: 2 } },
+            },
+            {
+                ...makeMessage({ mes: 'existing legacy bake' }),
+                extra: { sc_wi: { uids: [2], version: 1 } },
+            },
+        );
+        activateBakeEntries([
+            { uid: 1, world: 'book', order: 30, outletName: 'sc_bake', content: 'new book lore' },
+            {
+                uid: 2,
+                world: 'book',
+                order: 20,
+                outletName: 'sc_bake',
+                content: 'legacy duplicate',
+            },
+        ]);
         const prompt = [
             { role: 'assistant', content: 'assistant reply' },
             { role: 'user', content: 'latest user' },
         ];
-        activateBakeEntries();
 
         expect(await injectPendingWorldInfoBake({ chat: prompt })).toBe(true);
-        expect(prompt.at(-2)).toEqual({ role: 'system', content: 'x'.repeat(4000) });
-        expect(runtime.chat.at(-2).mes).toBe('x'.repeat(4000));
-
-        expect(await injectPendingWorldInfoBake({ chat: prompt })).toBe(false);
-        expect(prompt.filter((message) => message.role === 'system')).toHaveLength(1);
+        expect(prompt.at(-2)?.content).toBe('<wi>\nnew book lore\n</wi>');
+        expect(runtime.chat.at(-2)?.extra?.sc_wi.entries).toEqual([{ world: 'book', uid: 1 }]);
     });
 
-    it('caps the post-splice bake to remaining provider prompt capacity', async () => {
-        const runtime = installBakeContext({ outlet: 'x'.repeat(100), budget: 4000 });
+    it('applies World Info regex processing to each entry before wrapping', async () => {
+        installBakeContext();
+        context.processWorldInfoText.mockImplementation(async (text, depth) => `${text}:${depth}`);
+        activateBakeEntries([
+            { uid: 1, world: 'book', depth: 4, outletName: 'sc_bake', content: 'raw lore' },
+        ]);
+        const prompt = [
+            { role: 'assistant', content: 'assistant reply' },
+            { role: 'user', content: 'latest user' },
+        ];
+
+        expect(await injectPendingWorldInfoBake({ chat: prompt })).toBe(true);
+        expect(context.processWorldInfoText).toHaveBeenCalledWith('raw lore', 4);
+        expect(prompt.at(-2)?.content).toBe('<wi>\nraw lore:4\n</wi>');
+    });
+
+    it('selects complete entry blocks under the text budget', async () => {
+        const runtime = installBakeContext({ budget: 4000 });
+        const prompt = [
+            { role: 'assistant', content: 'assistant reply' },
+            { role: 'user', content: 'latest user' },
+        ];
+        activateBakeEntries([
+            { uid: 1, world: 'book', order: 30, outletName: 'sc_bake', content: 'x'.repeat(100) },
+            { uid: 2, world: 'book', order: 20, outletName: 'sc_bake', content: 'y'.repeat(4000) },
+        ]);
+
+        expect(await injectPendingWorldInfoBake({ chat: prompt })).toBe(true);
+        expect(prompt.at(-2)?.content).toBe(`<wi>\n${'x'.repeat(100)}\n</wi>`);
+        expect(runtime.chat.at(-2)?.extra?.sc_wi.entries).toEqual([{ world: 'book', uid: 1 }]);
+    });
+
+    it('selects complete entry blocks under remaining provider capacity', async () => {
+        installBakeContext({ budget: 4000 });
         const prompt = [
             { role: 'assistant', content: 'assistant reply' },
             { role: 'user', content: 'latest user' },
@@ -143,11 +198,14 @@ describe('world info bake', () => {
             const bake = messages.find((message) => message.role === 'system');
             return 970 + (bake?.content.length || 0);
         });
-        activateBakeEntries();
+        activateBakeEntries([
+            { uid: 1, world: 'book', order: 30, outletName: 'sc_bake', content: 'x'.repeat(10) },
+            { uid: 2, world: 'book', order: 20, outletName: 'sc_bake', content: 'y'.repeat(10) },
+        ]);
 
         expect(await injectPendingWorldInfoBake({ chat: prompt })).toBe(true);
-        expect(prompt.at(-2)?.content).toBe('x'.repeat(30));
-        expect(runtime.chat.at(-2)?.mes).toBe('x'.repeat(30));
+        expect(prompt.at(-2)?.content).toBe(`<wi>\n${'x'.repeat(10)}\n</wi>`);
+        expect(prompt.at(-2)?.content).not.toContain('y');
     });
 
     it('skips retry, continue, and rapid-user tails that lack one assistant/user fork', async () => {
@@ -217,7 +275,34 @@ describe('world info bake', () => {
                 ],
             }),
         ).toBe(true);
-        expect(runtime.chat.at(-2)?.extra?.sc_wi).toEqual({ uids: [1, 3], version: 1 });
+        expect(runtime.chat.at(-2)?.extra?.sc_wi).toEqual({
+            entries: [
+                { world: 'book', uid: 1 },
+                { world: 'book', uid: 3 },
+            ],
+            version: 2,
+        });
+    });
+
+    it('allows an entry to bake again after its prior marker is hidden', async () => {
+        const runtime = installBakeContext();
+        runtime.chat.unshift({
+            ...makeMessage({ mes: '<wi>\nlore one\n</wi>' }),
+            is_hidden: true,
+            extra: { sc_wi: { entries: [{ world: 'book', uid: 1 }], version: 2 } },
+        });
+        activateBakeEntries([
+            { uid: 1, world: 'book', order: 30, outletName: 'sc_bake', content: 'lore one' },
+        ]);
+
+        expect(
+            await injectPendingWorldInfoBake({
+                chat: [
+                    { role: 'assistant', content: 'assistant reply' },
+                    { role: 'user', content: 'latest user' },
+                ],
+            }),
+        ).toBe(true);
     });
 });
 

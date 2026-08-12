@@ -8,6 +8,7 @@
  */
 
 const SILLYTAVERN_MACRO_SYSTEM_PATH = '/scripts/macros/macro-system.js';
+const SILLYTAVERN_REGEX_ENGINE_PATH = '/scripts/extensions/regex/engine.js';
 
 /**
  * Get the raw SillyTavern context object.
@@ -301,6 +302,25 @@ export async function callTokenCountAsync(text) {
         throw new Error('getTokenCountAsync is not available in the current context.');
     }
     return await ctx.getTokenCountAsync(text);
+}
+
+/**
+ * Apply SillyTavern's World Info prompt regex rules to one entry.
+ * @param {string} text
+ * @param {number | null} [depth]
+ * @returns {Promise<string>}
+ */
+export async function processWorldInfoText(text, depth = null) {
+    try {
+        const engine = await import(SILLYTAVERN_REGEX_ENGINE_PATH);
+        const placement = engine?.regex_placement?.WORLD_INFO;
+        const process = engine?.getRegexedString;
+        return typeof process === 'function'
+            ? process(String(text), placement, { depth, isMarkdown: false, isPrompt: true })
+            : String(text);
+    } catch (_e) {
+        return String(text);
+    }
 }
 
 /**

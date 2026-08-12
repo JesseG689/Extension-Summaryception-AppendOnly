@@ -4,10 +4,10 @@ import {
     countPromptPayloadTokens,
     deleteChatMessage,
     getChat,
-    getContext,
     getPromptTokenCapacity,
     getWorldInfoNames,
     loadWorldInfo,
+    processWorldInfoText,
     renderInsertedChatMessage,
     saveWorldInfo,
 } from '../foundation/context.js';
@@ -15,25 +15,24 @@ import { getEffectiveSettings } from '../foundation/state.js';
 import { countTextTokens } from './token-count.js';
 
 const BAKE_OUTLET_NAME = 'sc_bake';
-const BAKE_OUTLET_KEY = `customWIOutlet_${BAKE_OUTLET_NAME}`;
+const BAKE_ENTRY_TAG = 'wi';
 
 const WORLD_INFO_OUTLET_POSITION = 7;
 const MIGRATION_MARKER = 'summaryceptionBake';
-let pendingUids = [];
+let pendingEntries = [];
 
 /**
  * Remember which activated entries belong to Summaryception's bake outlet.
- * The formatted outlet prompt is populated after this event, so content is read at prompt-ready time.
  * @param {unknown} activatedEntries
  * @returns {void}
  */
 export function captureWorldInfoBake(activatedEntries) {
-    pendingUids = Array.isArray(activatedEntries)
+    pendingEntries = Array.isArray(activatedEntries)
         ? activatedEntries
               .filter((entry) => isBakeOutletEntry(entry))
               .sort((left, right) => getEntryOrder(right) - getEntryOrder(left))
-              .map((entry) => getEntryUid(entry))
-              .filter((uid) => uid !== null)
+              .map(toPendingEntry)
+              .filter(Boolean)
         : [];
 }
 
@@ -71,42 +70,43 @@ export async function injectPendingWorldInfoBake(eventData, dryRun = false) {
         }
 
         const userPromptIndex = findLastUserPromptIndex(prompt);
-        const outletText = getBakeOutletText();
         if (userPromptIndex < 0) {
             debug('WI bake skipped: final prompt has no user message');
             return false;
         }
-        if (!outletText.trim()) {
-            debug('WI bake skipped: sc_bake outlet is empty');
-            return false;
-        }
-        if (pendingUids.length === 0) {
-            debug('WI bake skipped: no activated sc_bake entries were captured');
+
+        const entries = pendingEntries.filter((entry) => !wasEntryBaked(entry, chat));
+        if (entries.length === 0) {
+            debug('WI bake skipped: all activated sc_bake entries are already visible');
             return false;
         }
 
-        const content = await capBakeForPrompt(
-            outletText,
+        const selected = await selectBakeEntries(
+            entries,
             settings.memoryTokenBudget,
             prompt,
             userPromptIndex,
         );
-        if (!content.trim()) {
-            debug('WI bake skipped: no provider token capacity remains');
+        if (selected.length === 0) {
+            debug('WI bake skipped: no complete entry fits the available token budget');
             return false;
         }
 
-        const marker = { uids: [...pendingUids], version: 1 };
+        const content = selected.map((entry) => entry.block).join('\n');
+        const marker = {
+            entries: selected.map((entry) => ({ world: entry.world, uid: entry.uid })),
+            version: 2,
+        };
         prompt.splice(userPromptIndex, 0, { role: 'system', content });
         const narrator = createNarratorMessage(content, marker, settings.compactBakes);
         chat.splice(chat.length - 1, 0, narrator);
         renderInsertedChatMessage(narrator, chat.length - 2);
         debug(
-            `WI bake inserted: ${marker.uids.length} entries, ${content.length} characters, prompt block ${userPromptIndex}`,
+            `WI bake inserted: ${marker.entries.length} new entries, ${content.length} characters, prompt block ${userPromptIndex}`,
         );
         return true;
     } finally {
-        pendingUids = [];
+        pendingEntries = [];
     }
 }
 
@@ -205,10 +205,22 @@ function getEntryOrder(entry) {
     const order = Number(entry?.order);
     return Number.isFinite(order) ? order : 0;
 }
-
 function getEntryUid(entry) {
     const uid = entry?.uid;
     return typeof uid === 'string' || typeof uid === 'number' ? uid : null;
+}
+
+function toPendingEntry(entry) {
+    const uid = getEntryUid(entry);
+    if (uid === null || typeof entry?.content !== 'string' || !entry.content.trim()) {
+        return null;
+    }
+    return {
+        uid,
+        world: typeof entry.world === 'string' ? entry.world : '',
+        content: entry.content,
+        depth: Number.isFinite(Number(entry.depth)) ? Number(entry.depth) : null,
+    };
 }
 
 function getEventDryRun(eventData) {
@@ -249,64 +261,54 @@ function findLastUserPromptIndex(prompt) {
     return prompt.findLastIndex((message) => message?.role === 'user');
 }
 
-function getBakeOutletText() {
-    const value = getContext().extensionPrompts?.[BAKE_OUTLET_KEY]?.value;
-    return typeof value === 'string' ? value : '';
+function wasEntryBaked(entry, chat) {
+    return chat.some((message) => {
+        if (message?.is_hidden === true || message?.is_system === true) {
+            return false;
+        }
+        const marker = message?.extra?.sc_wi;
+        if (Array.isArray(marker?.entries)) {
+            return marker.entries.some(
+                (baked) => baked?.uid === entry.uid && baked?.world === entry.world,
+            );
+        }
+        return Array.isArray(marker?.uids) && marker.uids.includes(entry.uid);
+    });
 }
 
-async function capBakeForPrompt(text, textBudget, prompt, insertIndex) {
-    const budgeted = await capBakeText(text, textBudget);
-    const capacity = getPromptTokenCapacity();
-    if (!budgeted || capacity === null) {
-        return budgeted;
+async function selectBakeEntries(entries, textBudget, prompt, insertIndex) {
+    const limit = Math.max(0, Math.floor(Number(textBudget) || 0));
+    if (limit === 0) {
+        return [];
     }
-
-    const candidate = { role: 'system', content: budgeted };
+    const capacity = getPromptTokenCapacity();
+    const selected = [];
+    const candidate = { role: 'system', content: '' };
     prompt.splice(insertIndex, 0, candidate);
     try {
-        const fullCount = await countPromptPayloadTokens(prompt);
-        if (fullCount === null) {
-            return '';
-        }
-        if (fullCount <= capacity) {
-            return budgeted;
-        }
-
-        let low = 0;
-        let high = budgeted.length;
-        while (low < high) {
-            const middle = Math.ceil((low + high) / 2);
-            candidate.content = budgeted.slice(0, middle);
-            const count = await countPromptPayloadTokens(prompt);
-            if (count !== null && count <= capacity) {
-                low = middle;
-            } else {
-                high = middle - 1;
+        for (const entry of entries) {
+            const processed = (await processWorldInfoText(entry.content, entry.depth)).trim();
+            if (!processed) {
+                continue;
             }
+            const block = `<${BAKE_ENTRY_TAG}>\n${processed}\n</${BAKE_ENTRY_TAG}>`;
+            const nextContent = [...selected.map((item) => item.block), block].join('\n');
+            if ((await countTextTokens(nextContent)).count > limit) {
+                continue;
+            }
+            candidate.content = nextContent;
+            if (capacity !== null) {
+                const fullCount = await countPromptPayloadTokens(prompt);
+                if (fullCount === null || fullCount > capacity) {
+                    continue;
+                }
+            }
+            selected.push({ ...entry, block });
         }
-        return budgeted.slice(0, low).trimEnd();
+        return selected;
     } finally {
         prompt.splice(insertIndex, 1);
     }
-}
-
-async function capBakeText(text, budget) {
-    const limit = Math.max(0, Math.floor(Number(budget) || 0));
-    if (limit === 0 || (await countTextTokens(text)).count <= limit) {
-        return limit === 0 ? '' : text;
-    }
-
-    let low = 0;
-    let high = text.length;
-    while (low < high) {
-        const middle = Math.ceil((low + high) / 2);
-        if ((await countTextTokens(text.slice(0, middle))).count <= limit) {
-            low = middle;
-        } else {
-            high = middle - 1;
-        }
-    }
-    return text.slice(0, low).trimEnd();
 }
 
 function createNarratorMessage(content, marker, compact) {

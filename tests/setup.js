@@ -45,6 +45,7 @@ const foundationMocks = vi.hoisted(() => {
         unregisterMacro: vi.fn(),
         generateRaw: vi.fn(),
         callTokenCountAsync: vi.fn(),
+        processWorldInfoText: vi.fn(),
         estimateMainPromptTokens: vi.fn(),
         getRequestHeaders: vi.fn(),
         getPromptManager: vi.fn(),
@@ -124,6 +125,7 @@ const foundationMocks = vi.hoisted(() => {
                 ? Math.max(0, total - Math.max(0, response))
                 : null;
         });
+        context.processWorldInfoText.mockImplementation(async (text) => String(text));
         context.countPromptPayloadTokens.mockImplementation(async () => null);
         context.executeSlashCommandsWithOptions.mockImplementation(
             async (command, options = {}) => {

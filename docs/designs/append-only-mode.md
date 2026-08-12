@@ -158,10 +158,8 @@ a fallback if the narrator-message approach turns out to be infeasible.
 - World Info entries with `position = outlet` and `outletName = 'sc_bake'`.
   The user (or a one-shot migration command we ship) moves dynamic entries
   to this outlet position. Constant entries stay at `before` / `after`.
-- The formatted WI text ST already produces for the outlet, read from
-  `extension_prompts['customWIOutlet_sc_bake']`. ST applies the user's
-  `wi_format` template before populating this; we reuse that, we do not
-  reformat.
+- Each activated entry's content after ST World Info regex processing. The
+  bake preserves activation order and does not reuse the combined outlet text.
 
 ### What does NOT get baked
 
@@ -182,20 +180,17 @@ optional polish, not a v1 requirement.
 Register an `eventSource.on` listener on `WORLD_INFO_ACTIVATED`. On fire:
 - Retain the activated entries for `outletName = 'sc_bake'`, ordered by
   descending `order`.
-- Do NOT read the formatted outlet yet. ST populates
-  `extension_prompts['customWIOutlet_sc_bake']` after this event returns.
+- Retain each entry's lorebook, UID, content, and depth for per-entry processing.
 - Do NOT splice here. `coreChat` was snapshotted before the WI scan.
 
 **3. Dual-mutation inject (listener on `CHAT_COMPLETION_PROMPT_READY`).**
 This is the load-bearing intercept. Register a second listener on
 `CHAT_COMPLETION_PROMPT_READY`. On fire (skip `dryRun`):
-- Read the newly populated formatted outlet from
-  `extension_prompts['customWIOutlet_sc_bake']`.
-- If the outlet is empty/whitespace or no matching entries activated — skip.
-- Idempotency guard: skip if `chat[chat.length - 2]?.extra?.sc_wi` exists
-  (already baked for this send — continue/retry case).
-- Token budget check: if the formatted outlet exceeds `memoryTokenBudget`,
-  retain its highest-order prefix under the budget.
+- Drop entries whose `(world, uid)` identity already appears in a visible
+  version-2 bake marker. Continue to read legacy UID-only markers.
+- Apply ST's World Info regex processing to each remaining entry.
+- Wrap each result in a complete `<wi>...</wi>` block.
+- Select complete blocks under both `memoryTokenBudget` and remaining provider capacity.
 - **Mutation A — API payload.** Splice the system message into
   `eventData.chat` before the last `{role: 'user'}` entry. This is the
   array that becomes `generate_data.prompt` (`openai.js:1607-1614`). The
@@ -267,14 +262,10 @@ includes it from storage.
 
 **Q2: Does WI scan read narrator messages? — YES.**
 
-`getScanningChat()` (`world-info.js:1057`):
-`chat.filter(x => !x.is_system).map(x => x.mes)`. Our messages have
-`is_system: false`, so they survive the filter. WI scan sees their
-keywords. **Cascade is real.** Baked lore permanently lives in scan
-scope. Decision: accept (approximates sticky=9999 for free, bounded by
-`memoryTokenBudget` cap) or filter (monkey-patch `getScanningChat` to
-also exclude `extra.sc_wi`). Default: accept. Revisit if runaway
-activation becomes a problem.
+WI scan can read visible narrator text. Visible `extra.sc_wi` markers suppress
+rebaking the same `(world, uid)` entry. Hidden or aged-out markers do not, so
+current activations can bake again after a flush. Legacy UID-only markers are
+still read and conservatively suppress matching UIDs.
 
 **Q9: Does the summarizer read narrator messages? — YES.**
 
@@ -298,10 +289,9 @@ change.
 
 ### Activation tracking — short answer
 
-We do not run a parallel WI scan. We consume ST's. `WORLD_INFO_ACTIVATED`
-is the single source of truth; we are a sink. Per-message persistence
-(the `extra.sc_wi` marker on each baked narrator message) is for undo
-and audit, not for re-evaluation.
+We consume ST's `WORLD_INFO_ACTIVATED` result rather than running a parallel
+scan. Version-2 `extra.sc_wi` metadata stores `(world, uid)` identities for
+duplicate suppression, undo, and audit.
 
 ### Bake ordering — revised after Step 0
 
@@ -316,9 +306,9 @@ Sequence per turn (corrected):
    activated `sc_bake` entries.**
 6. `setOpenAIMessages(coreChat)` builds API message list from snapshot.
 7. `prepareOpenAIMessages` assembles the full prompt.
-8. ST populates the formatted outlet, then `CHAT_COMPLETION_PROMPT_READY`
-   fires (`openai.js:1610`) → **our inject listener reads the outlet and
-   splices `eventData.chat` (payload) + `chat[]` (storage).**
+8. `CHAT_COMPLETION_PROMPT_READY` fires (`openai.js:1610`) → **our inject
+   listener filters visible identities, processes and wraps each retained
+   entry, then splices `eventData.chat` (payload) + `chat[]` (storage).**
 9. API call. Provider sees the system message in the payload. Cache
    stores the full list.
 10. Response. ST saves `chat[]` — narrator message persists.
@@ -337,26 +327,18 @@ messages: small block, system avatar, optional compact layout. We set
 "SC-WI" line per bake — visible enough to audit, unobtrusive enough to
 ignore. No HTML comment tricks needed.
 
-The message content is the formatted WI text from the outlet (after ST's
-`wi_format` template is applied). The user sees the same text the model
-sees, in the same chat stream. If they want it more compact, ST's
-existing compact narrator display handles it.
-
-**WI scan cascade — resolved.** WI scan reads our narrator messages
-(`world-info.js:1057`: `chat.filter(x => !x.is_system)` — our messages
-have `is_system: false`, so they survive). Baked lore keywords
-permanently live in scan scope. Decision for v1: **accept the cascade.**
-It approximates sticky=9999 for free. Bounded by `memoryTokenBudget`
-cap on bake size. If runaway activation becomes measurable, add a
-monkey-patch on `getScanningChat()` to filter `extra.sc_wi`.
+Each baked entry is wrapped in a compact `<wi>...</wi>` boundary. Entry
+identity is persisted in version-2 `extra.sc_wi` metadata as
+`{ entries: [{ world, uid }] }`, not exposed in model-visible text. The user
+and model see the same processed entry blocks in the same chat stream.
 
 ### Settings reuse — no new sliders
 
 `APPEND_ONLY` mode does not introduce new budget controls. It reuses:
 
-- **`memoryTokenBudget`** — hard cap on the baked WI text appended per
-  turn. If captured outlet content exceeds this, truncate to the most
-  recently activated entries (highest `order` first) until under budget.
+- **`memoryTokenBudget`** — hard cap on the complete baked `<wi>` blocks
+  appended per turn. Highest-order activated entries are considered first;
+  no entry or tag is partially truncated.
 - **`verbatimTokenBudget`** — in `APPEND_ONLY`, this controls the same
   thing it does in `BALANCED` (the live-context token ceiling that
   triggers summarization). Unchanged semantics.
@@ -426,12 +408,8 @@ to ensure our splice lands first.
 1. **Existing chat history cannot be retroactively baked.** Prefix
    stability starts from the moment the user enables `APPEND_ONLY`. Old
    messages stay bare. Documented; not a bug.
-2. **WI keyword cascade from baked content.** **Resolved (Step 0).** WI
-   scan reads our narrator messages (`world-info.js:1057`). Cascade is
-   real. v1 decision: accept (bounded by `memoryTokenBudget`). Revisit
-   if runaway activation is measurable.
-3. **Token budget reuse.** `memoryTokenBudget` caps bake size. Truncation
-   policy: highest `order` first. Documented in mode help.
+2. **WI keyword cascade from baked content.** Visible bakes can participate in later scans, but their persisted identities prevent duplicate baking. Once a bake is hidden by a flush, its entries may activate and bake again.
+3. **Token budget reuse.** `memoryTokenBudget` caps complete `<wi>` blocks. Selection keeps highest-order activated entries first and never truncates an entry or tag.
 4. **Edit/regen.** Editing a user message does not affect adjacent
    narrator messages — they are independent chat entries. Regen affects
    assistant messages; the narrator message before the user message is
