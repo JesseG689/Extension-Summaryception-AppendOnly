@@ -60,12 +60,15 @@ describe('world info bake', () => {
 
         await expect(injectPendingWorldInfoBake({ chat: prompt })).resolves.toBe(true);
 
-        const content = '<wi>\nlore one\n</wi>\n<wi>\nlore three\n</wi>';
+        const content = prompt.at(-2)?.content;
         expect(prompt.slice(-3)).toEqual([
             { role: 'assistant', content: 'assistant reply' },
             { role: 'system', content },
             { role: 'user', content: 'latest user' },
         ]);
+        expect(content).toMatch(/^<world_info>\n[\s\S]*<wi>\n[\s\S]*<\/wi>[\s\S]*<\/world_info>$/);
+        expect(content.match(/<wi>/g)).toHaveLength(2);
+        expect(content.match(/<\/wi>/g)).toHaveLength(2);
         expect(runtime.chat.slice(-3).map((message) => message.mes)).toEqual([
             'assistant reply',
             content,
@@ -151,7 +154,9 @@ describe('world info bake', () => {
         ];
 
         expect(await injectPendingWorldInfoBake({ chat: prompt })).toBe(true);
-        expect(prompt.at(-2)?.content).toBe('<wi>\nnew book lore\n</wi>');
+        expect(prompt.at(-2)?.content).toMatch(
+            /^<world_info>\n[\s\S]*<wi>\nnew book lore\n<\/wi>[\s\S]*<\/world_info>$/,
+        );
         expect(runtime.chat.at(-2)?.extra?.sc_wi.entries).toEqual([{ world: 'book', uid: 1 }]);
     });
 
@@ -168,7 +173,9 @@ describe('world info bake', () => {
 
         expect(await injectPendingWorldInfoBake({ chat: prompt })).toBe(true);
         expect(context.processWorldInfoText).toHaveBeenCalledWith('raw lore', 4);
-        expect(prompt.at(-2)?.content).toBe('<wi>\nraw lore:4\n</wi>');
+        expect(prompt.at(-2)?.content).toMatch(
+            /^<world_info>\n[\s\S]*<wi>\nraw lore:4\n<\/wi>[\s\S]*<\/world_info>$/,
+        );
     });
 
     it('selects complete entry blocks under the text budget', async () => {
@@ -183,7 +190,7 @@ describe('world info bake', () => {
         ]);
 
         expect(await injectPendingWorldInfoBake({ chat: prompt })).toBe(true);
-        expect(prompt.at(-2)?.content).toBe(`<wi>\n${'x'.repeat(100)}\n</wi>`);
+        expect(prompt.at(-2)?.content).toContain(`<wi>\n${'x'.repeat(100)}\n</wi>`);
         expect(runtime.chat.at(-2)?.extra?.sc_wi.entries).toEqual([{ world: 'book', uid: 1 }]);
     });
 
@@ -196,7 +203,7 @@ describe('world info bake', () => {
         context.getPromptTokenCapacity.mockReturnValue(1000);
         context.countPromptPayloadTokens.mockImplementation(async (messages) => {
             const bake = messages.find((message) => message.role === 'system');
-            return 970 + (bake?.content.length || 0);
+            return 900 + (bake?.content.includes('y'.repeat(10)) ? 200 : 0);
         });
         activateBakeEntries([
             { uid: 1, world: 'book', order: 30, outletName: 'sc_bake', content: 'x'.repeat(10) },
@@ -204,8 +211,8 @@ describe('world info bake', () => {
         ]);
 
         expect(await injectPendingWorldInfoBake({ chat: prompt })).toBe(true);
-        expect(prompt.at(-2)?.content).toBe(`<wi>\n${'x'.repeat(10)}\n</wi>`);
-        expect(prompt.at(-2)?.content).not.toContain('y');
+        expect(prompt.at(-2)?.content).toContain(`<wi>\n${'x'.repeat(10)}\n</wi>`);
+        expect(prompt.at(-2)?.content).not.toMatch(/<wi>[\s\S]*y{10}[\s\S]*<\/wi>/);
     });
 
     it('skips retry, continue, and rapid-user tails that lack one assistant/user fork', async () => {

@@ -327,10 +327,13 @@ messages: small block, system avatar, optional compact layout. We set
 "SC-WI" line per bake — visible enough to audit, unobtrusive enough to
 ignore. No HTML comment tricks needed.
 
-Each baked entry is wrapped in a compact `<wi>...</wi>` boundary. Entry
-identity is persisted in version-2 `extra.sc_wi` metadata as
-`{ entries: [{ world, uid }] }`, not exposed in model-visible text. The user
-and model see the same processed entry blocks in the same chat stream.
+Each baked entry is wrapped in a compact `<wi>...</wi>` boundary inside a
+stable `<world_info>` reference envelope. The envelope states that entries are
+background reference, not current events, dialogue, actions, or a scene
+transition; the established chat scene remains authoritative. Entry identity is
+persisted in version-2 `extra.sc_wi` metadata as `{ entries: [{ world, uid }] }`,
+not exposed in model-visible text. The user and model see the same processed
+entry blocks in the same chat stream.
 
 ### Settings reuse — no new sliders
 

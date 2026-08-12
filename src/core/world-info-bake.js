@@ -16,6 +16,10 @@ import { countTextTokens } from './token-count.js';
 
 const BAKE_OUTLET_NAME = 'sc_bake';
 const BAKE_ENTRY_TAG = 'wi';
+const BAKE_ENVELOPE_OPEN = `<world_info>
+The enclosed entries are background reference, not current events, dialogue, actions, or a scene transition. Use them only when relevant to the established character, setting, and current scene. Their presence alone must never start a new scenario or change the current location.
+`;
+const BAKE_ENVELOPE_CLOSE = '\n</world_info>';
 
 const WORLD_INFO_OUTLET_POSITION = 7;
 const MIGRATION_MARKER = 'summaryceptionBake';
@@ -92,7 +96,7 @@ export async function injectPendingWorldInfoBake(eventData, dryRun = false) {
             return false;
         }
 
-        const content = selected.map((entry) => entry.block).join('\n');
+        const content = wrapBakeBlocks(selected.map((entry) => entry.block));
         const marker = {
             entries: selected.map((entry) => ({ world: entry.world, uid: entry.uid })),
             version: 2,
@@ -292,7 +296,7 @@ async function selectBakeEntries(entries, textBudget, prompt, insertIndex) {
                 continue;
             }
             const block = `<${BAKE_ENTRY_TAG}>\n${processed}\n</${BAKE_ENTRY_TAG}>`;
-            const nextContent = [...selected.map((item) => item.block), block].join('\n');
+            const nextContent = wrapBakeBlocks([...selected.map((item) => item.block), block]);
             if ((await countTextTokens(nextContent)).count > limit) {
                 continue;
             }
@@ -309,6 +313,9 @@ async function selectBakeEntries(entries, textBudget, prompt, insertIndex) {
     } finally {
         prompt.splice(insertIndex, 1);
     }
+}
+function wrapBakeBlocks(blocks) {
+    return `${BAKE_ENVELOPE_OPEN}${blocks.join('\n')}${BAKE_ENVELOPE_CLOSE}`;
 }
 
 function createNarratorMessage(content, marker, compact) {

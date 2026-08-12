@@ -33,3 +33,4 @@
 - Suppress an entry only while its bake marker is visible. Hidden markers permit a later bake.
 - Apply World Info regex processing before wrapping each entry.
 - Add only complete entry blocks that fit the memory and provider budgets.
+- Frame baked lore as background reference. Its presence must not change the established scene, location, character, or scenario.
