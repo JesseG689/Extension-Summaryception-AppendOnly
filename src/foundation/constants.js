@@ -120,6 +120,8 @@ export const defaultSettings = Object.freeze({
     customMemoryDepth: 0,
     injectCurrentState: false, // false = omit the [CURRENT STATE] block from injected memory
     compactBakes: true,
+    maxBakedWorldInfoEntries: 10,
+    bakedWorldInfoTokenBudget: 5000,
     // ─── Modular STATE categories (stateCat*) ─────────────────────────
     // Most categories ship enabled: the extension's [CURRENT STATE] injection
     // is meant to be the sole carrier, so users should disable the equivalent

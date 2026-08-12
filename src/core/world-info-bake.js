@@ -87,7 +87,8 @@ export async function injectPendingWorldInfoBake(eventData, dryRun = false) {
 
         const selected = await selectBakeEntries(
             entries,
-            settings.memoryTokenBudget,
+            settings.maxBakedWorldInfoEntries,
+            settings.bakedWorldInfoTokenBudget,
             prompt,
             userPromptIndex,
         );
@@ -280,9 +281,10 @@ function wasEntryBaked(entry, chat) {
     });
 }
 
-async function selectBakeEntries(entries, textBudget, prompt, insertIndex) {
+async function selectBakeEntries(entries, entryLimit, textBudget, prompt, insertIndex) {
+    const maxEntries = Math.max(0, Math.floor(Number(entryLimit) || 0));
     const limit = Math.max(0, Math.floor(Number(textBudget) || 0));
-    if (limit === 0) {
+    if (maxEntries === 0 || limit === 0) {
         return [];
     }
     const capacity = getPromptTokenCapacity();
@@ -291,6 +293,9 @@ async function selectBakeEntries(entries, textBudget, prompt, insertIndex) {
     prompt.splice(insertIndex, 0, candidate);
     try {
         for (const entry of entries) {
+            if (selected.length >= maxEntries) {
+                break;
+            }
             const processed = (await processWorldInfoText(entry.content, entry.depth)).trim();
             if (!processed) {
                 continue;

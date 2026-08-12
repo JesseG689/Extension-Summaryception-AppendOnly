@@ -134,6 +134,24 @@ describe('getEffectiveSettings', () => {
 
         expect(getEffectiveSettings().memoryMode).toBe('append_only');
     });
+
+    it('preserves Append Only presentation and bake limits in Easy runtime settings', () => {
+        installSummaryContext({
+            settings: {
+                uiMode: UI_MODES.EASY,
+                easyMemoryMode: 'append_only',
+                compactBakes: false,
+                maxBakedWorldInfoEntries: 7,
+                bakedWorldInfoTokenBudget: 7000,
+            },
+        });
+
+        expect(getEffectiveSettings()).toMatchObject({
+            compactBakes: false,
+            maxBakedWorldInfoEntries: 7,
+            bakedWorldInfoTokenBudget: 7000,
+        });
+    });
 });
 
 describe('getChatStore', () => {

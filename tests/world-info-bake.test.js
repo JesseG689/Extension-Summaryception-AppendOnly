@@ -10,7 +10,12 @@ import { installSummaryContext, makeMessage } from './test-helpers.js';
 
 const { context } = globalThis.summaryceptionFoundationMocks;
 
-function installBakeContext({ chat, outlet = 'formatted lore', budget = 10000 } = {}) {
+function installBakeContext({
+    chat,
+    outlet = 'formatted lore',
+    budget = 5000,
+    maxEntries = 10,
+} = {}) {
     const runtime = installSummaryContext({
         chat: chat || [
             makeMessage({ isUser: true, mes: 'old user' }),
@@ -19,7 +24,8 @@ function installBakeContext({ chat, outlet = 'formatted lore', budget = 10000 } 
         ],
         settings: {
             memoryMode: 'append_only',
-            memoryTokenBudget: budget,
+            bakedWorldInfoTokenBudget: budget,
+            maxBakedWorldInfoEntries: maxEntries,
         },
         extensionPrompts: {
             customWIOutlet_sc_bake: { value: outlet },
@@ -176,6 +182,28 @@ describe('world info bake', () => {
         expect(prompt.at(-2)?.content).toMatch(
             /^<world_info>\n[\s\S]*<wi>\nraw lore:4\n<\/wi>[\s\S]*<\/world_info>$/,
         );
+    });
+
+    it('limits each turn to the configured number of highest-order entries', async () => {
+        const runtime = installBakeContext({ maxEntries: 5 });
+        const prompt = [
+            { role: 'assistant', content: 'assistant reply' },
+            { role: 'user', content: 'latest user' },
+        ];
+        activateBakeEntries(
+            Array.from({ length: 6 }, (_, index) => ({
+                uid: index + 1,
+                world: 'book',
+                order: 60 - index,
+                outletName: 'sc_bake',
+                content: `lore ${index + 1}`,
+            })),
+        );
+
+        expect(await injectPendingWorldInfoBake({ chat: prompt })).toBe(true);
+        expect(runtime.chat.at(-2)?.extra?.sc_wi.entries).toHaveLength(5);
+        expect(prompt.at(-2)?.content).toContain('lore 5');
+        expect(prompt.at(-2)?.content).not.toContain('lore 6');
     });
 
     it('selects complete entry blocks under the text budget', async () => {

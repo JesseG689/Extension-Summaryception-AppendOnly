@@ -315,6 +315,13 @@ function normalizeVerbatimWindowSettings(settings) {
     );
     settings.verbatimTokenBudget = clampToStep(settings.verbatimTokenBudget, 4000, 64000, 1000);
     settings.memoryTokenBudget = clampToStep(settings.memoryTokenBudget, 4000, 32000, 1000);
+    settings.maxBakedWorldInfoEntries = clampInteger(settings.maxBakedWorldInfoEntries, 5, 50);
+    settings.bakedWorldInfoTokenBudget = clampToStep(
+        settings.bakedWorldInfoTokenBudget,
+        2000,
+        10000,
+        1000,
+    );
     settings.snippetsPerLayer = clampInteger(settings.snippetsPerLayer, 20, 40);
     settings.snippetsPerPromotion = clampInteger(settings.snippetsPerPromotion, 3, 4);
 }
@@ -392,6 +399,9 @@ function buildEasyEffectiveSettings(settings) {
         stateCatGmNotes: settings.stateCatGmNotes ?? defaultSettings.stateCatGmNotes,
         stateCatInventory: settings.stateCatInventory ?? defaultSettings.stateCatInventory,
         stateCatLocation: settings.stateCatLocation ?? defaultSettings.stateCatLocation,
+        compactBakes: settings.compactBakes,
+        maxBakedWorldInfoEntries: settings.maxBakedWorldInfoEntries,
+        bakedWorldInfoTokenBudget: settings.bakedWorldInfoTokenBudget,
     });
 
     const sourceCap = deriveEasySourceCap(settings.easySummarizerContextTokens);

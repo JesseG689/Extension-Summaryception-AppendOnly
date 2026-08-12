@@ -135,6 +135,26 @@
                                     <input id="sc_easy_memory_token_budget_val" class="text_pole sc-val sc-val-wide" type="text" inputmode="numeric" value="10k" data-sc-slider-setting="easyMemoryTokenBudget" data-sc-partner-input="#sc_easy_memory_token_budget" />
                                 </div>
                             </div>
+                            <div class="sc-row">
+                                <label for="sc_easy_max_baked_wi_entries">
+                                    <span>Max Baked WI Entries</span>
+                                    <small class="sc-hint">The most newly activated World Info entries baked into one turn.</small>
+                                </label>
+                                <div class="sc-slider-row">
+                                    <input type="range" id="sc_easy_max_baked_wi_entries" min="5" max="50" step="1" data-sc-slider-setting="maxBakedWorldInfoEntries" data-sc-partner-input="#sc_easy_max_baked_wi_entries_val" />
+                                    <input id="sc_easy_max_baked_wi_entries_val" class="text_pole sc-val sc-val-wide" type="text" inputmode="numeric" value="10" data-sc-slider-setting="maxBakedWorldInfoEntries" data-sc-partner-input="#sc_easy_max_baked_wi_entries" />
+                                </div>
+                            </div>
+                            <div class="sc-row">
+                                <label for="sc_easy_baked_wi_token_budget">
+                                    <span>Max Baked WI Tokens</span>
+                                    <small class="sc-hint">The token cap for complete World Info entries baked into one turn.</small>
+                                </label>
+                                <div class="sc-slider-row">
+                                    <input type="range" id="sc_easy_baked_wi_token_budget" min="2000" max="10000" step="1000" data-sc-slider-setting="bakedWorldInfoTokenBudget" data-sc-partner-input="#sc_easy_baked_wi_token_budget_val" />
+                                    <input id="sc_easy_baked_wi_token_budget_val" class="text_pole sc-val sc-val-wide" type="text" inputmode="numeric" value="5k" data-sc-slider-setting="bakedWorldInfoTokenBudget" data-sc-partner-input="#sc_easy_baked_wi_token_budget" />
+                                </div>
+                            </div>
                         </div>
                         <div class="sc-tuning-group">
                             <div class="sc-tuning-title">
@@ -571,6 +591,30 @@
                     <div id="sc_memory_help_append_only" class="sc-note" style="display: none;">
                         <span class="fa-solid fa-circle-info"></span>
                         <small>Append Only stores activated <code>sc_bake</code> outlet lore between the assistant and current user. Run <code>/sc-migrate-wi</code> once to move dynamic lore entries; <code>/sc-unbake-wi</code> restores them and removes baked chat messages.</small>
+                    </div>
+                    <div class="sc-tuning-grid">
+                        <div class="sc-tuning-group">
+                            <div class="sc-row">
+                                <label for="sc_max_baked_wi_entries">
+                                    <span>Max Baked WI Entries</span>
+                                    <small class="sc-hint">The most newly activated World Info entries baked into one turn.</small>
+                                </label>
+                                <div class="sc-slider-row">
+                                    <input type="range" id="sc_max_baked_wi_entries" min="5" max="50" step="1" data-sc-slider-setting="maxBakedWorldInfoEntries" data-sc-partner-input="#sc_max_baked_wi_entries_val" />
+                                    <input id="sc_max_baked_wi_entries_val" class="text_pole sc-val sc-val-wide" type="text" inputmode="numeric" value="10" data-sc-slider-setting="maxBakedWorldInfoEntries" data-sc-partner-input="#sc_max_baked_wi_entries" />
+                                </div>
+                            </div>
+                            <div class="sc-row">
+                                <label for="sc_baked_wi_token_budget">
+                                    <span>Max Baked WI Tokens</span>
+                                    <small class="sc-hint">The token cap for complete World Info entries baked into one turn.</small>
+                                </label>
+                                <div class="sc-slider-row">
+                                    <input type="range" id="sc_baked_wi_token_budget" min="2000" max="10000" step="1000" data-sc-slider-setting="bakedWorldInfoTokenBudget" data-sc-partner-input="#sc_baked_wi_token_budget_val" />
+                                    <input id="sc_baked_wi_token_budget_val" class="text_pole sc-val sc-val-wide" type="text" inputmode="numeric" value="5k" data-sc-slider-setting="bakedWorldInfoTokenBudget" data-sc-partner-input="#sc_baked_wi_token_budget" />
+                                </div>
+                            </div>
+                        </div>
                     </div>
                     <div class="sc-toggle-list">
                         <label class="checkbox_label sc-toggle-row" for="sc_compact_bakes">

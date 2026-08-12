@@ -335,19 +335,18 @@ persisted in version-2 `extra.sc_wi` metadata as `{ entries: [{ world, uid }] }`
 not exposed in model-visible text. The user and model see the same processed
 entry blocks in the same chat stream.
 
-### Settings reuse — no new sliders
+### Independent bake limits
 
-`APPEND_ONLY` mode does not introduce new budget controls. It reuses:
+`APPEND_ONLY` mode uses two dedicated controls:
 
-- **`memoryTokenBudget`** — hard cap on the complete baked `<wi>` blocks
-  appended per turn. Highest-order activated entries are considered first;
-  no entry or tag is partially truncated.
-- **`verbatimTokenBudget`** — in `APPEND_ONLY`, this controls the same
-  thing it does in `BALANCED` (the live-context token ceiling that
-  triggers summarization). Unchanged semantics.
+- **Max Baked WI Entries** — caps newly activated entries per turn. Default
+  10; range 5–50. Highest-order entries are selected first.
+- **Max Baked WI Tokens** — caps the complete baked `<world_info>` payload.
+  Default 5 000; range 2 000–10 000. No entry or tag is partially truncated.
 
-One existing slider (`memoryTokenBudget`) gets a second hat. Documented in
-its help text and the mode help block. No new DOM.
+The provider-capacity check remains an additional hard limit. The existing
+`memoryTokenBudget` and `verbatimTokenBudget` retain their summarization and
+live-context meanings.
 
 ### Summary memory injection in APPEND_ONLY mode
 
@@ -412,7 +411,7 @@ to ensure our splice lands first.
    stability starts from the moment the user enables `APPEND_ONLY`. Old
    messages stay bare. Documented; not a bug.
 2. **WI keyword cascade from baked content.** Visible bakes can participate in later scans, but their persisted identities prevent duplicate baking. Once a bake is hidden by a flush, its entries may activate and bake again.
-3. **Token budget reuse.** `memoryTokenBudget` caps complete `<wi>` blocks. Selection keeps highest-order activated entries first and never truncates an entry or tag.
+3. **Independent bake limits.** Entry count and bake tokens have dedicated caps. Selection keeps highest-order entries first and never truncates an entry or tag.
 4. **Edit/regen.** Editing a user message does not affect adjacent
    narrator messages — they are independent chat entries. Regen affects
    assistant messages; the narrator message before the user message is
@@ -543,7 +542,8 @@ End state: Bake works end-to-end with manual WI setup. Cache HIT pattern verifie
 
 - Added `/sc-migrate-wi` to move non-constant entries in every available lorebook to `position = outlet`, `outletName = 'sc_bake'`; original placement is stored for exact reversal.
 - Added `/sc-unbake-wi` to restore migrated entries and remove persisted `SC-WI` narrator messages through SillyTavern's native delete path.
-- Post-assembly baking now measures the complete candidate payload, including the inserted system-message envelope, and truncates to remaining provider capacity as well as `memoryTokenBudget`.
+- Post-assembly baking measures the complete candidate payload, including the inserted system-message envelope, and respects remaining provider capacity plus the dedicated bake limits.
 - Retry, Continue, Quick Reply, dry-run, malformed-tail, and repeated prompt-ready paths remain idempotent through the assistant/user fork guard.
 - Added the `compactBakes` setting and UI control; compact narrator display is enabled by default.
 - Verified flush ranges end before the baked narrator/user pair, preserving the R10 boundary.
+- Added independent controls for baked entry count and baked token size.
