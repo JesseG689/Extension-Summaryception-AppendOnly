@@ -46,6 +46,7 @@
 - Existing history cannot be retroactively baked.
 - Flushes hide baked lore with the messages that contain it.
 - Do not preserve baked lore through a summarization flush.
+- Flush cleanup removes baked blocks marked as owned and legacy blocks named `SC-WI`.
 
 ## Boundaries
 

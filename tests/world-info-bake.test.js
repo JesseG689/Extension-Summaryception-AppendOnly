@@ -397,12 +397,15 @@ describe('world info bake', () => {
         expect(runtime.chat.at(-2)?.mes).toContain('Injected 0 memories');
     });
 
-    it('deletes every temporary bake through the native chat path', async () => {
+    it('deletes marked and legacy SC-WI system blocks through the native chat path', async () => {
         const chat = [
             makeMessage({ isUser: true, mes: 'old user' }),
-            { ...makeMessage({ mes: 'first bake' }), extra: { sc_wi: { version: 1 } } },
-            makeMessage({ mes: 'assistant reply' }),
-            { ...makeMessage({ mes: 'second bake' }), extra: { sc_wi: { version: 2 } } },
+            { ...makeMessage({ mes: 'first bake', name: 'SC-WI' }), extra: {} },
+            makeMessage({ isSystem: true, mes: 'host system message' }),
+            {
+                ...makeMessage({ mes: 'second bake', name: 'SC-WI' }),
+                extra: { sc_wi: { version: 2 } },
+            },
             makeMessage({ isUser: true, mes: 'latest user' }),
         ];
         installBakeContext({ chat });
@@ -414,7 +417,7 @@ describe('world info bake', () => {
         await expect(deleteBakedWorldInfoMessages()).resolves.toEqual([1, 3]);
         expect(chat.map((message) => message.mes)).toEqual([
             'old user',
-            'assistant reply',
+            'host system message',
             'latest user',
         ]);
     });

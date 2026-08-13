@@ -168,7 +168,10 @@ export async function deleteBakedWorldInfoMessages() {
     const chat = getChat();
     const deleted = [];
     for (let index = chat.length - 1; index >= 0; index--) {
-        if (chat[index]?.extra?.sc_wi && (await deleteChatMessage(index))) {
+        if (
+            (chat[index]?.name === 'SC-WI' || chat[index]?.extra?.sc_wi) &&
+            (await deleteChatMessage(index))
+        ) {
             deleted.push(index);
         }
     }
