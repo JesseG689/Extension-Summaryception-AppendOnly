@@ -39,6 +39,7 @@ const foundationMocks = vi.hoisted(() => {
         getWorldInfoNames: vi.fn(),
         getPromptTokenCapacity: vi.fn(),
         countPromptPayloadTokens: vi.fn(),
+        expandSillyTavernMacros: vi.fn(),
         executeSlashCommandsWithOptions: vi.fn(),
         setExtensionPrompt: vi.fn(),
         registerMacro: vi.fn(),
@@ -127,6 +128,7 @@ const foundationMocks = vi.hoisted(() => {
         });
         context.processWorldInfoText.mockImplementation(async (text) => String(text));
         context.countPromptPayloadTokens.mockImplementation(async () => null);
+        context.expandSillyTavernMacros.mockImplementation(async (text) => String(text));
         context.executeSlashCommandsWithOptions.mockImplementation(
             async (command, options = {}) => {
                 await getContext().executeSlashCommandsWithOptions(command, options);

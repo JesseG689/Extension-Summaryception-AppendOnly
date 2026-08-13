@@ -3,6 +3,7 @@ import { debug } from '../foundation/logger.js';
 import {
     countPromptPayloadTokens,
     deleteChatMessage,
+    expandSillyTavernMacros,
     getChat,
     getPromptTokenCapacity,
     getWorldInfoNames,
@@ -16,10 +17,10 @@ import { countTextTokens } from './token-count.js';
 
 const BAKE_OUTLET_NAME = 'sc_bake';
 const BAKE_ENTRY_TAG = 'wi';
-const BAKE_ENVELOPE_OPEN = `<world_info>
-The enclosed entries are background reference, not current events, dialogue, actions, or a scene transition. Use them only when relevant to the established character, setting, and current scene. Their presence alone must never start a new scenario or change the current location.
-`;
-const BAKE_ENVELOPE_CLOSE = '\n</world_info>';
+const ENTRY_COUNT_SENTINEL = '__SC_ENTRY_COUNT__';
+const ENTRIES_SENTINEL = '__SC_ENTRIES__';
+const TEMPLATE_ENTRY_COUNT = '{{entry_count}}';
+const TEMPLATE_ENTRIES = '{{entries}}';
 
 const WORLD_INFO_OUTLET_POSITION = 7;
 const MIGRATION_MARKER = 'summaryceptionBake';
@@ -79,6 +80,10 @@ export async function injectPendingWorldInfoBake(eventData, dryRun = false) {
             debug('WI bake skipped: prompt-ready payload has no chat array');
             return false;
         }
+        if (hasCurrentTurnBake(chat)) {
+            debug('WI bake skipped: current user turn already has a persisted system block');
+            return false;
+        }
         if (!hasAssistantUserTail(chat)) {
             debug(
                 'WI bake skipped: stored chat tail is not assistant/user',
@@ -94,10 +99,12 @@ export async function injectPendingWorldInfoBake(eventData, dryRun = false) {
         }
 
         const entries = pendingEntries.filter((entry) => !wasEntryBaked(entry, chat));
-        if (entries.length === 0) {
-            debug('WI bake skipped: all activated sc_bake entries are already visible');
-            return false;
-        }
+        const protectedTemplate = String(settings.appendOnlySystemBlockTemplate)
+            .replaceAll(TEMPLATE_ENTRY_COUNT, ENTRY_COUNT_SENTINEL)
+            .replaceAll(TEMPLATE_ENTRIES, ENTRIES_SENTINEL);
+        const expandedTemplate = (await expandSillyTavernMacros(protectedTemplate))
+            .replaceAll(ENTRY_COUNT_SENTINEL, TEMPLATE_ENTRY_COUNT)
+            .replaceAll(ENTRIES_SENTINEL, TEMPLATE_ENTRIES);
 
         const selected = await selectBakeEntries(
             entries,
@@ -105,23 +112,27 @@ export async function injectPendingWorldInfoBake(eventData, dryRun = false) {
             settings.bakedWorldInfoTokenBudget,
             prompt,
             userPromptIndex,
+            expandedTemplate,
         );
-        if (selected.length === 0) {
-            debug('WI bake skipped: no complete entry fits the available token budget');
+        const content = renderSystemBlock(
+            expandedTemplate,
+            selected.map((entry) => entry.block),
+        );
+        if ((await countTextTokens(content)).count > settings.bakedWorldInfoTokenBudget) {
+            debug('WI bake skipped: system block template exceeds the available token budget');
             return false;
         }
 
-        const content = wrapBakeBlocks(selected.map((entry) => entry.block));
         const marker = {
             entries: selected.map((entry) => ({ world: entry.world, uid: entry.uid })),
-            version: 2,
+            version: 3,
         };
         prompt.splice(userPromptIndex, 0, { role: 'system', content });
         const narrator = createNarratorMessage(content, marker);
         chat.splice(chat.length - 1, 0, narrator);
         renderInsertedChatMessage(narrator, chat.length - 2);
         debug(
-            `WI bake inserted: ${marker.entries.length} new entries, ${content.length} characters, prompt block ${userPromptIndex}`,
+            `WI system block inserted: ${marker.entries.length} new entries, ${content.length} characters, prompt block ${userPromptIndex}`,
         );
         return true;
     } finally {
@@ -247,6 +258,7 @@ function toPendingEntry(entry) {
         uid,
         world: typeof entry.world === 'string' ? entry.world : '',
         content: entry.content,
+        title: typeof entry.comment === 'string' ? entry.comment.trim() : '',
         depth: Number.isFinite(Number(entry.depth)) ? Number(entry.depth) : null,
     };
 }
@@ -260,6 +272,10 @@ function getPromptChat(eventData) {
         return null;
     }
     return eventData.chat;
+}
+
+function hasCurrentTurnBake(chat) {
+    return Boolean(chat?.at(-1)?.is_user === true && chat?.at(-2)?.extra?.sc_wi);
 }
 
 function hasAssistantUserTail(chat) {
@@ -301,15 +317,12 @@ function wasEntryBaked(entry, chat) {
     });
 }
 
-async function selectBakeEntries(entries, entryLimit, textBudget, prompt, insertIndex) {
+async function selectBakeEntries(entries, entryLimit, textBudget, prompt, insertIndex, template) {
     const maxEntries = Math.max(0, Math.floor(Number(entryLimit) || 0));
     const limit = Math.max(0, Math.floor(Number(textBudget) || 0));
-    if (maxEntries === 0 || limit === 0) {
-        return [];
-    }
     const capacity = getPromptTokenCapacity();
     const selected = [];
-    const candidate = { role: 'system', content: '' };
+    const candidate = { role: 'system', content: renderSystemBlock(template, []) };
     prompt.splice(insertIndex, 0, candidate);
     try {
         for (const entry of entries) {
@@ -320,15 +333,21 @@ async function selectBakeEntries(entries, entryLimit, textBudget, prompt, insert
             if (!processed) {
                 continue;
             }
-            const block = `<${BAKE_ENTRY_TAG}>\n${processed}\n</${BAKE_ENTRY_TAG}>`;
-            const nextContent = wrapBakeBlocks([...selected.map((item) => item.block), block]);
+            const title = escapeHtml(entry.title || `Memory ${selected.length + 1}`);
+            const block = `<details>\n<summary>${title}</summary>\n<${BAKE_ENTRY_TAG}>\n${processed}\n</${BAKE_ENTRY_TAG}>\n</details>`;
+            const nextContent = renderSystemBlock(template, [
+                ...selected.map((item) => item.block),
+                block,
+            ]);
             if ((await countTextTokens(nextContent)).count > limit) {
                 continue;
             }
+            const previousContent = candidate.content;
             candidate.content = nextContent;
             if (capacity !== null) {
                 const fullCount = await countPromptPayloadTokens(prompt);
                 if (fullCount === null || fullCount > capacity) {
+                    candidate.content = previousContent;
                     continue;
                 }
             }
@@ -339,8 +358,19 @@ async function selectBakeEntries(entries, entryLimit, textBudget, prompt, insert
         prompt.splice(insertIndex, 1);
     }
 }
-function wrapBakeBlocks(blocks) {
-    return `${BAKE_ENVELOPE_OPEN}${blocks.join('\n')}${BAKE_ENVELOPE_CLOSE}`;
+function renderSystemBlock(template, blocks) {
+    return String(template)
+        .replaceAll(TEMPLATE_ENTRY_COUNT, String(blocks.length))
+        .replaceAll(TEMPLATE_ENTRIES, blocks.join('\n'));
+}
+
+function escapeHtml(text) {
+    return String(text)
+        .replaceAll('&', '&amp;')
+        .replaceAll('<', '&lt;')
+        .replaceAll('>', '&gt;')
+        .replaceAll('"', '&quot;')
+        .replaceAll("'", '&#39;');
 }
 
 function createNarratorMessage(content, marker) {

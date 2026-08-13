@@ -155,6 +155,13 @@
                                     <input id="sc_easy_baked_wi_token_budget_val" class="text_pole sc-val sc-val-wide" type="text" inputmode="numeric" value="5k" data-sc-slider-setting="bakedWorldInfoTokenBudget" data-sc-partner-input="#sc_easy_baked_wi_token_budget" />
                                 </div>
                             </div>
+                            <div class="sc-row sc-prompt-secondary">
+                                <label for="sc_easy_append_only_system_block_template">
+                                    <span>System Block Template</span>
+                                    <small class="sc-hint">Uses <code>{{entry_count}}</code> and <code>{{entries}}</code>. SillyTavern macros such as <code>{{roll::1d20}}</code> run once when a new user turn is baked.</small>
+                                </label>
+                                <textarea id="sc_easy_append_only_system_block_template" class="text_pole sc-textarea sc-textarea-tall" rows="8"></textarea>
+                            </div>
                         </div>
                         <div class="sc-tuning-group">
                             <div class="sc-tuning-title">
@@ -613,6 +620,13 @@
                                     <input type="range" id="sc_baked_wi_token_budget" min="2000" max="10000" step="1000" data-sc-slider-setting="bakedWorldInfoTokenBudget" data-sc-partner-input="#sc_baked_wi_token_budget_val" />
                                     <input id="sc_baked_wi_token_budget_val" class="text_pole sc-val sc-val-wide" type="text" inputmode="numeric" value="5k" data-sc-slider-setting="bakedWorldInfoTokenBudget" data-sc-partner-input="#sc_baked_wi_token_budget" />
                                 </div>
+                            </div>
+                            <div class="sc-row sc-prompt-secondary">
+                                <label for="sc_append_only_system_block_template">
+                                    <span>System Block Template</span>
+                                    <small class="sc-hint">Uses <code>{{entry_count}}</code> and <code>{{entries}}</code>. SillyTavern macros such as <code>{{roll::1d20}}</code> run once when a new user turn is baked.</small>
+                                </label>
+                                <textarea id="sc_append_only_system_block_template" class="text_pole sc-textarea sc-textarea-tall" rows="8"></textarea>
                             </div>
                         </div>
                     </div>

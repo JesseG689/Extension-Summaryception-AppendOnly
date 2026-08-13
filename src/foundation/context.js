@@ -305,6 +305,20 @@ export async function callTokenCountAsync(text) {
 }
 
 /**
+ * Expand SillyTavern macros once before persisting generated chat content.
+ * @param {string} text
+ * @returns {Promise<string>}
+ */
+export async function expandSillyTavernMacros(text) {
+    const hostModulePath = '/script.js';
+    const script = await import(/* @vite-ignore */ hostModulePath);
+    if (typeof script?.substituteParams !== 'function') {
+        throw new Error('SillyTavern substituteParams is unavailable.');
+    }
+    return String(script.substituteParams(String(text)));
+}
+
+/**
  * Apply SillyTavern's World Info prompt regex rules to one entry.
  * @param {string} text
  * @param {number | null} [depth]

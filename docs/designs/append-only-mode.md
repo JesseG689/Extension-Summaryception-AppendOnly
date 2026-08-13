@@ -318,21 +318,32 @@ storage. `setOpenAIMessages` maps `NARRATOR` → `role: 'system'`. The
 message list `[…, S_N, u_N, a_N, …]` matches turn N's payload exactly up
 to the tail → HIT.
 
-### Bake presentation — system narrator message
+### Bake presentation — customizable system narrator message
 
-The baked lore is its own message in `chat[]`, not text appended to a
-user message. ST's chat renderer displays it as a compact narrator message.
-We always set `isSmallSys: true` and `name: 'SC-WI'`, so each bake remains
-visible for audit without taking the space of a full chat message. No
-presentation toggle or custom HTML is needed.
+The baked content is its own message in `chat[]`, not text appended to a
+user message. ST displays it as a compact narrator message. We keep
+`isSmallSys: true` and `name: 'SC-WI'` so each block remains visible for
+audit without taking the space of a full chat message.
 
-Each baked entry is wrapped in a compact `<wi>...</wi>` boundary inside a
-stable `<world_info>` reference envelope. The envelope states that entries are
-background reference, not current events, dialogue, actions, or a scene
-transition; the established chat scene remains authoritative. Entry identity is
-persisted in version-2 `extra.sc_wi` metadata as `{ entries: [{ world, uid }] }`,
-not exposed in model-visible text. The user and model see the same processed
-entry blocks in the same chat stream.
+APPEND_ONLY exposes one full-message template editor in both Easy and
+Advanced controls. The template supports `{{entry_count}}`, `{{entries}}`,
+and native SillyTavern macros. The default uses an outer `<details>` block,
+a hidden HTML-comment instruction, and seven `{{roll::1d20}}` macros: one
+user roll, one assistant/NPC roll, and five Chekhov rolls. SillyTavern
+expands those macros once before the identical resolved text is inserted
+into the provider payload and persisted narrator message.
+
+Each newly activated entry is a nested collapsed `<details>` block. Its
+summary uses the World Info comment/title when available, or `Memory N`
+otherwise. The processed entry remains bounded by `<wi>...</wi>` tags.
+Entry identity is persisted in version-3 `extra.sc_wi` metadata as
+`{ entries: [{ world, uid }] }`, not exposed in model-visible text.
+
+A normal user turn always gets a block, including when no newly activated
+entry remains after duplicate suppression. This guarantees that its seven
+rolls exist. The adjacent persisted `extra.sc_wi` marker makes insertion
+idempotent for the current user turn. Regenerate, swipe, Continue, and all
+other non-normal generation paths reuse persisted content and never reroll.
 
 ### Independent bake limits
 

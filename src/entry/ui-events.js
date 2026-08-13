@@ -448,8 +448,12 @@ function enforceRetentionConstraints(changedKey) {
  * @returns {void}
  */
 function bindTextareaHandlers() {
-    /** @type {Array<{ id: string, key: 'injectionTemplate' }>} */
-    const textareas = [{ id: '#sc_injection_template', key: 'injectionTemplate' }];
+    /** @type {Array<{ id: string, key: 'injectionTemplate' | 'appendOnlySystemBlockTemplate' }>} */
+    const textareas = [
+        { id: '#sc_injection_template', key: 'injectionTemplate' },
+        { id: '#sc_easy_append_only_system_block_template', key: 'appendOnlySystemBlockTemplate' },
+        { id: '#sc_append_only_system_block_template', key: 'appendOnlySystemBlockTemplate' },
+    ];
 
     for (const ta of textareas) {
         bindDocumentSetting({

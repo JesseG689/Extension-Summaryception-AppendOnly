@@ -16,6 +16,9 @@
 - Baked lore is excluded from summarizer accounting but remains visible in the chat UI.
 - Cap a bake against the complete final payload after reserving response tokens. Skip the bake when final token measurement is unavailable.
 - Lore migration moves only dynamic entries and records their original placement. Cleanup restores placement and uses native chat deletion.
+- Expand host macros once before storing generated narrator content or sending it in the same payload.
+- A normal append-only user turn always gets one narrator block, even with zero new lore, so turn-scoped rolls persist.
+- The persisted narrator marker immediately before the user message prevents duplicate insertion and rerolls on alternate generation paths.
 - Summary flushes end on an assistant message. Keep the following baked narrator and user message visible as one tail extension.
 
 ## State Ownership

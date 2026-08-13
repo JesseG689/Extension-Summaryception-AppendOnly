@@ -3,6 +3,10 @@
  * Declared here so TypeScript's checkJs can validate their usage across src/.
  */
 
+declare module '/script.js' {
+    export function substituteParams(text: string): string;
+}
+
 interface ChatMessage {
     is_user: boolean;
     is_system: boolean;
@@ -68,6 +72,7 @@ interface ExtensionSettings {
     injectCurrentState: boolean;
     maxBakedWorldInfoEntries: number;
     bakedWorldInfoTokenBudget: number;
+    appendOnlySystemBlockTemplate: string;
     stateCatDateTime: boolean;
     stateCatBonds: boolean;
     stateCatChekhov: boolean;

@@ -231,6 +231,13 @@ function normalizeMemorySettings(settings) {
         settings.customMemoryDepth = customMemoryDepth;
         changed = true;
     }
+    if (
+        typeof settings.appendOnlySystemBlockTemplate !== 'string' ||
+        !settings.appendOnlySystemBlockTemplate.trim()
+    ) {
+        settings.appendOnlySystemBlockTemplate = defaultSettings.appendOnlySystemBlockTemplate;
+        changed = true;
+    }
     return changed;
 }
 
@@ -401,6 +408,8 @@ function buildEasyEffectiveSettings(settings) {
         stateCatLocation: settings.stateCatLocation ?? defaultSettings.stateCatLocation,
         maxBakedWorldInfoEntries: settings.maxBakedWorldInfoEntries,
         bakedWorldInfoTokenBudget: settings.bakedWorldInfoTokenBudget,
+        appendOnlySystemBlockTemplate:
+            settings.appendOnlySystemBlockTemplate || defaultSettings.appendOnlySystemBlockTemplate,
     });
 
     const sourceCap = deriveEasySourceCap(settings.easySummarizerContextTokens);

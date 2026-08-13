@@ -111,6 +111,8 @@ function syncSettingsInputs(s, effectiveSettings) {
     $('#sc_custom_memory_depth').val(s.customMemoryDepth);
     syncSliderSettingPairs(SETTING_SLIDER_SELECTOR, s);
     $('#sc_injection_template').val(s.injectionTemplate);
+    $('#sc_easy_append_only_system_block_template').val(s.appendOnlySystemBlockTemplate);
+    $('#sc_append_only_system_block_template').val(s.appendOnlySystemBlockTemplate);
     $('#sc_summarizer_system_prompt').val(s.summarizerSystemPrompt);
     $('#sc_summarizer_user_prompt').val(s.summarizerUserPrompt);
     $('#sc_summarizer_repair_prompt').val(s.summarizerRepairPrompt);

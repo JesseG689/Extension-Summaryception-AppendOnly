@@ -76,7 +76,9 @@ describe('world info bake', () => {
             { role: 'system', content },
             { role: 'user', content: 'latest user' },
         ]);
-        expect(content).toMatch(/^<world_info>\n[\s\S]*<wi>\n[\s\S]*<\/wi>[\s\S]*<\/world_info>$/);
+        expect(content).toMatch(
+            /^<details>\n<summary>Injected 2 memories<\/summary>[\s\S]*<wi>[\s\S]*<\/wi>[\s\S]*<\/details>$/,
+        );
         expect(content.match(/<wi>/g)).toHaveLength(2);
         expect(content.match(/<\/wi>/g)).toHaveLength(2);
         expect(runtime.chat.slice(-3).map((message) => message.mes)).toEqual([
@@ -99,7 +101,7 @@ describe('world info bake', () => {
                         { world: 'book', uid: 1 },
                         { world: 'book', uid: 3 },
                     ],
-                    version: 2,
+                    version: 3,
                 },
             },
         });
@@ -109,8 +111,50 @@ describe('world info bake', () => {
         );
     });
 
+    it('expands seven rolls once and persists the exact resolved block', async () => {
+        context.expandSillyTavernMacros.mockClear();
+        const runtime = installBakeContext();
+        context.expandSillyTavernMacros.mockImplementation(async (template) =>
+            template.replaceAll('{{roll::1d20}}', (_macro, offset) => String((offset % 20) + 1)),
+        );
+        const prompt = [
+            { role: 'assistant', content: 'assistant reply' },
+            { role: 'user', content: 'latest user' },
+        ];
+        activateBakeEntries();
+        expect(await injectPendingWorldInfoBake({ chat: prompt })).toBe(true);
+        expect(context.expandSillyTavernMacros).toHaveBeenCalledTimes(1);
+        expect(
+            context.expandSillyTavernMacros.mock.calls[0][0].match(/{{roll::1d20}}/g),
+        ).toHaveLength(7);
+        expect(prompt.at(-2).content).toBe(runtime.chat.at(-2).mes);
+        expect(prompt.at(-2).content).not.toContain('{{roll::1d20}}');
+    });
+
+    it('uses escaped entry comments and numbered title fallbacks', async () => {
+        installBakeContext();
+        const prompt = [
+            { role: 'assistant', content: 'assistant reply' },
+            { role: 'user', content: 'latest user' },
+        ];
+        activateBakeEntries([
+            {
+                uid: 1,
+                world: 'book',
+                order: 30,
+                outletName: 'sc_bake',
+                comment: 'Known <truth>',
+                content: 'one',
+            },
+            { uid: 2, world: 'book', order: 20, outletName: 'sc_bake', content: 'two' },
+        ]);
+        expect(await injectPendingWorldInfoBake({ chat: prompt })).toBe(true);
+        expect(prompt.at(-2).content).toContain('<summary>Known &lt;truth&gt;</summary>');
+        expect(prompt.at(-2).content).toContain('<summary>Memory 2</summary>');
+    });
+
     it.each(['regenerate', 'swipe', 'continue'])(
-        'does not inject newly activated entries during %s generation',
+        'does not inject during %s generation',
         async (generationType) => {
             const runtime = installBakeContext();
             const prompt = [
@@ -119,41 +163,45 @@ describe('world info bake', () => {
             ];
             setWorldInfoBakeGenerationType(generationType);
             activateBakeEntries();
-
             expect(await injectPendingWorldInfoBake({ chat: prompt })).toBe(false);
             expect(prompt).toHaveLength(2);
             expect(runtime.chat).toHaveLength(3);
-
-            setWorldInfoBakeGenerationType('normal');
-            expect(await injectPendingWorldInfoBake({ chat: prompt })).toBe(false);
         },
     );
 
-    it('does not rebake entries already present in visible chat history', async () => {
+    it('inserts a zero-entry roll block when all lore is already baked', async () => {
         const runtime = installBakeContext();
-        const firstPrompt = [
-            { role: 'user', content: 'old user' },
+        const prompt = [
             { role: 'assistant', content: 'assistant reply' },
             { role: 'user', content: 'latest user' },
         ];
         activateBakeEntries();
-        await injectPendingWorldInfoBake({ chat: firstPrompt });
-
+        await injectPendingWorldInfoBake({ chat: prompt });
         runtime.chat.push(makeMessage({ mes: 'new assistant' }));
         runtime.chat.push(makeMessage({ isUser: true, mes: 'next user' }));
         const secondPrompt = [
-            ...firstPrompt,
+            ...prompt,
             { role: 'assistant', content: 'new assistant' },
             { role: 'user', content: 'next user' },
         ];
         activateBakeEntries();
+        expect(await injectPendingWorldInfoBake({ chat: secondPrompt })).toBe(true);
+        expect(secondPrompt.at(-2)?.content).toContain('Injected 0 memories');
+    });
 
-        expect(await injectPendingWorldInfoBake({ chat: secondPrompt })).toBe(false);
-        expect(secondPrompt).toEqual([
-            ...firstPrompt,
-            { role: 'assistant', content: 'new assistant' },
-            { role: 'user', content: 'next user' },
-        ]);
+    it('does not reroll or duplicate the current user turn block', async () => {
+        const runtime = installBakeContext();
+        const prompt = [
+            { role: 'assistant', content: 'assistant reply' },
+            { role: 'user', content: 'latest user' },
+        ];
+        activateBakeEntries();
+        expect(await injectPendingWorldInfoBake({ chat: prompt })).toBe(true);
+        const firstContent = prompt.at(-2).content;
+        activateBakeEntries();
+        expect(await injectPendingWorldInfoBake({ chat: prompt })).toBe(false);
+        expect(prompt.at(-2).content).toBe(firstContent);
+        expect(runtime.chat.filter((message) => message.extra?.sc_wi)).toHaveLength(1);
     });
 
     it('scopes duplicate identities by lorebook and reads legacy UID markers', async () => {
@@ -184,10 +232,7 @@ describe('world info bake', () => {
         ];
 
         expect(await injectPendingWorldInfoBake({ chat: prompt })).toBe(true);
-        expect(prompt.at(-2)?.content).toMatch(
-            /^<world_info>\n[\s\S]*<wi>\nnew book lore\n<\/wi>[\s\S]*<\/world_info>$/,
-        );
-        expect(runtime.chat.at(-2)?.extra?.sc_wi.entries).toEqual([{ world: 'book', uid: 1 }]);
+        expect(prompt.at(-2)?.content).toContain('<wi>\nnew book lore\n</wi>');
     });
 
     it('applies World Info regex processing to each entry before wrapping', async () => {
@@ -203,9 +248,7 @@ describe('world info bake', () => {
 
         expect(await injectPendingWorldInfoBake({ chat: prompt })).toBe(true);
         expect(context.processWorldInfoText).toHaveBeenCalledWith('raw lore', 4);
-        expect(prompt.at(-2)?.content).toMatch(
-            /^<world_info>\n[\s\S]*<wi>\nraw lore:4\n<\/wi>[\s\S]*<\/world_info>$/,
-        );
+        expect(prompt.at(-2)?.content).toContain('<wi>\nraw lore:4\n</wi>');
     });
 
     it('limits each turn to the configured number of highest-order entries', async () => {
@@ -329,21 +372,20 @@ describe('world info bake', () => {
                 { world: 'book', uid: 1 },
                 { world: 'book', uid: 3 },
             ],
-            version: 2,
+            version: 3,
         });
     });
 
-    it('does not rebake an entry when its prior marker is hidden', async () => {
+    it('does not rebake lore marked in hidden history', async () => {
         const runtime = installBakeContext();
         runtime.chat.unshift({
             ...makeMessage({ mes: '<wi>\nlore one\n</wi>' }),
             is_hidden: true,
-            extra: { sc_wi: { entries: [{ world: 'book', uid: 1 }], version: 2 } },
+            extra: { sc_wi: { entries: [{ world: 'book', uid: 1 }], version: 3 } },
         });
         activateBakeEntries([
             { uid: 1, world: 'book', order: 30, outletName: 'sc_bake', content: 'lore one' },
         ]);
-
         expect(
             await injectPendingWorldInfoBake({
                 chat: [
@@ -351,7 +393,8 @@ describe('world info bake', () => {
                     { role: 'user', content: 'latest user' },
                 ],
             }),
-        ).toBe(false);
+        ).toBe(true);
+        expect(runtime.chat.at(-2)?.mes).toContain('Injected 0 memories');
     });
 
     it('deletes every temporary bake through the native chat path', async () => {

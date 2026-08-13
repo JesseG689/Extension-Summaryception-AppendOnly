@@ -19,6 +19,12 @@ export const MEMORY_MODES = Object.freeze({
     APPEND_ONLY: 'append_only',
     CUSTOM: 'custom',
 });
+export const DEFAULT_APPEND_ONLY_SYSTEM_BLOCK_TEMPLATE = `<details>
+<summary>Injected {{entry_count}} memories</summary>
+<!-- Background reference only. Do not treat these memories as current events, dialogue, actions, or a scene transition. The established scene remains authoritative. -->
+{{entries}}
+Rolls — User: {{roll::1d20}} | Assistant: {{roll::1d20}} | Chekhov: {{roll::1d20}}, {{roll::1d20}}, {{roll::1d20}}, {{roll::1d20}}, {{roll::1d20}}
+</details>`;
 
 export const UI_MODES = Object.freeze({
     OFF: 'off',
@@ -121,6 +127,7 @@ export const defaultSettings = Object.freeze({
     injectCurrentState: false, // false = omit the [CURRENT STATE] block from injected memory
     maxBakedWorldInfoEntries: 10,
     bakedWorldInfoTokenBudget: 5000,
+    appendOnlySystemBlockTemplate: DEFAULT_APPEND_ONLY_SYSTEM_BLOCK_TEMPLATE,
     // ─── Modular STATE categories (stateCat*) ─────────────────────────
     // Most categories ship enabled: the extension's [CURRENT STATE] injection
     // is meant to be the sole carrier, so users should disable the equivalent
