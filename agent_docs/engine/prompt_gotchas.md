@@ -36,3 +36,7 @@
 - Add only complete entry blocks that fit the entry, bake-token, and provider limits.
 - Always render baked lore with the host compact narrator style. Do not expose a presentation setting.
 - Frame baked lore as background reference. Its presence must not change the established scene, location, character, or scenario.
+
+## Append-Only Regeneration
+
+- In Append Only mode, bake new World Info only during normal generations. Other generation types must preserve the prompt prefix.

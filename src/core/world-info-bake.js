@@ -24,6 +24,16 @@ const BAKE_ENVELOPE_CLOSE = '\n</world_info>';
 const WORLD_INFO_OUTLET_POSITION = 7;
 const MIGRATION_MARKER = 'summaryceptionBake';
 let pendingEntries = [];
+let generationType = 'normal';
+
+/**
+ * Record the SillyTavern generation type that owns the next World Info activation.
+ * @param {unknown} type
+ * @returns {void}
+ */
+export function setWorldInfoBakeGenerationType(type) {
+    generationType = String(type || 'normal').toLowerCase();
+}
 
 /**
  * Remember which activated entries belong to Summaryception's bake outlet.
@@ -52,6 +62,10 @@ export async function injectPendingWorldInfoBake(eventData, dryRun = false) {
         const settings = getEffectiveSettings();
         if (isDryRun) {
             debug('WI bake skipped: dry run');
+            return false;
+        }
+        if (generationType !== 'normal') {
+            debug(`WI bake skipped: generation type is ${generationType}`);
             return false;
         }
         if (settings.memoryMode !== MEMORY_MODES.APPEND_ONLY) {

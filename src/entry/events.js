@@ -3,6 +3,7 @@ import { debug, info, isDebugEnabled, warn } from '../foundation/logger.js';
 import { getChatStore, getEffectiveSettings } from '../foundation/state.js';
 import { repairIfBranched, repairMissingGhostingForSummaries } from '../core/ghosting-reconcile.js';
 import { maskUserRoleAsAssistantInGenerateData } from '../core/assistant-role-mask.js';
+import { setWorldInfoBakeGenerationType } from '../core/world-info-bake.js';
 import {
     beginForegroundGeneration,
     endForegroundGeneration,
@@ -198,6 +199,7 @@ export function onGenerationStarted(...args) {
         debug('Ignoring generation start from SillyTavern dry run.');
         return;
     }
+    setWorldInfoBakeGenerationType(args[0]);
     if (hasActiveAbortController()) {
         debug('Ignoring generation start from active Summaryception request.');
         return;

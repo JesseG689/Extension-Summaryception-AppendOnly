@@ -4,6 +4,7 @@ import {
     captureWorldInfoBake,
     deleteBakedWorldInfoMessages,
     injectPendingWorldInfoBake,
+    setWorldInfoBakeGenerationType,
     migrateWorldInfoToBakeOutlet,
     unbakeWorldInfo,
 } from '../src/core/world-info-bake.js';
@@ -54,6 +55,7 @@ function activateBakeEntries(entries) {
 describe('world info bake', () => {
     beforeEach(() => {
         captureWorldInfoBake([]);
+        setWorldInfoBakeGenerationType('normal');
     });
 
     it('splices equivalent system content before the latest user in payload and storage', async () => {
@@ -106,6 +108,26 @@ describe('world info bake', () => {
             runtime.chat.length - 2,
         );
     });
+
+    it.each(['regenerate', 'swipe', 'continue'])(
+        'does not inject newly activated entries during %s generation',
+        async (generationType) => {
+            const runtime = installBakeContext();
+            const prompt = [
+                { role: 'assistant', content: 'assistant reply' },
+                { role: 'user', content: 'latest user' },
+            ];
+            setWorldInfoBakeGenerationType(generationType);
+            activateBakeEntries();
+
+            expect(await injectPendingWorldInfoBake({ chat: prompt })).toBe(false);
+            expect(prompt).toHaveLength(2);
+            expect(runtime.chat).toHaveLength(3);
+
+            setWorldInfoBakeGenerationType('normal');
+            expect(await injectPendingWorldInfoBake({ chat: prompt })).toBe(false);
+        },
+    );
 
     it('does not rebake entries already present in visible chat history', async () => {
         const runtime = installBakeContext();
