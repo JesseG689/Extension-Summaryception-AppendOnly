@@ -11,15 +11,6 @@
 - All runtime calls to SillyTavern globals pass through the foundation context module.
 - Missing optional host APIs return null, false, or a safe fallback. Callers must not assume the API exists.
 - Changing facade exports also requires an update to the global test setup.
-- Dynamic lore for append-only caching is stored as native narrator messages with stable markers.
-- The bake path updates the API payload and chat storage in the same prompt-ready event.
-- Baked lore is excluded from summarizer accounting but remains visible in the chat UI.
-- Cap a bake against the complete final payload after reserving response tokens. Skip the bake when final token measurement is unavailable.
-- Lore migration moves only dynamic entries and records their original placement. Cleanup restores placement and uses native chat deletion.
-- Expand host macros once before storing generated narrator content or sending it in the same payload.
-- A normal append-only user turn always gets one narrator block, even with zero new lore, so turn-scoped rolls persist.
-- The persisted narrator marker immediately before the user message prevents duplicate insertion and rerolls on alternate generation paths.
-- Summary flushes end on an assistant message. Keep the following baked narrator and user message visible as one tail extension.
 
 ## State Ownership
 

@@ -31,7 +31,7 @@
 - Summarized turns are hidden through the host hide command and stay readable in the chat UI.
 - Owned turns carry an ownership flag and are tracked in the store. Unhide acts strictly on owned messages, so messages the user hid are never disturbed.
 - By default the ghosting range also hides text-less messages (images, tool calls) between summarized turns, so they do not leave context-costing gaps. A setting gates this; when off, text-less messages stay visible to the model.
-- Baked World Info narrator messages are temporary. Delete them after a successful summary and never mark them as Summaryception-owned hidden messages.
+- For baked World Info cleanup and flush boundaries, read `append_only_gotchas.md`.
 
 ## Injection
 

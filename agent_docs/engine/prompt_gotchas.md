@@ -28,15 +28,6 @@
 - A broken-prefix verdict includes the complete first changed block in a collapsed, copyable JSON payload.
 - SillyTavern can omit the system flag on normal assistant messages. Treat only an explicit true value as a system message.
 
-## World Info Bakes
+## Append-Only Prompts
 
-- Track baked entries by lorebook and UID. A UID alone is not globally unique.
-- Suppress an entry only while its bake marker is visible. Hidden markers permit a later bake.
-- Apply World Info regex processing before wrapping each entry.
-- Add only complete entry blocks that fit the entry, bake-token, and provider limits.
-- Always render baked lore with the host compact narrator style. Do not expose a presentation setting.
-- Frame baked lore as background reference. Its presence must not change the established scene, location, character, or scenario.
-
-## Append-Only Regeneration
-
-- In Append Only mode, bake new World Info only during normal generations. Other generation types must preserve the prompt prefix.
+- For baked World Info assembly, limits, and regeneration rules, read `append_only_gotchas.md`.
