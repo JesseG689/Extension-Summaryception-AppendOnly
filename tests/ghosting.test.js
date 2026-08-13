@@ -1,6 +1,7 @@
 import { describe, expect, it } from 'vitest';
 
 import { repairMissingGhostingForSummaries } from '../src/core/ghosting-reconcile.js';
+import { ghostMessagesInRange } from '../src/core/ghosting.js';
 import { resetCommitStateForTests } from '../src/core/summarizer-commit.js';
 import { makeMessage, makeSummaryStore, installSummaryContext } from './test-helpers.js';
 
@@ -72,6 +73,27 @@ describe('hide non-text messages in summarized range', () => {
         expect(isHidden(calls, 0)).toBe(true);
         expect(isHidden(calls, 1)).toBe(true);
         expect(isHidden(calls, 3)).toBe(true);
+    });
+
+    it('never claims temporary World Info narrators for ghosting', async () => {
+        resetCommitStateForTests();
+        const calls = [];
+        const narrator = makeMessage({ mes: 'baked lore', name: 'SC-WI' });
+        narrator.extra.sc_wi = { version: 2 };
+        const runtime = installSummaryContext({
+            chat: [
+                makeMessage({ isUser: true, mes: 'old user' }),
+                narrator,
+                makeMessage({ mes: 'old assistant' }),
+            ],
+            settings: { hideNonTextMessages: true },
+            executeSlashCommandsWithOptions: async (command) => calls.push(String(command)),
+        });
+
+        await ghostMessagesInRange(0, 2);
+
+        expect(calls).toEqual(['/hide 0', '/hide 2']);
+        expect(runtime.chat[1].extra.sc_ghosted).toBeUndefined();
     });
 
     it('ends a flush before the following baked narrator and user pair', async () => {

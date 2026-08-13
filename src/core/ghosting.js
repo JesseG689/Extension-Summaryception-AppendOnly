@@ -241,7 +241,7 @@ function messageNeedsGhosting(msg) {
  * @returns {boolean}
  */
 function isGhostableMessage(msg) {
-    if (!msg) {
+    if (!msg || msg.extra?.sc_wi) {
         return false;
     }
     const hideNonText = getEffectiveSettings().hideNonTextMessages !== false;

@@ -2,10 +2,12 @@ import { beforeEach, describe, expect, it, vi } from 'vitest';
 
 import {
     captureWorldInfoBake,
+    deleteBakedWorldInfoMessages,
     injectPendingWorldInfoBake,
     migrateWorldInfoToBakeOutlet,
     unbakeWorldInfo,
 } from '../src/core/world-info-bake.js';
+import { rebaseStoreAfterMessageDeletion } from '../src/core/summarizer-batch.js';
 import { installSummaryContext, makeMessage } from './test-helpers.js';
 
 const { context } = globalThis.summaryceptionFoundationMocks;
@@ -309,7 +311,7 @@ describe('world info bake', () => {
         });
     });
 
-    it('allows an entry to bake again after its prior marker is hidden', async () => {
+    it('does not rebake an entry when its prior marker is hidden', async () => {
         const runtime = installBakeContext();
         runtime.chat.unshift({
             ...makeMessage({ mes: '<wi>\nlore one\n</wi>' }),
@@ -327,7 +329,52 @@ describe('world info bake', () => {
                     { role: 'user', content: 'latest user' },
                 ],
             }),
-        ).toBe(true);
+        ).toBe(false);
+    });
+
+    it('deletes every temporary bake through the native chat path', async () => {
+        const chat = [
+            makeMessage({ isUser: true, mes: 'old user' }),
+            { ...makeMessage({ mes: 'first bake' }), extra: { sc_wi: { version: 1 } } },
+            makeMessage({ mes: 'assistant reply' }),
+            { ...makeMessage({ mes: 'second bake' }), extra: { sc_wi: { version: 2 } } },
+            makeMessage({ isUser: true, mes: 'latest user' }),
+        ];
+        installBakeContext({ chat });
+        context.deleteChatMessage.mockImplementation(async (index) => {
+            chat.splice(index, 1);
+            return true;
+        });
+
+        await expect(deleteBakedWorldInfoMessages()).resolves.toEqual([1, 3]);
+        expect(chat.map((message) => message.mes)).toEqual([
+            'old user',
+            'assistant reply',
+            'latest user',
+        ]);
+    });
+
+    it('rebases summary and ghost metadata after bake deletion', () => {
+        const store = {
+            layers: [
+                [
+                    { turnRange: [0, 3], sourceRange: [0, 3] },
+                    { turnRange: [4, 7], sourceRange: [4, 7] },
+                ],
+            ],
+            summarizedUpTo: 7,
+            ghostedIndices: [0, 1, 3, 6],
+            mutationEpoch: 2,
+        };
+
+        expect(rebaseStoreAfterMessageDeletion(store, 0, 7, [1, 5, 9])).toEqual([0, 5]);
+        expect(store.layers[0]).toEqual([
+            { turnRange: [0, 2], sourceRange: [0, 2] },
+            { turnRange: [3, 5], sourceRange: [3, 5] },
+        ]);
+        expect(store.summarizedUpTo).toBe(5);
+        expect(store.ghostedIndices).toEqual([0, 2, 4]);
+        expect(store.mutationEpoch).toBe(3);
     });
 });
 

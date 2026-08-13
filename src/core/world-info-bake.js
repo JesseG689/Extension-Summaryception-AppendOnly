@@ -136,6 +136,21 @@ export async function migrateWorldInfoToBakeOutlet() {
 }
 
 /**
+ * Delete all temporary World Info narrator messages from the active chat.
+ * @returns {Promise<number[]>} Original chat indices deleted, ascending.
+ */
+export async function deleteBakedWorldInfoMessages() {
+    const chat = getChat();
+    const deleted = [];
+    for (let index = chat.length - 1; index >= 0; index--) {
+        if (chat[index]?.extra?.sc_wi && (await deleteChatMessage(index))) {
+            deleted.push(index);
+        }
+    }
+    return deleted.sort((left, right) => left - right);
+}
+
+/**
  * Restore migrated lorebook entries and delete baked narrator messages from this chat.
  * @returns {Promise<{ books: number, entries: number, messages: number }>}
  */
@@ -159,14 +174,8 @@ export async function unbakeWorldInfo() {
         return true;
     });
 
-    let messages = 0;
-    const chat = getChat();
-    for (let index = chat.length - 1; index >= 0; index--) {
-        if (chat[index]?.extra?.sc_wi && (await deleteChatMessage(index))) {
-            messages++;
-        }
-    }
-    return { ...result, messages };
+    const deleted = await deleteBakedWorldInfoMessages();
+    return { ...result, messages: deleted.length };
 }
 
 async function rewriteWorldInfoEntries(rewrite) {
@@ -268,9 +277,6 @@ function findLastUserPromptIndex(prompt) {
 
 function wasEntryBaked(entry, chat) {
     return chat.some((message) => {
-        if (message?.is_hidden === true || message?.is_system === true) {
-            return false;
-        }
         const marker = message?.extra?.sc_wi;
         if (Array.isArray(marker?.entries)) {
             return marker.entries.some(

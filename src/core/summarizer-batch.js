@@ -17,6 +17,7 @@ import { validateSummarizerOutputIntegrity } from './prompts.js';
 import { parseSnippet } from './summarizer-state.js';
 import { getCurrentStateSnapshotText } from './memory-injection.js';
 import { countTextTokens, formatTokenCount, formatTokenValue } from './token-count.js';
+import { deleteBakedWorldInfoMessages } from './world-info-bake.js';
 import {
     fingerprintSourceRange,
     getChatIdentity,
@@ -454,6 +455,12 @@ async function executeLayer0Commit({
         },
     });
 
+    const deletedWorldInfoIndices = await deleteBakedWorldInfoMessages();
+    if (deletedWorldInfoIndices.length > 0) {
+        rebaseStoreAfterMessageDeletion(store, passageStart, endIdx, deletedWorldInfoIndices);
+        await persistChatState();
+    }
+
     if (showToasts) {
         toastr.success(
             `Summary saved (Layer 0: ${store.layers[0].length} snippets)`,
@@ -461,6 +468,44 @@ async function executeLayer0Commit({
             { timeOut: 2000 },
         );
     }
+}
+/**
+ * Rebase chat-index metadata after native deletion of temporary WI messages.
+ * @param {SummaryceptionStore} store
+ * @param {number} startIdx
+ * @param {number} endIdx
+ * @param {number[]} deletedIndices
+ * @returns {[number, number]}
+ */
+export function rebaseStoreAfterMessageDeletion(store, startIdx, endIdx, deletedIndices) {
+    if (deletedIndices.length === 0) {
+        return [startIdx, endIdx];
+    }
+
+    const rebaseStart = (index) => index - deletedIndices.filter((item) => item < index).length;
+    const rebaseEnd = (index) => index - deletedIndices.filter((item) => item <= index).length;
+
+    for (const snippet of store.layers[0] || []) {
+        if (Array.isArray(snippet.turnRange)) {
+            snippet.turnRange = [
+                rebaseStart(snippet.turnRange[0]),
+                rebaseEnd(snippet.turnRange[1]),
+            ];
+        }
+        if (Array.isArray(snippet.sourceRange)) {
+            snippet.sourceRange = [
+                rebaseStart(snippet.sourceRange[0]),
+                rebaseEnd(snippet.sourceRange[1]),
+            ];
+        }
+    }
+
+    store.summarizedUpTo = rebaseEnd(store.summarizedUpTo);
+    store.ghostedIndices = store.ghostedIndices
+        .filter((index) => !deletedIndices.includes(index))
+        .map(rebaseStart);
+    bumpSummaryStoreMutationEpoch(store);
+    return [rebaseStart(startIdx), rebaseEnd(endIdx)];
 }
 
 function buildLayer0Snippet(snapshot, summary) {
