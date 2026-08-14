@@ -161,22 +161,18 @@ describe('getChatStore', () => {
         installSummaryContext();
         const store = getChatStore();
         expect(store).toMatchObject({ layers: [], ghostedMessageIds: [], mutationEpoch: 0 });
-        expect(store).not.toHaveProperty('summarizedUpTo');
-        expect(store).not.toHaveProperty('ghostedIndices');
     });
 
-    it('normalizes UUID arrays and rejects old or source-less snippets', () => {
+    it('normalizes UUID arrays and rejects source-less snippets', () => {
         installSummaryContext({
             metadata: {
                 summaryception: {
                     layers: [
                         [
                             { text: 'valid', sourceMessageIds: ['a', '', 'a', 'b'] },
-                            { text: 'old', turnRange: [0, 2] },
+                            { text: 'source-less' },
                         ],
                     ],
-                    summarizedUpTo: 2,
-                    ghostedIndices: [1, 2],
                     ghostedMessageIds: ['b', '', 'b', 'a'],
                     mutationEpoch: NaN,
                 },
@@ -187,8 +183,6 @@ describe('getChatStore', () => {
         expect(store.layers).toEqual([[{ text: 'valid', sourceMessageIds: ['a', 'b'] }]]);
         expect(store.ghostedMessageIds).toEqual(['b', 'a']);
         expect(store.mutationEpoch).toBe(0);
-        expect(store).not.toHaveProperty('summarizedUpTo');
-        expect(store).not.toHaveProperty('ghostedIndices');
     });
 });
 

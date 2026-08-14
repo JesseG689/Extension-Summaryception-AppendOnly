@@ -30,25 +30,6 @@ export async function repairGhostingForRange(startIdx, endIdx, options = {}) {
 }
 
 /**
- * Ghost a single message by index.
- * @param {number} messageIndex - The chat index to ghost
- * @returns {Promise<void>}
- */
-export async function ghostMessage(messageIndex) {
-    await ghostMessagesInRange(messageIndex, messageIndex, { kind: 'ghost-message' });
-}
-
-/**
- * Ghost all eligible messages from index 0 up to and including endIndex.
- * @param {number} endIndex - The highest index to ghost
- * @param {GhostRangeOptions} [options]
- * @returns {Promise<void>}
- */
-export async function ghostMessagesUpTo(endIndex, options = {}) {
-    await ghostMessagesInRange(0, endIndex, { kind: 'ghost-up-to', ...options });
-}
-
-/**
  * Ghost eligible messages in a specific chat range.
  * @internal
  * @param {number} startIdx

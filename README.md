@@ -111,7 +111,7 @@ OpenAI-compatible local endpoints may need SillyTavern's CORS proxy. Streaming r
 
 ## Slash commands
 
-`/sc-status` shows the current summarized index and layer counts.
+`/sc-status` shows the current summarized boundary and layer counts.
 
 `/sc-preview` prints the memory block that would be injected.
 
@@ -119,7 +119,7 @@ OpenAI-compatible local endpoints may need SillyTavern's CORS proxy. Streaming r
 
 ## Safety notes
 
-Summaryception is designed to be non-destructive. Summaries live in chat metadata. Settings live in extension settings. Ghosted messages are marked with `extra.sc_ghosted`, so the extension can tell its own hidden messages apart from messages you hid yourself.
+Summaryception is designed to be non-destructive. Summaries live in chat metadata. Settings live in extension settings. Ghosting ownership is stored as stable message IDs in chat metadata, so the extension can tell its own hidden messages apart from messages you hid yourself.
 
 If something looks off, use Clear or `/sc-clear`. That removes Summaryception's memory and ownership flags for the current chat, then unghosts the messages it owns.
 

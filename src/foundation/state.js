@@ -172,9 +172,6 @@ function normalizeChatStore(store) {
     store.layers = normalizeLayers(store.layers);
     store.ghostedMessageIds = normalizeStringArray(store.ghostedMessageIds);
     store.mutationEpoch = normalizeMutationEpoch(store.mutationEpoch);
-    const storeRecord = /** @type {Record<string, unknown>} */ (/** @type {unknown} */ (store));
-    delete storeRecord.summarizedUpTo;
-    delete storeRecord.ghostedIndices;
     return /** @type {SummaryceptionStore} */ (store);
 }
 
@@ -556,8 +553,6 @@ function isValidSnippet(snippet) {
 
 function normalizeSnippet(snippet) {
     snippet.sourceMessageIds = normalizeStringArray(snippet.sourceMessageIds);
-    delete snippet.turnRange;
-    delete snippet.sourceRange;
     return snippet;
 }
 
