@@ -48,7 +48,8 @@
 - Existing history cannot be retroactively baked.
 - Flushes hide baked lore with the messages that contain it.
 - Do not preserve baked lore through a summarization flush.
-- Summary preflight removes non-conversation chat records before planning. It keeps user turns and generated assistant replies.
+- Summary planning must not remove chat records.
+- Remove non-conversation records only after an automatic drain, Force Summarize, or Slop Breaker is ready.
 
 ## Boundaries
 

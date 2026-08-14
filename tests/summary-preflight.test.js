@@ -1,6 +1,7 @@
 import { afterEach, describe, expect, it, vi } from 'vitest';
 
-import { prepareSummaryCycle } from '../src/core/summary-preflight.js';
+import { cleanupSummaryCycle, prepareSummaryCycle } from '../src/core/summary-preflight.js';
+import { runElasticAutoCycle } from '../src/core/summarizer-engine.js';
 import { installSummaryContext, makeMessage, makeSummaryStore } from './test-helpers.js';
 
 describe('summary preflight', () => {
@@ -8,7 +9,7 @@ describe('summary preflight', () => {
         vi.restoreAllMocks();
     });
 
-    it('keeps user and assistant replies and removes other system records', async () => {
+    it('keeps baked and host system records during ordinary cycle preparation', async () => {
         vi.spyOn(globalThis.crypto, 'randomUUID')
             .mockReturnValueOnce('user-id')
             .mockReturnValueOnce('wi-id')
@@ -17,37 +18,75 @@ describe('summary preflight', () => {
             makeMessage({ isUser: true, scId: undefined }),
             { ...makeMessage({ name: 'SC-WI', scId: undefined }), extra: {} },
             { ...makeMessage({ isSystem: true, scId: 'tool-id' }), extra: { type: 'tool' } },
-            {
-                ...makeMessage({ isSystem: true, name: 'Seraphina', scId: 'character-id' }),
-                swipes: ['character reply'],
-            },
             makeMessage({ scId: undefined }),
         ];
         const saveMetadata = vi.fn(async () => {});
         const saveChat = vi.fn(async () => {});
         const reloadCurrentChat = vi.fn(async () => {});
-        const deleteMessage = vi.fn();
         const context = installSummaryContext({
             chat,
             metadata: { summaryception: makeSummaryStore() },
             saveMetadata,
             saveChat,
             reloadCurrentChat,
-            deleteMessage,
         });
 
         const prepared = await prepareSummaryCycle();
 
-        expect(deleteMessage).not.toHaveBeenCalled();
-        expect(reloadCurrentChat).toHaveBeenCalledOnce();
+        expect(reloadCurrentChat).not.toHaveBeenCalled();
         expect(prepared.chat).toBe(context.chat);
         expect(prepared.chat.map((message) => message.sc_id)).toEqual([
             'user-id',
-            'character-id',
+            'wi-id',
+            'tool-id',
             'assistant-id',
         ]);
-        expect(saveMetadata).toHaveBeenCalledTimes(1);
+        expect(saveMetadata).toHaveBeenCalledOnce();
+        expect(saveChat).toHaveBeenCalledOnce();
+    });
+
+    it('removes non-conversation records only at the explicit summary boundary', async () => {
+        const chat = [
+            makeMessage({ isUser: true, scId: 'user-id' }),
+            { ...makeMessage({ name: 'SC-WI', scId: 'wi-id' }), extra: {} },
+            { ...makeMessage({ isSystem: true, scId: 'tool-id' }), extra: { type: 'tool' } },
+            makeMessage({ scId: 'assistant-id' }),
+        ];
+        const saveMetadata = vi.fn(async () => {});
+        const saveChat = vi.fn(async () => {});
+        const reloadCurrentChat = vi.fn(async () => {});
+        installSummaryContext({
+            chat,
+            metadata: { summaryception: makeSummaryStore() },
+            saveMetadata,
+            saveChat,
+            reloadCurrentChat,
+        });
+
+        await expect(cleanupSummaryCycle()).resolves.toBe(2);
+
+        expect(chat.map((message) => message.sc_id)).toEqual(['user-id', 'assistant-id']);
+        expect(reloadCurrentChat).toHaveBeenCalledOnce();
+        expect(saveMetadata).toHaveBeenCalledOnce();
         expect(saveChat).toHaveBeenCalledTimes(2);
+    });
+
+    it('does not clear system records when the post-generation automatic cycle is idle', async () => {
+        const chat = [
+            makeMessage({ isUser: true, scId: 'user-id' }),
+            { ...makeMessage({ name: 'SC-WI', scId: 'wi-id' }), extra: { sc_wi: { version: 3 } } },
+            makeMessage({ scId: 'assistant-id' }),
+        ];
+        const saveChat = vi.fn(async () => {});
+        const reloadCurrentChat = vi.fn(async () => {});
+        installSummaryContext({ chat, saveChat, reloadCurrentChat });
+        const queue = { setPhase: vi.fn() };
+
+        await expect(runElasticAutoCycle(queue)).resolves.toBe('idle');
+
+        expect(chat.map((message) => message.sc_id)).toEqual(['user-id', 'wi-id', 'assistant-id']);
+        expect(saveChat).not.toHaveBeenCalled();
+        expect(reloadCurrentChat).not.toHaveBeenCalled();
     });
 
     it('does not persist when IDs and chat content are unchanged', async () => {

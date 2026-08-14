@@ -5,20 +5,27 @@ import { persistChatState } from './persist-state.js';
 import { deleteNonConversationMessages } from './world-info-bake.js';
 
 /**
- * Assign stable IDs and remove temporary World Info before summary planning.
+ * Assign stable IDs without changing chat contents.
  * @returns {Promise<{ chat: ChatMessage[], store: SummaryceptionStore }>}
  */
 export async function prepareSummaryCycle() {
-    let chat = getChat();
-    const assignedBeforeCleanup = ensureChatScIds(chat);
-    const deletedWorldInfoMessages = await deleteNonConversationMessages();
-
-    chat = getChat();
-    const assignedAfterCleanup = ensureChatScIds(chat);
+    const chat = getChat();
+    const assigned = ensureChatScIds(chat);
     const store = getChatStore();
-    if (assignedBeforeCleanup || assignedAfterCleanup || deletedWorldInfoMessages > 0) {
+    if (assigned) {
         await persistChatState();
     }
-
     return { chat, store };
+}
+
+/**
+ * Remove temporary World Info records at an explicit summarization boundary.
+ * @returns {Promise<number>}
+ */
+export async function cleanupSummaryCycle() {
+    const deletedWorldInfoMessages = await deleteNonConversationMessages();
+    if (deletedWorldInfoMessages > 0) {
+        await persistChatState();
+    }
+    return deletedWorldInfoMessages;
 }
