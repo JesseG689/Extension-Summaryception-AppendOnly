@@ -106,14 +106,14 @@ export async function injectPendingWorldInfoBake(eventData, dryRun = false) {
             .replaceAll(ENTRY_COUNT_SENTINEL, TEMPLATE_ENTRY_COUNT)
             .replaceAll(ENTRIES_SENTINEL, TEMPLATE_ENTRIES);
 
-        const selected = await selectBakeEntries(
+        const selected = await selectBakeEntries({
             entries,
-            settings.maxBakedWorldInfoEntries,
-            settings.bakedWorldInfoTokenBudget,
+            entryLimit: settings.maxBakedWorldInfoEntries,
+            textBudget: settings.bakedWorldInfoTokenBudget,
             prompt,
-            userPromptIndex,
-            expandedTemplate,
-        );
+            insertIndex: userPromptIndex,
+            template: expandedTemplate,
+        });
         const content = renderSystemBlock(
             expandedTemplate,
             selected.map((entry) => entry.block),
@@ -320,7 +320,14 @@ function wasEntryBaked(entry, chat) {
     });
 }
 
-async function selectBakeEntries(entries, entryLimit, textBudget, prompt, insertIndex, template) {
+async function selectBakeEntries({
+    entries,
+    entryLimit,
+    textBudget,
+    prompt,
+    insertIndex,
+    template,
+}) {
     const maxEntries = Math.max(0, Math.floor(Number(entryLimit) || 0));
     const limit = Math.max(0, Math.floor(Number(textBudget) || 0));
     const capacity = getPromptTokenCapacity();
