@@ -163,9 +163,10 @@ export async function migrateWorldInfoToBakeOutlet() {
 
 /**
  * Delete temporary and non-conversation messages from the full active chat.
+ * @param {{ persist?: boolean }} [options]
  * @returns {Promise<number>} Number of deleted messages.
  */
-export async function deleteNonConversationMessages() {
+export async function deleteNonConversationMessages({ persist = true } = {}) {
     const chat = getChat();
     const conversation = chat.filter(isConversationMessage);
     const deleted = chat.length - conversation.length;
@@ -174,8 +175,10 @@ export async function deleteNonConversationMessages() {
     }
 
     chat.splice(0, chat.length, ...conversation);
-    await saveChat();
-    await reloadCurrentChat();
+    if (persist) {
+        await saveChat();
+        await reloadCurrentChat();
+    }
     return deleted;
 }
 

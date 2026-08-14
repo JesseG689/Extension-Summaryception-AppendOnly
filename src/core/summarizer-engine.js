@@ -16,7 +16,7 @@ import {
     buildForceSummaryRoutePlan,
     buildSlopSummaryRoutePlan,
 } from './summarization-routes.js';
-import { cleanupSummaryCycle, prepareSummaryCycle } from './summary-preflight.js';
+import { prepareSummaryCycle } from './summary-preflight.js';
 export const ELASTIC_STRATEGIES = Object.freeze({
     AUTO: 'AUTO',
     FORCE: 'FORCE',
@@ -65,24 +65,20 @@ export async function runElasticAutoCycle(queue, { refreshUi } = {}) {
         return 'idle';
     }
 
-    let prepared = await prepareSummaryCycle();
+    const prepared = await prepareSummaryCycle();
     if (await hasPromotionOverflow(0)) {
         queue.setPhase('promoting');
         const promotionResult = await processPromotionCycle({ overflowKnown: true });
         return promotionResult;
     }
 
-    let routePlan = await buildAutoSummaryRoutePlan(prepared.chat, prepared.store, s);
+    const routePlan = await buildAutoSummaryRoutePlan(prepared.chat, prepared.store, s);
     logRoutePlan(routePlan, s);
 
     if (!routePlan.ready) {
         return 'idle';
     }
 
-    await cleanupSummaryCycle();
-    prepared = await prepareSummaryCycle();
-    routePlan = await buildAutoSummaryRoutePlan(prepared.chat, prepared.store, s);
-    logRoutePlan(routePlan, s);
     queue.setPhase(routePlan.phase);
     return await processRoutePlan(routePlan);
 }
@@ -101,15 +97,8 @@ export async function runElasticManual(deps, strategy, options = {}) {
         return createManualRunOutcome({ blocked: true });
     }
 
-    let prepared = await prepareSummaryCycle();
-    let task = await buildManualTask(strategy, options, prepared);
-    if (!task) {
-        return createManualRunOutcome();
-    }
-
-    await cleanupSummaryCycle();
-    prepared = await prepareSummaryCycle();
-    task = await buildManualTask(strategy, options, prepared);
+    const prepared = await prepareSummaryCycle();
+    const task = await buildManualTask(strategy, options, prepared);
     if (!task) {
         return createManualRunOutcome();
     }

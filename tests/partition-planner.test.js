@@ -6,7 +6,6 @@ import {
     makeMessage,
     makeSizedChat,
     makeSummarySettings,
-    makeSummaryStore,
     messageLineTokens,
 } from './test-helpers.js';
 
@@ -142,22 +141,19 @@ describe('buildLayer0Partitions', () => {
 });
 
 describe('countSourceRangeTokens', () => {
-    it('counts UUID-owned messages but skips user-hidden and system ones', async () => {
-        const owned = makeMessage({ mes: 'x'.repeat(100), isHidden: true });
+    it('counts only visible conversation messages', async () => {
         const chat = [
             makeMessage({ mes: 'x'.repeat(100) }),
             makeMessage({ mes: 'x'.repeat(100), isHidden: true }),
             makeMessage({ mes: 'x'.repeat(100), isSystem: true }),
-            owned,
+            makeMessage({ name: 'SC-WI', mes: 'x'.repeat(100) }),
+            { ...makeMessage({ mes: 'x'.repeat(100) }), extra: { type: 'tool' } },
         ];
-        installSummaryContext({
-            chat,
-            metadata: { summaryception: makeSummaryStore({ ghostedMessageIds: [owned.sc_id] }) },
-        });
+        installSummaryContext({ chat });
 
-        const stats = await countSourceRangeTokens(chat, 0, 3, makeSummarySettings());
+        const stats = await countSourceRangeTokens(chat, 0, 4, makeSummarySettings());
 
-        expect(stats.finalTokens).toBe(2 * messageLineTokens(false, 100));
+        expect(stats.finalTokens).toBe(messageLineTokens(false, 100));
     });
 
     it('skips baked WI narrator messages', async () => {

@@ -91,6 +91,27 @@ function* iterateBackwardChatRange(chat, startIndex, endIndex) {
 }
 
 /**
+ * Check whether a live chat record belongs in Layer 0 summarizer planning.
+ * @param {ChatMessage | undefined} message
+ * @returns {boolean}
+ */
+export function isSummarizerConversationMessage(message) {
+    if (!message?.mes || !String(message.mes).trim()) {
+        return false;
+    }
+    if (
+        message.is_system ||
+        message.is_hidden ||
+        message.extra?.sc_wi ||
+        message.name === 'SC-WI' ||
+        message.extra?.type
+    ) {
+        return false;
+    }
+    return true;
+}
+
+/**
  * Extract all assistant turns from the chat.
  * @param {ChatMessage[]} chat - The SillyTavern chat array
  * @returns {AssistantTurn[]} Assistant turns
@@ -99,10 +120,8 @@ export function getAssistantTurns(chat) {
     const turns = [];
     for (let i = 0; i < chat.length; i++) {
         const m = chat[i];
-        const owned = isSummaryceptionOwnedMessage(m);
-        const isAssistant = !m.is_user && !m.extra?.sc_wi && (!m.is_system || owned);
-        if (isAssistant && m.mes && m.mes.trim().length > 0) {
-            turns.push({ index: i, mes: m.mes, name: m.name || 'Assistant' });
+        if (isSummarizerConversationMessage(m) && !m.is_user) {
+            turns.push({ index: i, mes: String(m.mes), name: m.name || 'Assistant' });
         }
     }
     return turns;
@@ -216,7 +235,7 @@ function createPassageStatsAccumulator() {
 }
 
 async function renderPassageMessage({ message, depth, applyRegexScripts }) {
-    if (!isMessagePassageEligible(message)) {
+    if (!isSummarizerConversationMessage(message)) {
         return null;
     }
 
@@ -235,20 +254,6 @@ async function renderPassageMessage({ message, depth, applyRegexScripts }) {
         finalLine: `${speaker}: ${finalText}`,
         changed: finalText !== rawText,
     };
-}
-
-function isMessagePassageEligible(message) {
-    if (!message?.mes || !message.mes.trim()) {
-        return false;
-    }
-    return !isUserHiddenMessage(message);
-}
-
-function isUserHiddenMessage(message) {
-    return (
-        (message.is_system || message.is_hidden || message.extra?.sc_wi) &&
-        !isSummaryceptionOwnedMessage(message)
-    );
 }
 
 /**

@@ -1,6 +1,10 @@
-import { isSummaryceptionOwnedMessage } from './chatutils.js';
 import { getCurrentSummarizedBoundary } from '../foundation/state.js';
-import { findLastMessage, getPromptDepthsByChatIndex, iterateChatRange } from './chatutils.js';
+import {
+    findLastMessage,
+    getPromptDepthsByChatIndex,
+    isSummarizerConversationMessage,
+    iterateChatRange,
+} from './chatutils.js';
 import { applyRegexToMessage } from './regex-proxy.js';
 import { addBudgetStats, countMessageTokens, createBudgetStats } from './token-count.js';
 import { buildLayer0Partitions } from './partition-planner.js';
@@ -150,7 +154,7 @@ async function collectLiveTokenData(chat, startIdx, settings) {
     }
 
     for (const { index, message } of iterateChatRange(chat, startIdx, chat.length - 1)) {
-        if (isPromptVisibleLiveMessage(message)) {
+        if (isSummarizerConversationMessage(message)) {
             const counted = await countLiveMessage(message, promptDepths.get(index), settings);
             addBudgetStats(stats, counted);
             indexTokens.set(index, counted.finalTokens);
@@ -179,7 +183,12 @@ async function countLiveMessage(message, depth, settings) {
 }
 
 function isAssistantTriggered(chat, startIdx) {
-    const latest = findLastMessage(chat, chat.length - 1, isPromptVisibleLiveMessage, startIdx);
+    const latest = findLastMessage(
+        chat,
+        chat.length - 1,
+        isSummarizerConversationMessage,
+        startIdx,
+    );
     return latest ? !latest.message.is_user : false;
 }
 
@@ -205,7 +214,7 @@ function getLiveAssistantTurns(chat, startIdx, endIdx) {
     }
 
     for (const { index, message } of iterateChatRange(chat, startIdx, endIdx)) {
-        if (isPromptVisibleLiveMessage(message) && !message.is_user) {
+        if (isSummarizerConversationMessage(message) && !message.is_user) {
             turns.push({ index, mes: message.mes, name: message.name || 'Assistant' });
         }
     }
@@ -228,16 +237,4 @@ function getRangeStats(liveData, startIdx, endIdx) {
 function getMessageLine(message, text) {
     const speaker = message.is_user ? 'Player' : 'Assistant';
     return `${speaker}: ${text}`;
-}
-
-function isPromptVisibleLiveMessage(message) {
-    if (!message?.mes || !String(message.mes).trim()) {
-        return false;
-    }
-    return (
-        !isSummaryceptionOwnedMessage(message) &&
-        !message.extra?.sc_wi &&
-        !message.is_system &&
-        !message.is_hidden
-    );
 }

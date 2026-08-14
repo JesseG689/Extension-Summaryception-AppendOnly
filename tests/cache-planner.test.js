@@ -156,10 +156,10 @@ describe('getCacheFriendlyPlan', () => {
 
         expect(plan.reason).toBe('ready');
         expect(plan.liveTokens).toBe(
-            6 * messageLineTokens(true, 500) + 6 * messageLineTokens(false, 2000),
+            6 * messageLineTokens(true, 500) + 7 * messageLineTokens(false, 2000),
         );
-        expect(plan.tailStartIdx).toBe(9);
-        expect(plan.flushEndIdx).toBe(7);
+        expect(plan.tailStartIdx).toBe(11);
+        expect(plan.flushEndIdx).toBe(9);
     });
 
     it('excludes baked WI from the live cache window', async () => {

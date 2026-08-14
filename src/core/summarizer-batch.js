@@ -1,4 +1,5 @@
 import { getContext, getChat } from '../foundation/context.js';
+import { resolveScIdsToIndices } from '../foundation/message-identity.js';
 import {
     bumpSummaryStoreMutationEpoch,
     getChatStore,
@@ -20,6 +21,7 @@ import { executeLayer0StoreTransaction } from './layer0-store-transaction.js';
 import { validateSummarizerOutputIntegrity } from './prompts.js';
 import { parseSnippet } from './summarizer-state.js';
 import { getCurrentStateSnapshotText } from './memory-injection.js';
+import { deleteNonConversationMessages } from './world-info-bake.js';
 import { countTextTokens, formatTokenCount, formatTokenValue } from './token-count.js';
 import {
     fingerprintSourceRange,
@@ -360,7 +362,6 @@ async function commitLayer0Snippet({ snapshot, summary }) {
     }
 
     const store = getChatStore();
-    const [passageStart, endIdx] = snapshot.sourceRange;
     ensureLayer0(store);
 
     if (!isLayer0SummarySafe(summary, snapshot)) {
@@ -369,8 +370,7 @@ async function commitLayer0Snippet({ snapshot, summary }) {
 
     await executeLayer0Commit({
         store,
-        passageStart,
-        endIdx,
+        sourceMessageIds: snapshot.sourceMessageIds,
         rollbackMessage: 'Layer 0 commit persistence failed, rolling back store state:',
         onRollback: () => {
             debug('Layer 0 commit rolled back: post-save persistence failed.');
@@ -395,13 +395,11 @@ async function commitAtomicLayer0Snippets({ snapshots, pendingSnippets, showToas
 
     const store = getChatStore();
     ensureLayer0(store);
-    const passageStart = snapshots[0].sourceRange[0];
-    const endIdx = snapshots[snapshots.length - 1].sourceRange[1];
+    const sourceMessageIds = snapshots.flatMap((snapshot) => snapshot.sourceMessageIds);
 
     await executeLayer0Commit({
         store,
-        passageStart,
-        endIdx,
+        sourceMessageIds,
         rollbackMessage: 'Layer 0 commit persistence failed, rolling back store state:',
         onRollback: () => {
             debug('Atomic Layer 0 commit rolled back: post-save persistence failed.');
@@ -427,24 +425,37 @@ async function commitAtomicLayer0Snippets({ snapshots, pendingSnippets, showToas
 
 async function executeLayer0Commit({
     store,
-    passageStart,
-    endIdx,
+    sourceMessageIds,
     mutate,
     rollbackMessage,
     onRollback,
 }) {
+    const chat = getChat();
+    const chatRollbackPoint = [...chat];
     await executeLayer0StoreTransaction({
         store,
         mutate,
         rollbackMessage,
-        onRollback,
+        onRollback: async () => {
+            chat.splice(0, chat.length, ...chatRollbackPoint);
+            onRollback?.();
+        },
         persist: async () => {
+            await deleteNonConversationMessages({ persist: false });
             await saveChatStore();
             await updateCommittedInjection({ logMemoryStatus: true });
-            await ghostMessagesInRange(passageStart, endIdx, { chatSave: 'deferred' });
+            await ghostSourceMessageIds(sourceMessageIds);
             await persistChatState({ chatSave: 'deferred' });
         },
     });
+}
+
+async function ghostSourceMessageIds(sourceMessageIds) {
+    const indices = resolveScIdsToIndices(getChat(), sourceMessageIds);
+    if (indices.length === 0) {
+        return;
+    }
+    await ghostMessagesInRange(indices[0], indices[indices.length - 1], { chatSave: 'deferred' });
 }
 
 function buildLayer0Snippet(snapshot, summary) {

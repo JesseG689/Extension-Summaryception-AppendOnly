@@ -8,7 +8,7 @@ import { saveChatStore } from '../foundation/state.js';
  * @param {() => void} p.mutate
  * @param {() => Promise<void>} p.persist
  * @param {string} p.rollbackMessage
- * @param {() => void} [p.onRollback]
+ * @param {() => void | Promise<void>} [p.onRollback]
  * @returns {Promise<void>}
  */
 export async function executeLayer0StoreTransaction({
@@ -25,7 +25,7 @@ export async function executeLayer0StoreTransaction({
         await persist();
     } catch (err) {
         restoreLayer0RollbackPoint(store, rollbackPoint);
-        onRollback?.();
+        await onRollback?.();
         error(rollbackMessage, err);
         await saveChatStore();
         throw err;

@@ -1,6 +1,11 @@
-import { isSummaryceptionOwnedMessage } from './chatutils.js';
+import {
+    getAssistantTurns,
+    getPromptDepthsByChatIndex,
+    isSummarizerConversationMessage,
+    isSummaryceptionOwnedMessage,
+    iterateChatRange,
+} from './chatutils.js';
 import { getCurrentSummarizedBoundary } from '../foundation/state.js';
-import { getAssistantTurns, getPromptDepthsByChatIndex, iterateChatRange } from './chatutils.js';
 import { applyRegexToMessage } from './regex-proxy.js';
 import { addBudgetStats, countMessageTokens, createBudgetStats } from './token-count.js';
 import { buildLayer0Partitions } from './partition-planner.js';
@@ -184,7 +189,7 @@ async function getTokenBudgetBoundary(chat, settings) {
 
     const promptDepths = getPromptDepthsByChatIndex(chat);
     for (const { index, message } of iterateChatRange(chat, chat.length - 1, 0)) {
-        if (!isPromptVisibleMessage(message)) {
+        if (!isSummarizerConversationMessage(message)) {
             continue;
         }
 
@@ -226,11 +231,4 @@ async function getBudgetMessageText(message, rawText, depth, settings) {
 function getBudgetMessageLine(message, text) {
     const speaker = message.is_user ? 'Player' : 'Assistant';
     return `${speaker}: ${text}`;
-}
-
-function isPromptVisibleMessage(message) {
-    if (isSummaryceptionOwnedMessage(message)) {
-        return false;
-    }
-    return !message.extra?.sc_wi && !message.is_system && !message.is_hidden;
 }

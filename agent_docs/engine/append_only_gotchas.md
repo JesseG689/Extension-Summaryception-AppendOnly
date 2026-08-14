@@ -49,6 +49,7 @@
 - Flushes hide baked lore with the messages that contain it.
 - Do not preserve baked lore through a summarization flush.
 - Summary planning must not remove chat records.
+- Commit cleanup with the summary write, injection update, and ghosting. Do not clean before the Layer 0 request.
 - Remove non-conversation records only after an automatic drain, Force Summarize, or Slop Breaker is ready.
 
 ## Boundaries

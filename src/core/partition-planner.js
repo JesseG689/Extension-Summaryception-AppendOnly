@@ -1,6 +1,9 @@
-import { isSummaryceptionOwnedMessage } from './chatutils.js';
 import { defaultSettings } from '../foundation/constants.js';
-import { getPromptDepthsByChatIndex, iterateChatRange } from './chatutils.js';
+import {
+    getPromptDepthsByChatIndex,
+    isSummarizerConversationMessage,
+    iterateChatRange,
+} from './chatutils.js';
 import { applyRegexToMessage } from './regex-proxy.js';
 import { addBudgetStats, countMessageTokens, createBudgetStats } from './token-count.js';
 
@@ -74,7 +77,7 @@ export async function countSourceRangeTokens(chat, startIdx, endIdx, settings) {
     }
 
     for (const { index, message } of iterateChatRange(chat, startIdx, endIdx)) {
-        if (!isPassageCountableMessage(message)) {
+        if (!isSummarizerConversationMessage(message)) {
             continue;
         }
         addBudgetStats(stats, await countSourceMessage(message, promptDepths.get(index), settings));
@@ -213,14 +216,4 @@ function getTargetSourceTokens(settings) {
 function getMessageLine(message, text) {
     const speaker = message.is_user ? 'Player' : 'Assistant';
     return `${speaker}: ${text}`;
-}
-
-function isPassageCountableMessage(message) {
-    if (!message?.mes || !String(message.mes).trim()) {
-        return false;
-    }
-    return (
-        !message.extra?.sc_wi &&
-        (!(message.is_system || message.is_hidden) || isSummaryceptionOwnedMessage(message))
-    );
 }

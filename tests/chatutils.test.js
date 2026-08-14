@@ -5,6 +5,7 @@ import {
     getAssistantTurns,
     getPromptDepthsByChatIndex,
     getVisibleAssistantTurns,
+    isSummarizerConversationMessage,
     iterateChatRange,
 } from '../src/core/chatutils.js';
 import {
@@ -31,23 +32,12 @@ describe('getAssistantTurns', () => {
         expect(turns[1].mes).toBe('I am assistant two.');
     });
 
-    it('includes UUID-owned system messages but excludes plain system messages', () => {
-        const ownedMessage = makeMessage({ isSystem: true, mes: 'gone' });
-        const chat = [ownedMessage];
-        installSummaryContext({
-            chat,
-            metadata: {
-                summaryception: makeSummaryStore({ ghostedMessageIds: [ownedMessage.sc_id] }),
-            },
-        });
-        const ghosted = getAssistantTurns(chat);
-        expect(ghosted).toHaveLength(1);
-        expect(ghosted[0].mes).toBe('gone');
+    it('excludes hidden and system records from assistant turns', () => {
+        const hidden = makeMessage({ isHidden: true, mes: 'hidden' });
+        const system = makeMessage({ isSystem: true, mes: 'system' });
+        installSummaryContext({ chat: [hidden, system] });
 
-        const plainMessage = makeMessage({ isSystem: true, mes: 'system' });
-        installSummaryContext({ chat: [plainMessage] });
-        const plain = getAssistantTurns([plainMessage]);
-        expect(plain).toHaveLength(0);
+        expect(getAssistantTurns([hidden, system])).toEqual([]);
     });
 
     it('excludes baked WI narrator messages from assistant turns', () => {
@@ -68,6 +58,23 @@ describe('getAssistantTurns', () => {
         const bare = getAssistantTurns([{ is_user: false, is_system: false, mes: 'hi' }]);
         expect(bare).toHaveLength(1);
         expect(bare[0].name).toBe('Assistant');
+    });
+});
+
+describe('isSummarizerConversationMessage', () => {
+    it('includes only visible user and assistant conversation records', () => {
+        const records = [
+            makeMessage({ isUser: true, mes: 'user' }),
+            makeMessage({ mes: 'assistant' }),
+            { ...makeMessage({ name: 'SC-WI', mes: 'legacy lore' }), extra: {} },
+            { ...makeMessage({ mes: 'baked lore' }), extra: { sc_wi: { version: 1 } } },
+            { ...makeMessage({ mes: 'tool' }), extra: { type: 'tool' } },
+            makeMessage({ isSystem: true, mes: 'system' }),
+            makeMessage({ isHidden: true, mes: 'hidden' }),
+            makeMessage({ mes: '   ' }),
+        ];
+
+        expect(records.filter(isSummarizerConversationMessage)).toEqual(records.slice(0, 2));
     });
 });
 
