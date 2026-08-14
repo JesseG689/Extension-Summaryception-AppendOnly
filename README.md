@@ -155,13 +155,23 @@ Summaryception is designed to be non-destructive. Summaries live in chat metadat
 
 If something looks off, use Clear or `/sc-clear`. That removes Summaryception's memory and ownership flags for the current chat, then unghosts the messages it owns.
 
+## Presets
+
+For default and prefix cache any preset works. I like this one https://rentry.org/freaky-frankenstein-presets 
+
+Append only presets:
+
+[modified FF5.0 preset](https://gist.githubusercontent.com/vadash/e1e801688c68fb468e41d760881f3e87/raw/2bef10797e76ee35e88ce26528184d1d5ef949bf/FF_APPEND_ONLY_5.1.5.json)
+
+[modified FF5.2 preset](https://gist.githubusercontent.com/vadash/0e9c53bc3c971b8570a131d18a102d85/raw/2ea7035d4a6139e49dc8cdcf472ed8e90e5efdae/FF_APPEND_5.2.24.json)
+
 ## Version history
 
 Older major versions are still available as branches. Open SillyTavern's extension list and use the branch button beside Summaryception.
 
 <img src="img/how_to_switch_branch.png" width="700" alt="Branch button beside Summaryception in SillyTavern's extension list" />
 
-- **v21:** Added Append Only for strict prompt caches, including [Hapuppy's Kimi K3](https://hapuppy.com/register?invite=CKxDPfUL). Cached input is very cheap there, but the model needs a stable preset with no rotating macros or dynamic injection positions. This [modified FF5.0 preset](https://gist.githubusercontent.com/vadash/e1e801688c68fb468e41d760881f3e87/raw/2bef10797e76ee35e88ce26528184d1d5ef949bf/FF_APPEND_ONLY_5.1.5.json) is set up for Append Only. The screenshot below shows roughly 49k-58k cache reads on 56k-59k input prompts. That is the whole point of this slightly fussy mode.
+- **v21:** Added Append Only for strict prompt caches, including [Hapuppy's Kimi K3](https://hapuppy.com/register?invite=CKxDPfUL). Cached input is very cheap there, but the model needs a stable preset with no rotating macros or dynamic injection positions. The screenshot below shows roughly 49k-58k cache reads on 56k-59k input prompts. That is the whole point of this slightly fussy mode.
 
 <img src="img/hapuppy_kimi_cache.png" width="900" alt="Kimi K3 usage showing most input tokens served from cache" />
 
