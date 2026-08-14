@@ -105,17 +105,13 @@ export function renderInsertedChatMessage(message, index) {
 }
 
 /**
- * Delete one persistent chat message through SillyTavern's native path.
- * @param {number} index
- * @returns {Promise<boolean>}
+ *
  */
-export async function deleteChatMessage(index) {
-    const remove = getContext().deleteMessage;
-    if (typeof remove !== 'function') {
-        return false;
+export async function reloadCurrentChat() {
+    const reload = getContext().reloadCurrentChat;
+    if (typeof reload === 'function') {
+        await reload();
     }
-    await remove(index, undefined, false);
-    return true;
 }
 
 /**

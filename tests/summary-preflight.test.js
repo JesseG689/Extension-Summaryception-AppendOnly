@@ -25,22 +25,21 @@ describe('summary preflight', () => {
         ];
         const saveMetadata = vi.fn(async () => {});
         const saveChat = vi.fn(async () => {});
-        const deleteMessage = vi.fn(async (index) => {
-            chat.splice(index, 1);
-            return true;
-        });
+        const reloadCurrentChat = vi.fn(async () => {});
+        const deleteMessage = vi.fn();
         const context = installSummaryContext({
             chat,
             metadata: { summaryception: makeSummaryStore() },
             saveMetadata,
             saveChat,
+            reloadCurrentChat,
             deleteMessage,
         });
 
         const prepared = await prepareSummaryCycle();
 
-        expect(deleteMessage).toHaveBeenNthCalledWith(1, 2, undefined, false);
-        expect(deleteMessage).toHaveBeenNthCalledWith(2, 1, undefined, false);
+        expect(deleteMessage).not.toHaveBeenCalled();
+        expect(reloadCurrentChat).toHaveBeenCalledOnce();
         expect(prepared.chat).toBe(context.chat);
         expect(prepared.chat.map((message) => message.sc_id)).toEqual([
             'user-id',
@@ -48,7 +47,7 @@ describe('summary preflight', () => {
             'assistant-id',
         ]);
         expect(saveMetadata).toHaveBeenCalledTimes(1);
-        expect(saveChat).toHaveBeenCalledTimes(1);
+        expect(saveChat).toHaveBeenCalledTimes(2);
     });
 
     it('does not persist when IDs and chat content are unchanged', async () => {

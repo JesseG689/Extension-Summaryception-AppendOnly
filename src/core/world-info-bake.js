@@ -2,14 +2,15 @@ import { MEMORY_MODES } from '../foundation/constants.js';
 import { debug } from '../foundation/logger.js';
 import {
     countPromptPayloadTokens,
-    deleteChatMessage,
     expandSillyTavernMacros,
     getChat,
     getPromptTokenCapacity,
     getWorldInfoNames,
     loadWorldInfo,
     processWorldInfoText,
+    reloadCurrentChat,
     renderInsertedChatMessage,
+    saveChat,
     saveWorldInfo,
 } from '../foundation/context.js';
 import { getEffectiveSettings } from '../foundation/state.js';
@@ -161,17 +162,20 @@ export async function migrateWorldInfoToBakeOutlet() {
 }
 
 /**
- * Delete temporary and non-conversation messages from the active chat.
- * @returns {Promise<number>} Number of successfully deleted messages.
+ * Delete temporary and non-conversation messages from the full active chat.
+ * @returns {Promise<number>} Number of deleted messages.
  */
 export async function deleteNonConversationMessages() {
     const chat = getChat();
-    let deleted = 0;
-    for (let index = chat.length - 1; index >= 0; index--) {
-        if (!isConversationMessage(chat[index]) && (await deleteChatMessage(index))) {
-            deleted++;
-        }
+    const conversation = chat.filter(isConversationMessage);
+    const deleted = chat.length - conversation.length;
+    if (deleted === 0) {
+        return 0;
     }
+
+    chat.splice(0, chat.length, ...conversation);
+    await saveChat();
+    await reloadCurrentChat();
     return deleted;
 }
 

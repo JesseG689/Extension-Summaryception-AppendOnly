@@ -32,8 +32,8 @@ const foundationMocks = vi.hoisted(() => {
         saveSettingsDebounced: vi.fn(),
         saveMetadata: vi.fn(),
         saveChat: vi.fn(),
+        reloadCurrentChat: vi.fn(),
         renderInsertedChatMessage: vi.fn(),
-        deleteChatMessage: vi.fn(),
         loadWorldInfo: vi.fn(),
         saveWorldInfo: vi.fn(),
         getWorldInfoNames: vi.fn(),
@@ -94,13 +94,11 @@ const foundationMocks = vi.hoisted(() => {
                 // Runtime context unavailable in some tests.
             }
         });
-        context.deleteChatMessage.mockImplementation(async (index) => {
-            const fn = getContext().deleteMessage;
-            if (typeof fn !== 'function') {
-                return false;
+        context.reloadCurrentChat.mockImplementation(async () => {
+            const fn = getContext().reloadCurrentChat;
+            if (typeof fn === 'function') {
+                await fn();
             }
-            await fn(index, undefined, false);
-            return true;
         });
         context.loadWorldInfo.mockImplementation(async (name) => {
             const fn = getContext().loadWorldInfo;

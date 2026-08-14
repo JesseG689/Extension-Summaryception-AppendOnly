@@ -246,6 +246,7 @@ interface SillyTavernContext {
     powerUserSettings?: { token_padding?: number };
     promptManager?: SillyTavernPromptManager;
     saveChat?: () => Promise<void>;
+    reloadCurrentChat?: () => Promise<void>;
     ConnectionManagerRequestService?: ConnectionManagerRequestService;
     SlashCommandParser?: SlashCommandParser;
     SlashCommand?: SlashCommand;

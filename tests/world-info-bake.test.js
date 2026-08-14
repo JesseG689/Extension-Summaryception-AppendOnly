@@ -396,7 +396,7 @@ describe('world info bake', () => {
         expect(runtime.chat.at(-2)?.mes).toContain('Injected 0 memories');
     });
 
-    it('deletes marked and legacy SC-WI blocks without changing UUID metadata', async () => {
+    it('deletes marked and legacy SC-WI blocks from the full chat without DOM deletion', async () => {
         const chat = [
             makeMessage({ isUser: true, mes: 'old user', scId: 'user-old' }),
             { ...makeMessage({ mes: 'first bake', name: 'SC-WI', scId: 'wi-1' }), extra: {} },
@@ -407,6 +407,11 @@ describe('world info bake', () => {
             },
             makeMessage({ isUser: true, mes: 'latest user', scId: 'user-latest' }),
         ];
+        const saveChat = vi.fn();
+        const reloadCurrentChat = vi.fn();
+        const deleteMessage = vi.fn();
+        const runtime = installBakeContext({ chat });
+        Object.assign(runtime, { saveChat, reloadCurrentChat, deleteMessage });
         const store = {
             layers: [
                 [
@@ -419,13 +424,11 @@ describe('world info bake', () => {
             ghostedMessageIds: ['user-old', 'wi-1'],
             mutationEpoch: 2,
         };
-        installBakeContext({ chat });
-        context.deleteChatMessage.mockImplementation(async (index) => {
-            chat.splice(index, 1);
-            return true;
-        });
 
         await expect(deleteNonConversationMessages()).resolves.toBe(3);
+        expect(deleteMessage).not.toHaveBeenCalled();
+        expect(saveChat).toHaveBeenCalledOnce();
+        expect(reloadCurrentChat).toHaveBeenCalledOnce();
         expect(chat.map((message) => message.sc_id)).toEqual(['user-old', 'user-latest']);
         expect(store).toEqual({
             layers: [
@@ -461,10 +464,6 @@ describe('world info migration', () => {
         context.getWorldInfoNames.mockReturnValue(['book', 'missing']);
         context.loadWorldInfo.mockImplementation(async (name) => (name === 'book' ? book : null));
         context.saveWorldInfo.mockResolvedValue(true);
-        context.deleteChatMessage.mockImplementation(async (index) => {
-            chat.splice(index, 1);
-            return true;
-        });
 
         await expect(migrateWorldInfoToBakeOutlet()).resolves.toEqual({ books: 1, entries: 2 });
         expect(book.entries[1]).toMatchObject({
