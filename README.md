@@ -203,6 +203,10 @@ v15, need to redo it
   <img src="https://github.com/user-attachments/assets/88f5de03-4414-4b7d-8b1a-3bfa60b5d3f8" width="180" alt="5" />
 </p>
 
+<img src="img/kimi_connection_profile_1.png" width="900" alt="Kimi K3 setup #1" />
+
+<img src="img/kimi_connection_profile_2.png" width="900" alt="Kimi K3 setup #2" />
+
 ## License
 
 AGPL-3.0. See [LICENSE](LICENSE).
