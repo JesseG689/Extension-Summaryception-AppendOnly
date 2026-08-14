@@ -8,7 +8,7 @@ describe('summary preflight', () => {
         vi.restoreAllMocks();
     });
 
-    it('assigns IDs, deletes stale World Info, re-reads chat, and persists once', async () => {
+    it('keeps user and assistant replies and removes other system records', async () => {
         vi.spyOn(globalThis.crypto, 'randomUUID')
             .mockReturnValueOnce('user-id')
             .mockReturnValueOnce('wi-id')
@@ -16,6 +16,11 @@ describe('summary preflight', () => {
         const chat = [
             makeMessage({ isUser: true, scId: undefined }),
             { ...makeMessage({ name: 'SC-WI', scId: undefined }), extra: {} },
+            { ...makeMessage({ isSystem: true, scId: 'tool-id' }), extra: { type: 'tool' } },
+            {
+                ...makeMessage({ isSystem: true, name: 'Seraphina', scId: 'character-id' }),
+                swipes: ['character reply'],
+            },
             makeMessage({ scId: undefined }),
         ];
         const saveMetadata = vi.fn(async () => {});
@@ -34,10 +39,14 @@ describe('summary preflight', () => {
 
         const prepared = await prepareSummaryCycle();
 
-        expect(deleteMessage).toHaveBeenCalledWith(1, undefined, false);
+        expect(deleteMessage).toHaveBeenNthCalledWith(1, 2, undefined, false);
+        expect(deleteMessage).toHaveBeenNthCalledWith(2, 1, undefined, false);
         expect(prepared.chat).toBe(context.chat);
-        expect(prepared.chat.map((message) => message.sc_id)).toEqual(['user-id', 'assistant-id']);
-        expect(prepared.chat.some((message) => message.name === 'SC-WI')).toBe(false);
+        expect(prepared.chat.map((message) => message.sc_id)).toEqual([
+            'user-id',
+            'character-id',
+            'assistant-id',
+        ]);
         expect(saveMetadata).toHaveBeenCalledTimes(1);
         expect(saveChat).toHaveBeenCalledTimes(1);
     });

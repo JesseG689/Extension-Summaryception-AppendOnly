@@ -161,21 +161,36 @@ export async function migrateWorldInfoToBakeOutlet() {
 }
 
 /**
- * Delete all temporary World Info narrator messages from the active chat.
+ * Delete temporary and non-conversation messages from the active chat.
  * @returns {Promise<number>} Number of successfully deleted messages.
  */
-export async function deleteBakedWorldInfoMessages() {
+export async function deleteNonConversationMessages() {
     const chat = getChat();
     let deleted = 0;
     for (let index = chat.length - 1; index >= 0; index--) {
-        if (
-            (chat[index]?.name === 'SC-WI' || chat[index]?.extra?.sc_wi) &&
-            (await deleteChatMessage(index))
-        ) {
+        if (!isConversationMessage(chat[index]) && (await deleteChatMessage(index))) {
             deleted++;
         }
     }
     return deleted;
+}
+
+function isConversationMessage(message) {
+    if (message?.is_user === true) {
+        return true;
+    }
+    if (
+        !message?.mes?.trim() ||
+        message?.extra?.sc_wi ||
+        message?.name === 'SC-WI' ||
+        message?.extra?.type
+    ) {
+        return false;
+    }
+    if (message?.is_system !== true) {
+        return true;
+    }
+    return Array.isArray(message?.swipes);
 }
 
 /**
@@ -202,7 +217,7 @@ export async function unbakeWorldInfo() {
         return true;
     });
 
-    const messages = await deleteBakedWorldInfoMessages();
+    const messages = await deleteNonConversationMessages();
     return { ...result, messages };
 }
 

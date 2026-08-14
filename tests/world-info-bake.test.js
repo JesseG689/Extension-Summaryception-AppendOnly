@@ -2,7 +2,7 @@ import { beforeEach, describe, expect, it, vi } from 'vitest';
 
 import {
     captureWorldInfoBake,
-    deleteBakedWorldInfoMessages,
+    deleteNonConversationMessages,
     injectPendingWorldInfoBake,
     setWorldInfoBakeGenerationType,
     migrateWorldInfoToBakeOutlet,
@@ -425,12 +425,8 @@ describe('world info bake', () => {
             return true;
         });
 
-        await expect(deleteBakedWorldInfoMessages()).resolves.toBe(2);
-        expect(chat.map((message) => message.sc_id)).toEqual([
-            'user-old',
-            'host-system',
-            'user-latest',
-        ]);
+        await expect(deleteNonConversationMessages()).resolves.toBe(3);
+        expect(chat.map((message) => message.sc_id)).toEqual(['user-old', 'user-latest']);
         expect(store).toEqual({
             layers: [
                 [

@@ -48,7 +48,7 @@
 - Existing history cannot be retroactively baked.
 - Flushes hide baked lore with the messages that contain it.
 - Do not preserve baked lore through a summarization flush.
-- Flush cleanup removes baked blocks marked as owned and legacy blocks named `SC-WI`.
+- Summary preflight removes non-conversation chat records before planning. It keeps user turns and generated assistant replies.
 
 ## Boundaries
 
