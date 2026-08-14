@@ -6,6 +6,7 @@ import {
     makeMessage,
     makeSizedChat,
     makeSummarySettings,
+    makeSummaryStore,
     messageLineTokens,
 } from './test-helpers.js';
 
@@ -141,14 +142,18 @@ describe('buildLayer0Partitions', () => {
 });
 
 describe('countSourceRangeTokens', () => {
-    it('counts ghosted messages but skips hidden and system ones', async () => {
-        installSummaryContext();
+    it('counts UUID-owned messages but skips user-hidden and system ones', async () => {
+        const owned = makeMessage({ mes: 'x'.repeat(100), isHidden: true });
         const chat = [
             makeMessage({ mes: 'x'.repeat(100) }),
             makeMessage({ mes: 'x'.repeat(100), isHidden: true }),
             makeMessage({ mes: 'x'.repeat(100), isSystem: true }),
-            makeMessage({ mes: 'x'.repeat(100), isHidden: true, ghosted: true }),
+            owned,
         ];
+        installSummaryContext({
+            chat,
+            metadata: { summaryception: makeSummaryStore({ ghostedMessageIds: [owned.sc_id] }) },
+        });
 
         const stats = await countSourceRangeTokens(chat, 0, 3, makeSummarySettings());
 

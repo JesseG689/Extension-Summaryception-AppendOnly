@@ -1,7 +1,8 @@
 import { getChat } from '../foundation/context.js';
 import { debug, info, isDebugEnabled, warn } from '../foundation/logger.js';
+import { ensureChatScIds } from '../foundation/message-identity.js';
 import { getChatStore, getEffectiveSettings } from '../foundation/state.js';
-import { repairIfBranched, repairMissingGhostingForSummaries } from '../core/ghosting-reconcile.js';
+import { repairMissingGhostingForSummaries } from '../core/ghosting-reconcile.js';
 import { maskUserRoleAsAssistantInGenerateData } from '../core/assistant-role-mask.js';
 import { setWorldInfoBakeGenerationType } from '../core/world-info-bake.js';
 import {
@@ -15,6 +16,7 @@ import {
 } from '../core/summarizer.js';
 import { updateInjection } from '../features/injection.js';
 import { repairOrphanedMessages } from '../features/maintenance.js';
+import { persistChatState } from '../core/persist-state.js';
 import { updateUI } from './ui.js';
 
 let previousPromptSectionHashes = [];
@@ -270,13 +272,13 @@ function recoverPromptFreeze(reason) {
     });
 }
 
-/**
- * Normalize metadata, repair branch drift, refresh injection, then restore missing ghost flags.
- * @returns {Promise<void>}
- */
+/** Normalize message IDs, refresh injection, then restore missing ghost flags. */
 async function reconcileLoadedChatState() {
+    const chat = getChat();
+    if (ensureChatScIds(chat)) {
+        await persistChatState();
+    }
     getChatStore();
-    await repairIfBranched();
     await repairOrphanedMessages();
     updateInjection();
     await repairMissingGhostingForSummaries();

@@ -6,16 +6,18 @@ import { vi } from 'vitest';
  * so modules can be tested without the browser runtime.
  */
 
+let nextMessageId = 0;
+
 /** Build a stub chat message. */
-export function makeMessage({
-    isUser = false,
-    isSystem = false,
-    isHidden = false,
-    mes = 'Hello, world.',
-    name = 'Assistant',
-    ghosted = false,
-    scId,
-} = {}) {
+export function makeMessage(options = {}) {
+    const {
+        isUser = false,
+        isSystem = false,
+        isHidden = false,
+        mes = 'Hello, world.',
+        name = 'Assistant',
+    } = options;
+    const scId = Object.hasOwn(options, 'scId') ? options.scId : `message-${nextMessageId++}`;
     return {
         sc_id: scId,
         is_user: isUser,
@@ -23,16 +25,15 @@ export function makeMessage({
         is_hidden: isHidden,
         mes,
         name,
-        extra: ghosted ? { sc_ghosted: true } : {},
+        extra: {},
     };
-
 }
+
 export function makeMessages(count, options = {}) {
     return Array.from({ length: count }, (_value, index) => {
         const messageOptions = typeof options === 'function' ? options(index) : options;
         return makeMessage({ scId: `message-${index}`, ...messageOptions });
     });
-
 }
 
 /** Build repeated long assistant messages for budget-window tests. */

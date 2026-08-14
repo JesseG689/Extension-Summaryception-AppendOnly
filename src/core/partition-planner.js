@@ -1,3 +1,4 @@
+import { isSummaryceptionOwnedMessage } from './chatutils.js';
 import { defaultSettings } from '../foundation/constants.js';
 import { getPromptDepthsByChatIndex, iterateChatRange } from './chatutils.js';
 import { applyRegexToMessage } from './regex-proxy.js';
@@ -220,6 +221,6 @@ function isPassageCountableMessage(message) {
     }
     return (
         !message.extra?.sc_wi &&
-        (!(message.is_system || message.is_hidden) || message.extra?.sc_ghosted)
+        (!(message.is_system || message.is_hidden) || isSummaryceptionOwnedMessage(message))
     );
 }

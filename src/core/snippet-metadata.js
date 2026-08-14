@@ -123,7 +123,13 @@ export function stripLeadingSnippetAnchor(text) {
 }
 
 function resolveSnippetRange(sourceMessageIds) {
-    const indices = resolveScIdsToIndices(getChat(), sourceMessageIds);
+    let chat;
+    try {
+        chat = getChat();
+    } catch (_error) {
+        return null;
+    }
+    const indices = resolveScIdsToIndices(chat, sourceMessageIds);
     if (indices.length === 0) {
         return null;
     }
@@ -131,7 +137,7 @@ function resolveSnippetRange(sourceMessageIds) {
 }
 
 function knownStateValue(value) {
-    const text = String(value ?? '').trim();
+    const text = typeof value === 'string' ? value.trim() : '';
     if (!text || text.toLowerCase() === UNKNOWN_TIME) {
         return undefined;
     }

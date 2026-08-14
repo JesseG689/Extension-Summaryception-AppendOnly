@@ -46,9 +46,9 @@ describe('message identity', () => {
                 ['message-3', 3],
             ]),
         );
-        expect(resolveScIdsToIndices(chat, ['message-3', 'missing', 'duplicate', 'message-3'])).toEqual([
-            0, 3,
-        ]);
+        expect(
+            resolveScIdsToIndices(chat, ['message-3', 'missing', 'duplicate', 'message-3']),
+        ).toEqual([0, 3]);
         expect(rangesFromSortedIndices([0, 1, 3])).toEqual([
             [0, 1],
             [3, 3],

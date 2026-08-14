@@ -99,8 +99,8 @@ export function getAssistantTurns(chat) {
     const turns = [];
     for (let i = 0; i < chat.length; i++) {
         const m = chat[i];
-        const isOurGhost = m.extra?.sc_ghosted === true;
-        const isAssistant = !m.is_user && !m.extra?.sc_wi && (!m.is_system || isOurGhost);
+        const owned = isSummaryceptionOwnedMessage(m);
+        const isAssistant = !m.is_user && !m.extra?.sc_wi && (!m.is_system || owned);
         if (isAssistant && m.mes && m.mes.trim().length > 0) {
             turns.push({ index: i, mes: m.mes, name: m.name || 'Assistant' });
         }
@@ -120,7 +120,7 @@ export function getVisibleAssistantTurns(chat) {
         if (
             !m.is_user &&
             !m.is_system &&
-            !m.extra?.sc_ghosted &&
+            !isSummaryceptionOwnedMessage(m) &&
             m.mes &&
             m.mes.trim().length > 0
         ) {
@@ -171,9 +171,8 @@ export function getPromptDepthsByChatIndex(chat) {
  */
 
 /**
- * Build passage text and regex token stats from a range of chat messages.
- * Skips messages that are hidden (by user or system) UNLESS they were
- * hidden by Summaryception (sc_ghosted). Also skips empty messages.
+ * Skips user-hidden messages while retaining messages hidden by Summaryception ownership.
+ * Also skips empty messages.
  * @param {ChatMessage[]} chat
  * @param {number} startIdx
  * @param {number} endIdx
@@ -248,8 +247,20 @@ function isMessagePassageEligible(message) {
 function isUserHiddenMessage(message) {
     return (
         (message.is_system || message.is_hidden || message.extra?.sc_wi) &&
-        !message.extra?.sc_ghosted
+        !isSummaryceptionOwnedMessage(message)
     );
+}
+
+/**
+ * Check whether Summaryception owns a live message's hidden state.
+ * @param {ChatMessage | undefined} message
+ * @returns {boolean}
+ */
+export function isSummaryceptionOwnedMessage(message) {
+    if (typeof message?.sc_id !== 'string') {
+        return false;
+    }
+    return getChatStore().ghostedMessageIds.includes(message.sc_id);
 }
 
 async function getPassageFinalText({ message, rawText, depth, applyRegexScripts }) {

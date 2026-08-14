@@ -172,7 +172,7 @@ function normalizeChatStore(store) {
     store.layers = normalizeLayers(store.layers);
     store.ghostedMessageIds = normalizeStringArray(store.ghostedMessageIds);
     store.mutationEpoch = normalizeMutationEpoch(store.mutationEpoch);
-    const storeRecord = /** @type {Record<string, unknown>} */ (store);
+    const storeRecord = /** @type {Record<string, unknown>} */ (/** @type {unknown} */ (store));
     delete storeRecord.summarizedUpTo;
     delete storeRecord.ghostedIndices;
     return /** @type {SummaryceptionStore} */ (store);
@@ -606,7 +606,6 @@ function normalizeMutationEpoch(value) {
     }
     return Math.max(0, value);
 }
-
 
 /**
  * Get the player's display name.

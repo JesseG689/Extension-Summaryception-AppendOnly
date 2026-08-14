@@ -1,4 +1,9 @@
 import { executeSlashCommandsWithOptions, getChat } from '../foundation/context.js';
+import {
+    ensureMessageScId,
+    rangesFromSortedIndices,
+    resolveScIdsToIndices,
+} from '../foundation/message-identity.js';
 import { getChatStore, getEffectiveSettings } from '../foundation/state.js';
 import { debug, error, info, warn } from '../foundation/logger.js';
 import { persistChatState } from './persist-state.js';
@@ -115,7 +120,7 @@ async function ghostMessagesInRangeEffect(startIdx, endIdx, epoch, options) {
     }
 
     const store = getChatStore();
-    const ranges = collectHideRanges(chat, range);
+    const ranges = collectHideRanges(chat, store, range);
     const total = countRangeMessages(ranges);
     const progressToast = createHideProgressToast(options, total);
     let processed = 0;
@@ -208,13 +213,14 @@ function queueGhostRange(startIdx, endIdx, options) {
 /**
  * Build contiguous ranges of messages that still need ownership or visual hide work.
  * @param {ChatMessage[]} chat
+ * @param {SummaryceptionStore} store
  * @param {[number, number]} range
  * @returns {Array<[number, number]>}
  */
-function collectHideRanges(chat, range) {
+function collectHideRanges(chat, store, range) {
     const indices = [];
     for (let i = range[0]; i <= range[1]; i++) {
-        if (messageNeedsGhosting(chat[i])) {
+        if (messageNeedsGhosting(chat[i], store)) {
             indices.push(i);
         }
     }
@@ -224,40 +230,44 @@ function collectHideRanges(chat, range) {
 /**
  * Check whether a message needs Summaryception ownership or visual hiding.
  * @param {ChatMessage | undefined} msg
+ * @param {SummaryceptionStore} store
  * @returns {boolean}
  */
-function messageNeedsGhosting(msg) {
-    if (!msg || !isGhostableMessage(msg)) {
+function messageNeedsGhosting(msg, store) {
+    if (!msg || !isGhostableMessage(msg, store)) {
         return false;
     }
 
-    const owned = msg.extra?.sc_ghosted === true;
+    const owned = typeof msg.sc_id === 'string' && store.ghostedMessageIds.includes(msg.sc_id);
     return !owned || !isVisuallyHidden(msg);
 }
 
 /**
  * Check whether a message is eligible for Summaryception ghosting.
  * @param {ChatMessage | undefined} msg
+ * @param {SummaryceptionStore} store
  * @returns {boolean}
  */
-function isGhostableMessage(msg) {
-    if (!msg || msg.extra?.sc_wi) {
+function isGhostableMessage(msg, store) {
+    if (!msg || msg.extra?.sc_wi || msg.name === 'SC-WI') {
         return false;
     }
     const hideNonText = getEffectiveSettings().hideNonTextMessages !== false;
     if (!hideNonText && !msg.mes?.trim()) {
         return false;
     }
-    return !isUserHidden(msg);
+    return !isUserHidden(msg, store);
 }
 
 /**
- * Check whether a message is hidden by the user or by non-Summaryception system state.
+ * Check whether a message is hidden outside Summaryception ownership.
  * @param {ChatMessage} msg
+ * @param {SummaryceptionStore} store
  * @returns {boolean}
  */
-function isUserHidden(msg) {
-    return isVisuallyHidden(msg) && msg.extra?.sc_ghosted !== true;
+function isUserHidden(msg, store) {
+    const owned = typeof msg.sc_id === 'string' && store.ghostedMessageIds.includes(msg.sc_id);
+    return isVisuallyHidden(msg) && !owned;
 }
 
 /**
@@ -277,28 +287,14 @@ function isVisuallyHidden(msg) {
  * @returns {void}
  */
 function markGhostedRange(chat, store, range) {
+    const owned = new Set(store.ghostedMessageIds);
     for (let i = range[0]; i <= range[1]; i++) {
-        const msg = chat[i];
-        if (!msg) {
-            continue;
+        const id = ensureMessageScId(chat[i]);
+        if (id) {
+            owned.add(id);
         }
-        msg.extra = msg.extra || {};
-        msg.extra.sc_ghosted = true;
-        addGhostedIndex(store, i);
     }
-    store.ghostedIndices.sort((a, b) => a - b);
-}
-
-/**
- * Track a ghosted index if it is not already present.
- * @param {SummaryceptionStore} store
- * @param {number} index
- * @returns {void}
- */
-function addGhostedIndex(store, index) {
-    if (!store.ghostedIndices.includes(index)) {
-        store.ghostedIndices.push(index);
-    }
+    store.ghostedMessageIds = [...owned];
 }
 
 /**
@@ -309,34 +305,20 @@ function addGhostedIndex(store, index) {
  * @returns {Array<[number, number]>}
  */
 function getOwnedGhostRanges(chat, store, limit) {
-    const indices = collectGhostedIndices(chat, store).filter((idx) => {
-        if (!limit) {
-            return true;
-        }
-        return idx >= limit[0] && idx <= limit[1];
-    });
-    return rangesFromSortedIndices(indices);
+    return rangesFromSortedIndices(collectGhostedMessageIndices(chat, store, limit));
 }
 
 /**
- * Collect indices that metadata or chat flags mark as Summaryception-owned.
+ * Resolve Summaryception-owned message IDs to current chat indices.
  * @param {ChatMessage[]} chat
  * @param {SummaryceptionStore} store
+ * @param {[number, number]} [limit]
  * @returns {number[]}
  */
-function collectGhostedIndices(chat, store) {
-    const result = new Set();
-    for (const idx of store.ghostedIndices || []) {
-        if (idx >= 0 && idx < chat.length) {
-            result.add(idx);
-        }
-    }
-    for (let i = 0; i < chat.length; i++) {
-        if (chat[i]?.extra?.sc_ghosted) {
-            result.add(i);
-        }
-    }
-    return [...result].sort((a, b) => a - b);
+export function collectGhostedMessageIndices(chat, store, limit) {
+    return resolveScIdsToIndices(chat, store.ghostedMessageIds).filter(
+        (index) => !limit || (index >= limit[0] && index <= limit[1]),
+    );
 }
 
 /**
@@ -374,32 +356,13 @@ async function unhideRanges({ chat, store, ranges, progressToast = null, total =
  * @returns {void}
  */
 function clearGhostedRange(chat, store, range) {
+    const ids = new Set();
     for (let i = range[0]; i <= range[1]; i++) {
-        const msg = chat[i];
-        if (msg?.extra?.sc_ghosted) {
-            delete msg.extra.sc_ghosted;
+        if (typeof chat[i]?.sc_id === 'string') {
+            ids.add(chat[i].sc_id);
         }
     }
-    store.ghostedIndices = store.ghostedIndices.filter((idx) => idx < range[0] || idx > range[1]);
-}
-
-/**
- * Convert sorted indices into contiguous ranges.
- * @param {number[]} indices
- * @returns {Array<[number, number]>}
- */
-function rangesFromSortedIndices(indices) {
-    /** @type {Array<[number, number]>} */
-    const ranges = [];
-    for (const index of indices) {
-        const last = ranges[ranges.length - 1];
-        if (last && index === last[1] + 1) {
-            last[1] = index;
-        } else {
-            ranges.push([index, index]);
-        }
-    }
-    return ranges;
+    store.ghostedMessageIds = store.ghostedMessageIds.filter((id) => !ids.has(id));
 }
 
 /**

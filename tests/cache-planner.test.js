@@ -113,7 +113,7 @@ describe('getCacheFriendlyPlan', () => {
         expect(plan.assistantTurns).toEqual([]);
     });
 
-    it('offsets the flush start by summarizedUpTo', async () => {
+    it('offsets the flush start by the resolved source UUID boundary', async () => {
         installSummaryContext();
         const chat = makeSizedChat(6, { userLength: 500, assistantLength: 2000 });
         const settings = makeSummarySettings({
@@ -121,8 +121,9 @@ describe('getCacheFriendlyPlan', () => {
             minSummaryBudget: 6000,
             maxL0SourceTokens: 24000,
         });
-        const store = makeSummaryStore({ summarizedUpTo: 3 });
-
+        const store = makeSummaryStore({
+            layers: [[{ text: 'summary', sourceMessageIds: [chat[3].sc_id] }]],
+        });
         const plan = await getCacheFriendlyPlan(chat, store, settings);
 
         expect(plan.reason).toBe('ready');
@@ -135,21 +136,23 @@ describe('getCacheFriendlyPlan', () => {
         expect(plan.partitions[0].sourceEndIdx).toBe(7);
     });
 
-    it('ignores hidden, system, and ghosted messages in the cache window', async () => {
-        installSummaryContext();
+    it('ignores hidden, system, and UUID-owned messages in the cache window', async () => {
+        const owned = makeMessage({ mes: 'x'.repeat(2000) });
         const chat = [
             ...makeSizedChat(6, { userLength: 500, assistantLength: 2000 }),
             makeMessage({ mes: 'x'.repeat(2000), isHidden: true }),
             makeMessage({ mes: 'x'.repeat(2000), isSystem: true }),
-            makeMessage({ mes: 'x'.repeat(2000), ghosted: true }),
+            owned,
         ];
+        const store = makeSummaryStore({ ghostedMessageIds: [owned.sc_id] });
+        installSummaryContext({ chat, metadata: { summaryception: store } });
         const settings = makeSummarySettings({
             verbatimTokenBudget: 6000,
             minSummaryBudget: 6000,
             maxL0SourceTokens: 24000,
         });
 
-        const plan = await getCacheFriendlyPlan(chat, makeSummaryStore(), settings);
+        const plan = await getCacheFriendlyPlan(chat, store, settings);
 
         expect(plan.reason).toBe('ready');
         expect(plan.liveTokens).toBe(

@@ -15,7 +15,6 @@ export function ensureMessageScId(message) {
     }
     chatMessage.sc_id = globalThis.crypto.randomUUID();
     return chatMessage.sc_id;
-
 }
 
 /**

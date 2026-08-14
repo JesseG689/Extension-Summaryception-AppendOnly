@@ -14,18 +14,25 @@ import { makeMessage, makeSummaryStore, installSummaryContext } from './test-hel
 describe('hide non-text messages in summarized range', () => {
     function buildChat() {
         return [
-            makeMessage({ mes: 'turn zero' }),
-            makeMessage({ mes: 'turn one' }),
+            makeMessage({ mes: 'turn zero', scId: 'message-0' }),
+            makeMessage({ mes: 'turn one', scId: 'message-1' }),
             // No text — an image or tool-call message that carries no summary text.
-            makeMessage({ mes: '', name: 'Image' }),
-            makeMessage({ mes: 'turn three' }),
+            makeMessage({ mes: '', name: 'Image', scId: 'message-2' }),
+            makeMessage({ mes: 'turn three', scId: 'message-3' }),
         ];
     }
 
     function makeSummarydStore() {
         return makeSummaryStore({
-            summarizedUpTo: 3,
-            layers: [[{ text: 'summary snippet', turnRange: [0, 3] }]],
+            ghostedMessageIds: [],
+            layers: [
+                [
+                    {
+                        text: 'summary snippet',
+                        sourceMessageIds: ['message-0', 'message-1', 'message-2', 'message-3'],
+                    },
+                ],
+            ],
         });
     }
 
@@ -92,8 +99,10 @@ describe('hide non-text messages in summarized range', () => {
 
         await ghostMessagesInRange(0, 2);
 
-        expect(calls).toEqual(['/hide 0', '/hide 2']);
-        expect(runtime.chat[1].extra.sc_ghosted).toBeUndefined();
+        expect(runtime.chatMetadata.summaryception.ghostedMessageIds).toEqual([
+            runtime.chat[0].sc_id,
+            runtime.chat[2].sc_id,
+        ]);
     });
 
     it('ends a flush before the following baked narrator and user pair', async () => {
@@ -103,15 +112,16 @@ describe('hide non-text messages in summarized range', () => {
         narrator.extra.sc_wi = { version: 1 };
         installSummaryContext({
             chat: [
-                makeMessage({ isUser: true, mes: 'old user' }),
-                makeMessage({ mes: 'old assistant' }),
+                makeMessage({ isUser: true, mes: 'old user', scId: 'message-0' }),
+                makeMessage({ mes: 'old assistant', scId: 'message-1' }),
                 narrator,
-                makeMessage({ isUser: true, mes: 'current user' }),
+                makeMessage({ isUser: true, mes: 'current user', scId: 'message-3' }),
             ],
             metadata: {
                 summaryception: makeSummaryStore({
-                    summarizedUpTo: 1,
-                    layers: [[{ text: 'summary snippet', turnRange: [0, 1] }]],
+                    layers: [
+                        [{ text: 'summary snippet', sourceMessageIds: ['message-0', 'message-1'] }],
+                    ],
                 }),
             },
             settings: { hideNonTextMessages: true },
@@ -123,5 +133,43 @@ describe('hide non-text messages in summarized range', () => {
         expect(calls).toContain('/hide 0-1');
         expect(isHidden(calls, 2)).toBe(false);
         expect(isHidden(calls, 3)).toBe(false);
+    });
+
+    it('repairs only contiguous surviving UUID ranges and ignores a missing ID', async () => {
+        resetCommitStateForTests();
+        const calls = [];
+        const chat = Array.from({ length: 11 }, (_value, index) =>
+            makeMessage({ mes: `turn ${index}`, scId: `message-${index}` }),
+        );
+        installSummaryContext({
+            chat,
+            metadata: {
+                summaryception: makeSummaryStore({
+                    layers: [
+                        [
+                            {
+                                text: 'summary snippet',
+                                sourceMessageIds: [
+                                    ...Array.from(
+                                        { length: 5 },
+                                        (_value, index) => `message-${index + 1}`,
+                                    ),
+                                    'missing-message',
+                                    ...Array.from(
+                                        { length: 4 },
+                                        (_value, index) => `message-${index + 7}`,
+                                    ),
+                                ],
+                            },
+                        ],
+                    ],
+                }),
+            },
+            executeSlashCommandsWithOptions: async (command) => calls.push(String(command)),
+        });
+
+        await repairMissingGhostingForSummaries();
+
+        expect(calls).toEqual(['/hide 1-5', '/hide 7-10']);
     });
 });

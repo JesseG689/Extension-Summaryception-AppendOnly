@@ -1,8 +1,5 @@
 import { getChat } from '../foundation/context.js';
-import {
-    rangesFromSortedIndices,
-    resolveScIdsToIndices,
-} from '../foundation/message-identity.js';
+import { rangesFromSortedIndices, resolveScIdsToIndices } from '../foundation/message-identity.js';
 import { STATE_SNAPSHOT_MODE } from '../foundation/prompt-constants.js';
 import { bumpSummaryStoreMutationEpoch, getChatStore, saveChatStore } from '../foundation/state.js';
 import { buildPassageFromRangeWithStats } from '../core/chatutils.js';
@@ -112,9 +109,7 @@ export async function deleteSnippetAt(layerIndex, snippetIndex) {
                 snippets.flatMap((snippet) => snippet.sourceMessageIds || []),
             ),
         );
-        const removedIds = new Set(
-            removed.sourceMessageIds.filter((id) => !remainingIds.has(id)),
-        );
+        const removedIds = new Set(removed.sourceMessageIds.filter((id) => !remainingIds.has(id)));
         store.ghostedMessageIds = store.ghostedMessageIds.filter((id) => !removedIds.has(id));
         const indices = resolveScIdsToIndices(getChat(), [...removedIds]);
         for (const [start, end] of rangesFromSortedIndices(indices)) {
@@ -270,4 +265,3 @@ function collectLayerContext({
         contextParts.push(layer[i].text);
     }
 }
-

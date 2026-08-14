@@ -51,7 +51,6 @@ export function fingerprintSourceRange(chat, startIdx, endIdx) {
             Boolean(msg?.is_user),
             Boolean(msg?.is_system),
             Boolean(msg?.is_hidden),
-            Boolean(msg?.extra?.sc_ghosted),
         ]);
     }
     return JSON.stringify(messages);

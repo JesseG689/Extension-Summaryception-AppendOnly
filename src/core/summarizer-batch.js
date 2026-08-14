@@ -96,12 +96,12 @@ export async function summarizeOneBatchFromTurns(visibleTurns) {
 /**
  * Repair ghosting for turns already marked as summarized.
  * @param {import('./chatutils.js').AssistantTurn[]} visibleTurns
- * @param {number} summarizedUpTo
+ * @param {number} boundaryIndex
  * @returns {Promise<void>}
  */
-async function repairGhosting(visibleTurns, summarizedUpTo) {
+async function repairGhosting(visibleTurns, boundaryIndex) {
     info('All visible turns are already summarized — repairing ghosting...');
-    const turnsToGhost = visibleTurns.filter((t) => t.index <= summarizedUpTo);
+    const turnsToGhost = visibleTurns.filter((t) => t.index <= boundaryIndex);
     if (turnsToGhost.length > 0) {
         const first = turnsToGhost[0].index;
         const last = turnsToGhost[turnsToGhost.length - 1].index;
@@ -268,7 +268,6 @@ async function performBatchSummary({ batch, chat, store, passageStart, endIdx, o
             await commitLayer0Snippet({
                 snapshot,
                 summary,
-                showToasts: opts.showToasts,
             }),
     });
 
@@ -324,9 +323,7 @@ async function traceTextTokens(label, text) {
  */
 async function captureLayer0Snapshot({ chat, store, passageStart, endIdx, contextText }) {
     const ctx = getContext();
-    const sourceMessageIds = chat
-        .slice(passageStart, endIdx + 1)
-        .map((message) => message?.sc_id);
+    const sourceMessageIds = chat.slice(passageStart, endIdx + 1).map((message) => message?.sc_id);
     const stableSourceMessageIds = /** @type {string[]} */ (sourceMessageIds);
     if (
         sourceMessageIds.length !== endIdx - passageStart + 1 ||
@@ -356,10 +353,9 @@ async function captureLayer0Snapshot({ chat, store, passageStart, endIdx, contex
  * @param {object} p
  * @param {import('./summarizer-commit.js').SummarizationJobSnapshot} p.snapshot
  * @param {string} p.summary - The LLM-generated summary text
- * @param {boolean} p.showToasts - Whether to show success toast
  * @returns {Promise<boolean>}
  */
-async function commitLayer0Snippet({ snapshot, summary, showToasts }) {
+async function commitLayer0Snippet({ snapshot, summary }) {
     if (!isLayer0SnapshotValid(snapshot)) {
         return false;
     }

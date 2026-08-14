@@ -1,6 +1,6 @@
 import { executeSlashCommandsWithOptions, getChat, saveChat } from '../foundation/context.js';
+import { isSummaryceptionOwnedMessage } from '../core/chatutils.js';
 import { warn } from '../foundation/logger.js';
-
 /**
  * Check whether a hidden message is no longer owned by Summaryception.
  * @param {ChatMessage | undefined} message
@@ -11,7 +11,7 @@ export function isOrphanedHiddenMessage(message) {
         message &&
         (message.is_system || message.is_hidden) &&
         !message.is_user &&
-        !message.extra?.sc_ghosted &&
+        !isSummaryceptionOwnedMessage(message) &&
         message.mes &&
         message.mes.trim().length > 0,
     );

@@ -12,6 +12,7 @@ import {
     defaultSettings,
 } from '../foundation/constants.js';
 import { getChat } from '../foundation/context.js';
+import { rangesFromSortedIndices, resolveScIdsToIndices } from '../foundation/message-identity.js';
 import { error, warn } from '../foundation/logger.js';
 import {
     bumpSummaryStoreMutationEpoch,
@@ -21,7 +22,7 @@ import {
     saveSettings,
     getChatStore,
 } from '../foundation/state.js';
-import { ghostMessagesUpTo, unghostAllMessages } from '../core/ghosting.js';
+import { ghostMessagesInRange, unghostAllMessages } from '../core/ghosting.js';
 import {
     abortSummarization,
     getIsSummarizing,
@@ -709,21 +710,34 @@ function triggerImport() {
             }
 
             const store = getChatStore();
+            if (
+                !Array.isArray(data.ghostedMessageIds) ||
+                !data.layers.every(
+                    (layer) =>
+                        Array.isArray(layer) &&
+                        layer.every(
+                            (snippet) =>
+                                Array.isArray(snippet?.sourceMessageIds) &&
+                                snippet.sourceMessageIds.length > 0,
+                        ),
+                )
+            ) {
+                toastr.error('Invalid file format.');
+                return;
+            }
 
             await unghostAllMessages();
-
             store.layers = data.layers;
-            store.summarizedUpTo = data.summarizedUpTo ?? -1;
-            store.ghostedIndices = data.ghostedIndices || [];
+            store.ghostedMessageIds = data.ghostedMessageIds;
             bumpSummaryStoreMutationEpoch(store);
-
-            if (store.summarizedUpTo >= 0) {
-                await ghostMessagesUpTo(store.summarizedUpTo, { showProgress: true });
+            const indices = resolveScIdsToIndices(getChat(), store.ghostedMessageIds);
+            for (const [start, end] of rangesFromSortedIndices(indices)) {
+                await ghostMessagesInRange(start, end, { showProgress: true });
             }
 
             await persistAndRefresh({ ui: true });
             toastr.success(
-                `Memory imported. ${store.layers.reduce((sum, l) => sum + (l?.length || 0), 0)} snippets loaded, messages ghosted up to index ${store.summarizedUpTo}.`,
+                `Memory imported. ${store.layers.reduce((sum, l) => sum + (l?.length || 0), 0)} snippets loaded.`,
                 'Summaryception',
                 { timeOut: 4000 },
             );

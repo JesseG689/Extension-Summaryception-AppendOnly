@@ -7,7 +7,12 @@ import {
     getVisibleAssistantTurns,
     iterateChatRange,
 } from '../src/core/chatutils.js';
-import { makeMessage, makeMessages } from './test-helpers.js';
+import {
+    installSummaryContext,
+    makeMessage,
+    makeMessages,
+    makeSummaryStore,
+} from './test-helpers.js';
 
 describe('getAssistantTurns', () => {
     it('collects non-system assistant turns with their indices and preserved text', () => {
@@ -17,6 +22,7 @@ describe('getAssistantTurns', () => {
             makeMessage({ isSystem: true, mes: 'system note' }),
             makeMessage({ mes: 'I am assistant two.' }),
         ];
+        installSummaryContext({ chat });
         const turns = getAssistantTurns(chat);
         expect(turns).toHaveLength(2);
         expect(turns[0].index).toBe(1);
@@ -25,19 +31,28 @@ describe('getAssistantTurns', () => {
         expect(turns[1].mes).toBe('I am assistant two.');
     });
 
-    it('includes ghosted system messages but excludes plain system messages', () => {
-        const ghosted = getAssistantTurns([
-            makeMessage({ isSystem: true, ghosted: true, mes: 'gone' }),
-        ]);
+    it('includes UUID-owned system messages but excludes plain system messages', () => {
+        const ownedMessage = makeMessage({ isSystem: true, mes: 'gone' });
+        const chat = [ownedMessage];
+        installSummaryContext({
+            chat,
+            metadata: {
+                summaryception: makeSummaryStore({ ghostedMessageIds: [ownedMessage.sc_id] }),
+            },
+        });
+        const ghosted = getAssistantTurns(chat);
         expect(ghosted).toHaveLength(1);
         expect(ghosted[0].mes).toBe('gone');
 
-        const plain = getAssistantTurns([makeMessage({ isSystem: true, mes: 'system' })]);
+        const plainMessage = makeMessage({ isSystem: true, mes: 'system' });
+        installSummaryContext({ chat: [plainMessage] });
+        const plain = getAssistantTurns([plainMessage]);
         expect(plain).toHaveLength(0);
     });
 
     it('excludes baked WI narrator messages from assistant turns', () => {
         const baked = makeMessage({ mes: 'formatted lore' });
+        installSummaryContext({ chat: [baked] });
         baked.extra.sc_wi = { uids: [1], version: 1 };
 
         expect(getAssistantTurns([baked])).toEqual([]);
@@ -45,6 +60,7 @@ describe('getAssistantTurns', () => {
 
     it('skips empty/whitespace messages and defaults a missing name', () => {
         // Whitespace-only assistant message is dropped.
+        installSummaryContext({ chat: [] });
         const whitespace = getAssistantTurns([makeMessage({ mes: '   ' })]);
         expect(whitespace).toHaveLength(0);
 
@@ -56,13 +72,18 @@ describe('getAssistantTurns', () => {
 });
 
 describe('getVisibleAssistantTurns', () => {
-    it('returns non-user non-system non-ghosted assistant turns (ghosted ones are excluded here even though getAssistantTurns includes them)', () => {
+    it('returns non-user non-system non-owned assistant turns', () => {
+        const owned = makeMessage({ mes: 'ghosted assistant' });
         const chat = [
-            makeMessage({ mes: 'plain assistant' }), // kept
-            makeMessage({ ghosted: true, mes: 'ghosted assistant' }), // excluded
-            makeMessage({ isSystem: true, mes: 'system' }), // excluded
-            makeMessage({ isUser: true, mes: 'user' }), // excluded
+            makeMessage({ mes: 'plain assistant' }),
+            owned,
+            makeMessage({ isSystem: true, mes: 'system' }),
+            makeMessage({ isUser: true, mes: 'user' }),
         ];
+        installSummaryContext({
+            chat,
+            metadata: { summaryception: makeSummaryStore({ ghostedMessageIds: [owned.sc_id] }) },
+        });
         const turns = getVisibleAssistantTurns(chat);
         expect(turns).toHaveLength(1);
         expect(turns[0].mes).toBe('plain assistant');

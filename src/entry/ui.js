@@ -9,8 +9,14 @@ import {
     getChat,
     isSendButtonInStopMode,
 } from '../foundation/context.js';
+import { resolveScIdsToIndices } from '../foundation/message-identity.js';
 import { warn } from '../foundation/logger.js';
-import { getEffectiveSettings, getSettings, getChatStore } from '../foundation/state.js';
+import {
+    getEffectiveSettings,
+    getSettings,
+    getChatStore,
+    getCurrentSummarizedBoundary,
+} from '../foundation/state.js';
 import { getIsSummarizing } from '../core/summarizer.js';
 import { countTextTokens, formatTokenValue } from '../core/token-count.js';
 import { buildAutoSummaryRoutePlan } from '../core/summarization-routes.js';
@@ -372,7 +378,7 @@ function syncMemoryModeControls(s) {
 function getGhostedCount() {
     try {
         const chat = getChat();
-        return chat.filter((m) => m.extra?.sc_ghosted).length;
+        return resolveScIdsToIndices(chat, getChatStore().ghostedMessageIds).length;
     } catch (_e) {
         return 0;
     }
@@ -707,7 +713,10 @@ function renderLayerStats(s, store) {
             }
         }
     }
-    statsHtml += `<div class="sc-layer-stat sc-muted">Summarized up to chat index: ${store.summarizedUpTo ?? -1}</div>`;
+    const boundary = getCurrentSummarizedBoundary(getChat(), store);
+    if (boundary >= 0) {
+        statsHtml += `<div class="sc-layer-stat sc-muted">Current summarized boundary: ${boundary}</div>`;
+    }
     if (!store.layers?.length || store.layers.every((l) => !l || l.length === 0)) {
         statsHtml = '<div class="sc-layer-stat sc-muted">No summaries yet for this chat.</div>';
     }
@@ -819,13 +828,14 @@ function buildSnippetBrowserItem(snippet, layerIndex, snippetIndex) {
         snippetIndex,
         text: snippet.text,
         meta: getSnippetMeta(snippet),
-        canRedo: Boolean(layerIndex === 0 && snippet.turnRange),
+        canRedo: Boolean(layerIndex === 0 && snippet.sourceMessageIds?.length),
     };
 }
 
 function getSnippetMeta(snippet) {
-    const rangeStr = snippet.turnRange
-        ? `turns ${snippet.turnRange[0]}-${snippet.turnRange[1]}`
+    const sourceCount = snippet.sourceMessageIds?.length || 0;
+    const rangeStr = sourceCount
+        ? `${sourceCount} source messages`
         : snippet.mergedCount
           ? `merged ${snippet.mergedCount} from L${snippet.fromLayer}`
           : '';

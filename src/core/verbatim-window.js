@@ -1,3 +1,5 @@
+import { isSummaryceptionOwnedMessage } from './chatutils.js';
+import { getCurrentSummarizedBoundary } from '../foundation/state.js';
 import { getAssistantTurns, getPromptDepthsByChatIndex, iterateChatRange } from './chatutils.js';
 import { applyRegexToMessage } from './regex-proxy.js';
 import { addBudgetStats, countMessageTokens, createBudgetStats } from './token-count.js';
@@ -95,19 +97,22 @@ export async function getLayer0OverflowPlan(
 }
 
 function getVisibleAssistantTurns(chat) {
-    return getAssistantTurns(chat).filter((turn) => !chat[turn.index]?.extra?.sc_ghosted);
+    return getAssistantTurns(chat).filter(
+        (turn) => !isSummaryceptionOwnedMessage(chat[turn.index]),
+    );
 }
 
 async function buildOverflowPlanData(chat, store, settings) {
     const visibleTurns = getVisibleAssistantTurns(chat);
-    const eligibleTurns = visibleTurns.filter((turn) => turn.index > store.summarizedUpTo);
+    const summarizedBoundary = getCurrentSummarizedBoundary(chat, store);
+    const eligibleTurns = visibleTurns.filter((turn) => turn.index > summarizedBoundary);
     const budget = await getTokenBudgetBoundary(chat, settings);
     const overflowTurns = eligibleTurns.filter((turn) => turn.index <= budget.boundaryIndex);
 
     return {
         chat,
         settings,
-        sourceStartIdx: getPassageStart(store),
+        sourceStartIdx: summarizedBoundary < 0 ? 0 : summarizedBoundary + 1,
         visibleTurns,
         eligibleTurns,
         overflowTurns,
@@ -195,10 +200,6 @@ async function getTokenBudgetBoundary(chat, settings) {
     return { boundaryIndex, exceeded, stats };
 }
 
-function getPassageStart(store) {
-    return store.summarizedUpTo < 0 ? 0 : store.summarizedUpTo + 1;
-}
-
 async function countBudgetMessage(message, depth, settings) {
     const rawText = String(message.mes || '').trim();
     const finalText = await getBudgetMessageText(message, rawText, depth, settings);
@@ -228,10 +229,7 @@ function getBudgetMessageLine(message, text) {
 }
 
 function isPromptVisibleMessage(message) {
-    if (!message?.mes || !String(message.mes).trim()) {
-        return false;
-    }
-    if (message.extra?.sc_ghosted) {
+    if (isSummaryceptionOwnedMessage(message)) {
         return false;
     }
     return !message.extra?.sc_wi && !message.is_system && !message.is_hidden;

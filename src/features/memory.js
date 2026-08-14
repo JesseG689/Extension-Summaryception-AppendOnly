@@ -27,8 +27,7 @@ export async function clearSummaryceptionMemory(
 
     const store = getChatStore();
     store.layers.length = 0;
-    store.summarizedUpTo = -1;
-    store.ghostedIndices = [];
+    store.ghostedMessageIds = [];
     bumpSummaryStoreMutationEpoch(store);
 
     const chatMetadata = getChatMetadata();

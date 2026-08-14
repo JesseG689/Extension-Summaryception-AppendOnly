@@ -1,3 +1,5 @@
+import { isSummaryceptionOwnedMessage } from './chatutils.js';
+import { getCurrentSummarizedBoundary } from '../foundation/state.js';
 import { findLastMessage, getPromptDepthsByChatIndex, iterateChatRange } from './chatutils.js';
 import { applyRegexToMessage } from './regex-proxy.js';
 import { addBudgetStats, countMessageTokens, createBudgetStats } from './token-count.js';
@@ -30,7 +32,8 @@ import { buildLayer0Partitions } from './partition-planner.js';
  * @returns {Promise<CacheFriendlyPlan>}
  */
 export async function getCacheFriendlyPlan(chat, store, settings) {
-    const flushStartIdx = store.summarizedUpTo < 0 ? 0 : store.summarizedUpTo + 1;
+    const boundary = getCurrentSummarizedBoundary(chat, store);
+    const flushStartIdx = boundary < 0 ? 0 : boundary + 1;
     const liveData = await collectLiveTokenData(chat, flushStartIdx, settings);
     const protectedTailTokens = getProtectedTailTokens(settings.verbatimTokenBudget);
     const empty = (overrides = {}) =>
@@ -231,8 +234,10 @@ function isPromptVisibleLiveMessage(message) {
     if (!message?.mes || !String(message.mes).trim()) {
         return false;
     }
-    if (message.extra?.sc_ghosted) {
-        return false;
-    }
-    return !message.extra?.sc_wi && !message.is_system && !message.is_hidden;
+    return (
+        !isSummaryceptionOwnedMessage(message) &&
+        !message.extra?.sc_wi &&
+        !message.is_system &&
+        !message.is_hidden
+    );
 }

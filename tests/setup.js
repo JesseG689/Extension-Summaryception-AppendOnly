@@ -252,7 +252,7 @@ const foundationMocks = vi.hoisted(() => {
         });
         logger.debugVisibleTurns.mockImplementation((chat, store) => {
             logger.trace('=== DEBUG VISIBLE TURNS ===');
-            logger.trace('  store.summarizedUpTo:', store.summarizedUpTo);
+            logger.trace('  store.ghostedMessageIds:', store.ghostedMessageIds);
             logger.trace('  Total chat messages:', chat.length);
             logger.trace('=== END DEBUG ===');
         });

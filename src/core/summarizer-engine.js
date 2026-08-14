@@ -225,9 +225,14 @@ async function buildSlopTask(options, strategy, prepared) {
         targetIndex,
         getBatch: async () => {
             const cycle = await prepareSummaryCycle();
-            return await buildSlopSummaryRoutePlan(cycle.chat, cycle.store, getEffectiveSettings(), {
-                targetIndex,
-            });
+            return await buildSlopSummaryRoutePlan(
+                cycle.chat,
+                cycle.store,
+                getEffectiveSettings(),
+                {
+                    targetIndex,
+                },
+            );
         },
         isBatchReady: (batch) => batch?.ready,
         processBatch: strategy.processBatch,
@@ -347,16 +352,11 @@ async function processSlopBatch(plan) {
         committed: success && afterIndex >= plan.sourceEndIdx,
         done: afterIndex >= plan.targetIndex,
     };
-
 }
 
 async function getForceRoutePlan(prepared) {
     const cycle = prepared || (await prepareSummaryCycle());
-    const plan = await buildForceSummaryRoutePlan(
-        cycle.chat,
-        cycle.store,
-        getEffectiveSettings(),
-    );
+    const plan = await buildForceSummaryRoutePlan(cycle.chat, cycle.store, getEffectiveSettings());
 
     trace(`Current visible turns: ${plan.rawPlan.visibleTurnCount}, plan reason: ${plan.reason}`);
     return plan;
