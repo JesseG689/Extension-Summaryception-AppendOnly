@@ -77,7 +77,7 @@ Pick this mode when cached input is cheaper and your provider supports that kind
 
 ### Append Only
 
-Append Only is for stricter providers. They only give a useful cache hit when the old request is the exact start of the new one: `A -> AB -> ABC`. Changing `AB` into `AC` breaks the chain.
+Append Only is for stricter providers. They only give a useful cache hit when the old request is the exact start of the new one: `A -> AB -> ABC`. Changing `AB` into `AC` breaks the chain. Hapuppy provider (link below) is why this mode was created ($20 for 10 000 kimi k3 messages)
 
 To keep that chain intact, Summaryception leaves its memory prefix alone between flushes and bakes newly activated lore into the chat tail. It is fussy, but on providers with a deep cached-input discount it is often the cheapest mode.
 
@@ -126,8 +126,6 @@ Summaryception can use:
 
 - SillyTavern's active main API.
 - SillyTavern Connection Profiles.
-- Ollama.
-- OpenAI-compatible endpoints.
 
 There are three routes:
 
@@ -135,7 +133,7 @@ There are three routes:
 - Merge for deeper Layer 1+ promotion work.
 - Fallback for retryable failures after the primary route gives up.
 
-OpenAI-compatible local endpoints may need SillyTavern's CORS proxy. Streaming responses must finish with `data: [DONE]`; incomplete streams are treated as failed attempts.
+OpenAI-compatible local endpoints may need SillyTavern's CORS proxy. Streaming responses must finish with `data: [DONE]`; incomplete streams are treated as failed attempts. After v20 we dont use preset for summarization tasks so it doesnt matter what you linked to connection.
 
 ## Slash commands
 
@@ -165,6 +163,8 @@ Append only presets:
 
 [modified FF5.2 preset](https://gist.githubusercontent.com/vadash/0e9c53bc3c971b8570a131d18a102d85/raw/2ea7035d4a6139e49dc8cdcf472ed8e90e5efdae/FF_APPEND_5.2.24.json)
 
+If u keep debug enabled, F12 log shows if your preset breaks append only cache and where it happens.
+
 ## Version history
 
 Older major versions are still available as branches. Open SillyTavern's extension list and use the branch button beside Summaryception.
@@ -192,6 +192,8 @@ Older major versions are still available as branches. Open SillyTavern's extensi
 - **v6:** Major modular rewrite with speedups, background processing fixes, and global regex support.
 
 ## Screenshots
+
+v15, need to redo it
 
 <p align="center">
   <img src="https://github.com/user-attachments/assets/f1fda4c0-282e-4bbf-8924-98755fb461e0" width="180" alt="1" />
