@@ -33,6 +33,7 @@
 - Summarized turns are hidden through the host hide command and stay readable in the chat UI.
 - Unhide only store-owned messages. Never disturb messages that the user hid.
 - By default, ghosting also hides text-less messages between summarized turns. A setting keeps them visible when required.
+- Clear is a destructive reset. Unhide the full chat, remove non-conversation messages, and delete all per-chat Summaryception metadata.
 - For baked World Info cleanup and flush boundaries, read `append_only_gotchas.md`.
 
 ## Injection
