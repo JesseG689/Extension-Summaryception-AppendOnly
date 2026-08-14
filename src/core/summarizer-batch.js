@@ -1,5 +1,4 @@
 import { getContext, getChat } from '../foundation/context.js';
-import { STATE_SNAPSHOT_MODE } from '../foundation/prompt-constants.js';
 import {
     bumpSummaryStoreMutationEpoch,
     getChatStore,
@@ -454,7 +453,6 @@ function buildLayer0Snippet(snapshot, summary) {
         text: summary,
         sourceMessageIds: [...snapshot.sourceMessageIds],
         ...buildSnippetMetadataFromState(parsed.state),
-        stateMode: /** @type {'snapshot-v1'} */ (STATE_SNAPSHOT_MODE),
         timestamp: Date.now(),
     };
 }

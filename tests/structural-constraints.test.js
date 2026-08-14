@@ -11,6 +11,7 @@ import {
     buildSizeTargetLine,
 } from '../src/core/token-budget/budget-hint-builder.js';
 import { getActiveLineCap } from '../src/foundation/state-categories.js';
+import { defaultSettings } from '../src/foundation/constants.js';
 
 describe('computeSentenceCap', () => {
     const degenerateTargets = [undefined, 0, -5, NaN];
@@ -130,6 +131,7 @@ describe('buildLayer0BudgetHint', () => {
             sourceStateTokens: 0,
             sourceStateKeyCount: 0,
             targetTokens: 250,
+            settings: defaultSettings,
         });
         expect(result).toContain('<summaryception_source_budget>');
         expect(result).toContain('</summaryception_source_budget>');
@@ -145,6 +147,7 @@ describe('buildLayer0BudgetHint', () => {
             sourceStateTokens: 100,
             sourceStateKeyCount: 4,
             targetTokens: 250,
+            settings: defaultSettings,
         });
         expect(result).toContain('Existing [STATE]: 4 keys.');
         // The [STATE] cap line equals computeStateLineCap(4) (cross-check via

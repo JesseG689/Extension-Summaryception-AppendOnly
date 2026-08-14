@@ -43,7 +43,6 @@ const foundationMocks = vi.hoisted(() => {
         executeSlashCommandsWithOptions: vi.fn(),
         setExtensionPrompt: vi.fn(),
         registerMacro: vi.fn(),
-        unregisterMacro: vi.fn(),
         generateRaw: vi.fn(),
         callTokenCountAsync: vi.fn(),
         processWorldInfoText: vi.fn(),
@@ -138,22 +137,8 @@ const foundationMocks = vi.hoisted(() => {
             const { position = 0, depth = 0, scan = false, role = 0 } = options;
             getContext().setExtensionPrompt(name, text, position, depth, scan, role);
         });
-        context.registerMacro.mockImplementation(async (name, handler, description = '') => {
-            const fn = getContext().registerMacro;
-            if (typeof fn !== 'function') {
-                return false;
-            }
-            fn(name, () => handler(), description);
-            return true;
-        });
-        context.unregisterMacro.mockImplementation(async (name) => {
-            const fn = getContext().unregisterMacro;
-            if (typeof fn !== 'function') {
-                return false;
-            }
-            fn(name);
-            return true;
-        });
+        context.registerMacro.mockResolvedValue(true);
+
         context.generateRaw.mockImplementation(async (options) => {
             const ctx = getContext();
             if (typeof ctx.generateRaw !== 'function') {

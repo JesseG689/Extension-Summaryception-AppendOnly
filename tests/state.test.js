@@ -40,16 +40,6 @@ describe('getSettings', () => {
         // …while the originally-provided key survived unchanged.
         expect(settings.enabled).toBe(true);
     });
-    it('migrates persisted cache modes to balanced', () => {
-        installSummaryContext({
-            settings: { memoryMode: 'cache', easyMemoryMode: 'cache' },
-        });
-
-        const settings = getSettings();
-
-        expect(settings.memoryMode).toBe('balanced');
-        expect(settings.easyMemoryMode).toBe('balanced');
-    });
 
     it.each([MASK_USER_ROLE_MODES.MARKER_LAST, MASK_USER_ROLE_MODES.KEEP_LAST_USER])(
         'repairs prefix-breaking mask mode %s when Append Only is selected',

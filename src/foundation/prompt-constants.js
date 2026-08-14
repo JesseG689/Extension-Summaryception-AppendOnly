@@ -11,7 +11,6 @@ export const ENGLISH_FIRST_LANGUAGE_RULE =
 export const ANTI_RUN_ON_RULE =
     'Write in short, direct sentences. Prefer periods over commas and semicolons; do not chain actions together with commas, semicolons, or conjunctions into run-on sentences. Limit each sentence to roughly two actions or events.';
 
-export const STATE_SNAPSHOT_MODE = 'snapshot-v1';
 export const STATE_SNAPSHOT_SOFT_TARGET_TOKENS = 700;
 export const STATE_SNAPSHOT_MAX_TOKENS = 1000;
 /**

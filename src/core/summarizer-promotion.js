@@ -15,13 +15,7 @@ import {
     formatSnippetAnchor,
     stripLeadingSnippetAnchor,
 } from './snippet-metadata.js';
-import {
-    compileGlobalState,
-    isSnapshotStateSnippet,
-    mergeStates,
-    parseSnippet,
-    serializeState,
-} from './summarizer-state.js';
+import { compileGlobalState, parseSnippet, serializeState } from './summarizer-state.js';
 import { callSummarizer } from './summarizer-request.js';
 import { validateSummarizerOutputIntegrity } from './prompts.js';
 import {
@@ -271,15 +265,12 @@ async function prepareLayerPromotion({ layerIndex, settings, quota, layerTokens,
         return null;
     }
 
-    const parsed = toMerge.map((sn) => parseSnippet(sn.text));
     const storyTxt = toMerge
         .map((snippet) => formatAnchoredSnippetNarrative(snippet))
         .filter(Boolean)
         .join('\n\n');
     const sourceNarrativeText = storyTxt;
-    const mergedState = isSnapshotStateSnippet(toMerge[toMerge.length - 1])
-        ? compileGlobalState([toMerge])
-        : mergeStates(parsed.map((snippet) => snippet.state));
+    const mergedState = compileGlobalState([toMerge]);
     const serializedState = serializeState(mergedState);
     const sourceState = serializedState || '(none)';
     const memoryTokensBefore = await countTextTokens(storyTxt);
@@ -634,26 +625,17 @@ function rejectPromotionBelowMin({
 
 function buildHypotheticalPromotionLayers(layers, layerIndex, mergeCount, promotedSnippet) {
     const sourceLayers = Array.isArray(layers) ? layers : [];
-    const nextLayers = sourceLayers.map((layer) =>
-        Array.isArray(layer) ? cloneLayer(layer) : layer,
-    );
+    const nextLayers = sourceLayers.map((layer) => (Array.isArray(layer) ? [...layer] : layer));
     const sourceLayer = Array.isArray(nextLayers[layerIndex]) ? [...nextLayers[layerIndex]] : [];
     const destLayer = Array.isArray(nextLayers[layerIndex + 1])
         ? [...nextLayers[layerIndex + 1]]
         : [];
 
-    const toMerge = sourceLayer.splice(0, mergeCount);
-    if (layerIndex === 0) {
-        carryPromotedLayer0State({ promotedSnippets: toMerge, remainingLayer: sourceLayer });
-    }
+    sourceLayer.splice(0, mergeCount);
     destLayer.push(promotedSnippet);
     nextLayers[layerIndex] = sourceLayer;
     nextLayers[layerIndex + 1] = destLayer;
     return nextLayers;
-}
-
-function cloneLayer(layer) {
-    return layer.map((snippet) => ({ ...snippet }));
 }
 
 async function wouldViolateLayer0RetentionFloor({
@@ -676,12 +658,9 @@ async function wouldViolateLayer0RetentionFloor({
 
 function buildHypotheticalLayer0AfterPromotion(layers, mergeCount) {
     const sourceLayers = Array.isArray(layers) ? layers : [];
-    const nextLayers = sourceLayers.map((layer) =>
-        Array.isArray(layer) ? cloneLayer(layer) : layer,
-    );
+    const nextLayers = sourceLayers.map((layer) => (Array.isArray(layer) ? [...layer] : layer));
     const sourceLayer = Array.isArray(nextLayers[0]) ? [...nextLayers[0]] : [];
-    const promotedSnippets = sourceLayer.splice(0, mergeCount);
-    carryPromotedLayer0State({ promotedSnippets, remainingLayer: sourceLayer });
+    sourceLayer.splice(0, mergeCount);
     nextLayers[0] = sourceLayer;
     return nextLayers;
 }
@@ -691,75 +670,6 @@ function buildPromotedSnippet(text, metadata) {
         text,
         ...metadata,
     };
-}
-
-function carryPromotedLayer0State({ promotedSnippets, remainingLayer }) {
-    if (!Array.isArray(remainingLayer) || remainingLayer.length === 0) {
-        return;
-    }
-    if (remainingLayer.some((snippet) => isSnapshotStateSnippet(snippet))) {
-        return;
-    }
-
-    const carryState = buildLayer0CarryState(promotedSnippets, remainingLayer[0]);
-    if (Object.keys(carryState).length === 0) {
-        return;
-    }
-
-    const target = remainingLayer[0];
-    const parsed = parseSnippet(target.text || '');
-    const mergedState = mergeStates([carryState, parsed.state]);
-    const stateText = serializeState(mergedState);
-    target.text = stateText
-        ? ['[NARRATIVE]', parsed.narrative.trim(), '', stateText].join('\n').trim()
-        : parsed.narrative.trim();
-
-    if (carryState.current_date_time && !target.currentDateTime) {
-        target.currentDateTime = carryState.current_date_time;
-    }
-}
-
-function buildLayer0CarryState(promotedSnippets, oldestRemainingSnippet) {
-    const promotedState = mergeStates(
-        (promotedSnippets || []).map((snippet) => parseSnippet(snippet?.text || '').state),
-    );
-    const remainingState = parseSnippet(oldestRemainingSnippet?.text || '').state;
-    const carryState = /** @type {Record<string, string>} */ ({});
-
-    const hooks = filterCarryHooks(promotedState.hooks);
-    if (hooks) {
-        carryState.hooks = hooks;
-    }
-    if (promotedState.dynamics) {
-        carryState.dynamics = promotedState.dynamics;
-    }
-    if (promotedState.inventory) {
-        carryState.inventory = promotedState.inventory;
-    }
-    if (promotedState.counters) {
-        carryState.counters = promotedState.counters;
-    }
-    if (promotedState.current_date_time && !remainingState.current_date_time) {
-        carryState.current_date_time = promotedState.current_date_time;
-    }
-
-    return carryState;
-}
-
-function filterCarryHooks(value) {
-    const text = String(value || '').trim();
-    if (!text) {
-        return '';
-    }
-    const entries = text
-        .split(';')
-        .map((entry) => entry.trim())
-        .filter(Boolean)
-        .filter(
-            (entry) =>
-                !/\b(resolved|complete|completed|done|closed|cancelled|canceled)\b/i.test(entry),
-        );
-    return entries.join('; ');
 }
 
 /**
@@ -799,9 +709,6 @@ async function applyMergePromotion({ snapshot, layerIndex, promotedSnippet }) {
 
     if (toMerge.length !== snapshot.mergeCount) {
         return false;
-    }
-    if (layerIndex === 0) {
-        carryPromotedLayer0State({ promotedSnippets: toMerge, remainingLayer: layer });
     }
 
     destLayer.push({

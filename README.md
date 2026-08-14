@@ -42,7 +42,7 @@ That sounds abstract until you hit a 2,000 message chat and the model still reme
 
 ## Install
 
-Requirements: SillyTavern 1.16.0 or newer.
+Requirements: the latest stable SillyTavern release.
 
 In SillyTavern:
 

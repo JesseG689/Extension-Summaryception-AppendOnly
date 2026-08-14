@@ -1,6 +1,5 @@
 import { getChat } from '../foundation/context.js';
 import { rangesFromSortedIndices, resolveScIdsToIndices } from '../foundation/message-identity.js';
-import { STATE_SNAPSHOT_MODE } from '../foundation/prompt-constants.js';
 import { bumpSummaryStoreMutationEpoch, getChatStore, saveChatStore } from '../foundation/state.js';
 import { buildPassageFromRangeWithStats } from '../core/chatutils.js';
 import { unghostMessagesInRange } from '../core/ghosting.js';
@@ -190,7 +189,6 @@ async function regenerateSnippetWithTarget(target) {
     target.snippet.text = newSummary;
     target.snippet.timestamp = Date.now();
     target.snippet.regenerated = true;
-    target.snippet.stateMode = STATE_SNAPSHOT_MODE;
     Object.assign(target.snippet, buildSnippetMetadataFromState(parseSnippet(newSummary).state));
     bumpSummaryStoreMutationEpoch(getChatStore());
 

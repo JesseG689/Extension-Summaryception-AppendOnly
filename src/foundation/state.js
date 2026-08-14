@@ -182,17 +182,6 @@ function normalizeChatStore(store) {
  */
 function normalizeMemorySettings(settings) {
     let changed = false;
-    const migrateMode = (mode) => (mode === 'cache' ? MEMORY_MODES.BALANCED : mode);
-    const migratedMemoryMode = migrateMode(settings.memoryMode);
-    const migratedEasyMemoryMode = migrateMode(settings.easyMemoryMode);
-    if (settings.memoryMode !== migratedMemoryMode) {
-        settings.memoryMode = migratedMemoryMode;
-        changed = true;
-    }
-    if (settings.easyMemoryMode !== migratedEasyMemoryMode) {
-        settings.easyMemoryMode = migratedEasyMemoryMode;
-        changed = true;
-    }
     const validModes = [MEMORY_MODES.BALANCED, MEMORY_MODES.PREFIX_CACHE, MEMORY_MODES.APPEND_ONLY];
     if (!isSettingValue(validModes, settings.memoryMode)) {
         settings.memoryMode = defaultSettings.memoryMode;

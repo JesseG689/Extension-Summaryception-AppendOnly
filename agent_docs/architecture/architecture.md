@@ -9,7 +9,7 @@
 ## SillyTavern Facade
 
 - All runtime calls to SillyTavern globals pass through the foundation context module.
-- Missing optional host APIs return null, false, or a safe fallback. Callers must not assume the API exists.
+- Required host APIs target the latest stable SillyTavern release. Optional integrations can return a safe fallback.
 - Changing facade exports also requires an update to the global test setup.
 
 ## State Ownership

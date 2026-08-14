@@ -43,10 +43,8 @@ export function buildSizeConstraintsBlock({ wrapperTag, targetLine, repairLine =
  * @param {number} p.sourceStateTokens - Serialized prior [STATE] token count.
  * @param {number} p.sourceStateKeyCount - Keys present in the prior snapshot.
  * @param {number} p.targetTokens - Slider target T (`getLayer0SummaryTokenTarget`).
- * @param {ExtensionSettings} [p.settings] - Effective settings; when
- *   supplied the per-category line cap is anchored to the enabled
- *   modular STATE categories (clamped to STATE_KEY_CEILING) rather than the
- *   old fixed-ceiling default. Back-compat: omitted → legacy behavior.
+ * @param {ExtensionSettings} p.settings - Effective settings used to derive the
+ *   enabled modular STATE category cap.
  * @returns {string} Prompt block text (no trailing newline).
  */
 export function buildLayer0BudgetHint({
@@ -60,9 +58,7 @@ export function buildLayer0BudgetHint({
     const hasState = Number(sourceStateTokens) > 0;
     const stateLineCap = hasState
         ? computeStateLineCap(sourceStateKeyCount)
-        : settings
-          ? getActiveLineCap(settings, STATE_KEY_CEILING)
-          : STATE_KEY_CEILING;
+        : getActiveLineCap(settings, STATE_KEY_CEILING);
 
     const existingStateLine = hasState
         ? `Existing [STATE]: ${sourceStateKeyCount} keys.`
