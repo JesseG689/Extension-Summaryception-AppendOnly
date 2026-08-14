@@ -8,7 +8,6 @@ import {
     migrateWorldInfoToBakeOutlet,
     unbakeWorldInfo,
 } from '../src/core/world-info-bake.js';
-import { rebaseStoreAfterMessageDeletion } from '../src/core/summarizer-batch.js';
 import { installSummaryContext, makeMessage } from './test-helpers.js';
 
 const { context } = globalThis.summaryceptionFoundationMocks;
@@ -397,52 +396,53 @@ describe('world info bake', () => {
         expect(runtime.chat.at(-2)?.mes).toContain('Injected 0 memories');
     });
 
-    it('deletes marked and legacy SC-WI system blocks through the native chat path', async () => {
+    it('deletes marked and legacy SC-WI blocks without changing UUID metadata', async () => {
         const chat = [
-            makeMessage({ isUser: true, mes: 'old user' }),
-            { ...makeMessage({ mes: 'first bake', name: 'SC-WI' }), extra: {} },
-            makeMessage({ isSystem: true, mes: 'host system message' }),
+            makeMessage({ isUser: true, mes: 'old user', scId: 'user-old' }),
+            { ...makeMessage({ mes: 'first bake', name: 'SC-WI', scId: 'wi-1' }), extra: {} },
+            makeMessage({ isSystem: true, mes: 'host system message', scId: 'host-system' }),
             {
-                ...makeMessage({ mes: 'second bake', name: 'SC-WI' }),
+                ...makeMessage({ mes: 'second bake', name: 'SC-WI', scId: 'wi-2' }),
                 extra: { sc_wi: { version: 2 } },
             },
-            makeMessage({ isUser: true, mes: 'latest user' }),
+            makeMessage({ isUser: true, mes: 'latest user', scId: 'user-latest' }),
         ];
+        const store = {
+            layers: [
+                [
+                    {
+                        text: 'summary',
+                        sourceMessageIds: ['user-old', 'wi-1', 'host-system'],
+                    },
+                ],
+            ],
+            ghostedMessageIds: ['user-old', 'wi-1'],
+            mutationEpoch: 2,
+        };
         installBakeContext({ chat });
         context.deleteChatMessage.mockImplementation(async (index) => {
             chat.splice(index, 1);
             return true;
         });
 
-        await expect(deleteBakedWorldInfoMessages()).resolves.toEqual([1, 3]);
-        expect(chat.map((message) => message.mes)).toEqual([
-            'old user',
-            'host system message',
-            'latest user',
+        await expect(deleteBakedWorldInfoMessages()).resolves.toBe(2);
+        expect(chat.map((message) => message.sc_id)).toEqual([
+            'user-old',
+            'host-system',
+            'user-latest',
         ]);
-    });
-
-    it('rebases summary and ghost metadata after bake deletion', () => {
-        const store = {
+        expect(store).toEqual({
             layers: [
                 [
-                    { turnRange: [0, 3], sourceRange: [0, 3] },
-                    { turnRange: [4, 7], sourceRange: [4, 7] },
+                    {
+                        text: 'summary',
+                        sourceMessageIds: ['user-old', 'wi-1', 'host-system'],
+                    },
                 ],
             ],
-            summarizedUpTo: 7,
-            ghostedIndices: [0, 1, 3, 6],
+            ghostedMessageIds: ['user-old', 'wi-1'],
             mutationEpoch: 2,
-        };
-
-        expect(rebaseStoreAfterMessageDeletion(store, 0, 7, [1, 5, 9])).toEqual([0, 5]);
-        expect(store.layers[0]).toEqual([
-            { turnRange: [0, 2], sourceRange: [0, 2] },
-            { turnRange: [3, 5], sourceRange: [3, 5] },
-        ]);
-        expect(store.summarizedUpTo).toBe(5);
-        expect(store.ghostedIndices).toEqual([0, 2, 4]);
-        expect(store.mutationEpoch).toBe(3);
+        });
     });
 });
 

@@ -1,5 +1,9 @@
 import { getChat } from '../foundation/context.js';
-import { getChatStore, getEffectiveSettings } from '../foundation/state.js';
+import {
+    getChatStore,
+    getCurrentSummarizedBoundary,
+    getEffectiveSettings,
+} from '../foundation/state.js';
 import { debug, info, trace } from '../foundation/logger.js';
 import { summarizeAtomicLayer0Partitions, summarizeBatchFromTurns } from './summarizer-batch.js';
 import { maybePromoteLayer, hasPromotionOverflow } from './summarizer-promotion.js';
@@ -12,6 +16,7 @@ import {
     buildForceSummaryRoutePlan,
     buildSlopSummaryRoutePlan,
 } from './summarization-routes.js';
+import { prepareSummaryCycle } from './summary-preflight.js';
 
 export const ELASTIC_STRATEGIES = Object.freeze({
     AUTO: 'AUTO',
@@ -61,13 +66,14 @@ export async function runElasticAutoCycle(queue, { refreshUi } = {}) {
         return 'idle';
     }
 
+    const prepared = await prepareSummaryCycle();
     if (await hasPromotionOverflow(0)) {
         queue.setPhase('promoting');
         const promotionResult = await processPromotionCycle({ overflowKnown: true });
         return promotionResult;
     }
 
-    const routePlan = await buildAutoSummaryRoutePlan(getChat(), getChatStore(), s);
+    const routePlan = await buildAutoSummaryRoutePlan(prepared.chat, prepared.store, s);
     logRoutePlan(routePlan, s);
 
     if (routePlan.ready) {
@@ -92,7 +98,8 @@ export async function runElasticManual(deps, strategy, options = {}) {
         return createManualRunOutcome({ blocked: true });
     }
 
-    const task = await buildManualTask(strategy, options);
+    const prepared = await prepareSummaryCycle();
+    const task = await buildManualTask(strategy, options, prepared);
     if (!task) {
         return createManualRunOutcome();
     }
@@ -168,17 +175,18 @@ const MANUAL_STRATEGIES = Object.freeze({
     [ELASTIC_STRATEGIES.SLOP]: {
         buildTask: buildSlopTask,
         processBatch: processSlopBatch,
-        isComplete: (_outcome, task) => getChatStore().summarizedUpTo >= task.targetIndex,
+        isComplete: (_outcome, task) =>
+            getCurrentSummarizedBoundary(getChat(), getChatStore()) >= task.targetIndex,
     },
 });
 
-async function buildManualTask(strategy, options) {
+async function buildManualTask(strategy, options, prepared) {
     const manualStrategy = MANUAL_STRATEGIES[strategy];
-    return await manualStrategy?.buildTask(options, manualStrategy);
+    return await manualStrategy?.buildTask(options, manualStrategy, prepared);
 }
 
-async function buildForceTask(options, strategy) {
-    const initialRoutePlan = await getForceRoutePlan();
+async function buildForceTask(options, strategy, prepared) {
+    const initialRoutePlan = await getForceRoutePlan(prepared);
     if (!initialRoutePlan.ready) {
         return null;
     }
@@ -197,10 +205,10 @@ async function buildForceTask(options, strategy) {
     };
 }
 
-async function buildSlopTask(options, strategy) {
+async function buildSlopTask(options, strategy, prepared) {
     const initialRoutePlan = await buildSlopSummaryRoutePlan(
-        getChat(),
-        getChatStore(),
+        prepared.chat,
+        prepared.store,
         getEffectiveSettings(),
     );
     if (!initialRoutePlan.ready) {
@@ -215,10 +223,12 @@ async function buildSlopTask(options, strategy) {
         title: 'Summaryception Slop Breaker',
         options,
         targetIndex,
-        getBatch: async () =>
-            await buildSlopSummaryRoutePlan(getChat(), getChatStore(), getEffectiveSettings(), {
+        getBatch: async () => {
+            const cycle = await prepareSummaryCycle();
+            return await buildSlopSummaryRoutePlan(cycle.chat, cycle.store, getEffectiveSettings(), {
                 targetIndex,
-            }),
+            });
+        },
         isBatchReady: (batch) => batch?.ready,
         processBatch: strategy.processBatch,
         isComplete: strategy.isComplete,
@@ -320,28 +330,31 @@ function shouldStopManualLoop(outcome, result, signal, queue) {
 
 async function processForceBatch(plan) {
     trace('Processing force batch via elastic engine');
-    const beforeIndex = getChatStore().summarizedUpTo;
+    const beforeIndex = getCurrentSummarizedBoundary(getChat(), getChatStore());
     const success = await commitRoutePlan(plan, { catchExceptions: true });
+    const afterIndex = getCurrentSummarizedBoundary(getChat(), getChatStore());
     return {
         success,
-        committed: success && getChatStore().summarizedUpTo > beforeIndex,
+        committed: success && afterIndex > beforeIndex,
     };
 }
 
 async function processSlopBatch(plan) {
     const success = await commitRoutePlan(plan, { catchExceptions: true });
-    const afterIndex = getChatStore().summarizedUpTo;
+    const afterIndex = getCurrentSummarizedBoundary(getChat(), getChatStore());
     return {
         success,
         committed: success && afterIndex >= plan.sourceEndIdx,
         done: afterIndex >= plan.targetIndex,
     };
+
 }
 
-async function getForceRoutePlan() {
+async function getForceRoutePlan(prepared) {
+    const cycle = prepared || (await prepareSummaryCycle());
     const plan = await buildForceSummaryRoutePlan(
-        getChat(),
-        getChatStore(),
+        cycle.chat,
+        cycle.store,
         getEffectiveSettings(),
     );
 

@@ -35,13 +35,11 @@ export async function executeLayer0StoreTransaction({
 function captureLayer0RollbackPoint(store) {
     return {
         layer0: [...(store.layers[0] || [])],
-        summarizedUpTo: store.summarizedUpTo,
         mutationEpoch: store.mutationEpoch,
     };
 }
 
 function restoreLayer0RollbackPoint(store, rollbackPoint) {
     store.layers[0] = rollbackPoint.layer0;
-    store.summarizedUpTo = rollbackPoint.summarizedUpTo;
     store.mutationEpoch = rollbackPoint.mutationEpoch;
 }

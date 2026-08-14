@@ -1,6 +1,11 @@
 import { getContext, getChat } from '../foundation/context.js';
 import { STATE_SNAPSHOT_MODE } from '../foundation/prompt-constants.js';
-import { bumpSummaryStoreMutationEpoch, getChatStore, saveChatStore } from '../foundation/state.js';
+import {
+    bumpSummaryStoreMutationEpoch,
+    getChatStore,
+    getCurrentSummarizedBoundary,
+    saveChatStore,
+} from '../foundation/state.js';
 import { debug, error, info, isTraceEnabled, trace, warn } from '../foundation/logger.js';
 import { ghostMessagesInRange, repairGhostingForRange } from './ghosting.js';
 import {
@@ -17,7 +22,6 @@ import { validateSummarizerOutputIntegrity } from './prompts.js';
 import { parseSnippet } from './summarizer-state.js';
 import { getCurrentStateSnapshotText } from './memory-injection.js';
 import { countTextTokens, formatTokenCount, formatTokenValue } from './token-count.js';
-import { deleteBakedWorldInfoMessages } from './world-info-bake.js';
 import {
     fingerprintSourceRange,
     getChatIdentity,
@@ -41,12 +45,13 @@ export async function summarizeBatchFromTurns(
 
     const chat = getChat();
     const store = getChatStore();
+    const summarizedBoundary = getCurrentSummarizedBoundary(chat, store);
 
-    const eligibleTurns = visibleTurns.filter((t) => t.index > store.summarizedUpTo);
+    const eligibleTurns = visibleTurns.filter((turn) => turn.index > summarizedBoundary);
     trace('  eligibleTurns after filtering:', eligibleTurns.length);
 
     if (eligibleTurns.length === 0) {
-        await repairGhosting(visibleTurns, store.summarizedUpTo);
+        await repairGhosting(visibleTurns, summarizedBoundary);
         return false;
     }
 
@@ -124,14 +129,14 @@ async function summarizeBatchCore({ chat, store, eligibleTurns, opts }) {
 
     const { startIdx, endIdx: batchEndIdx } = getBatchRange(batch);
     const endIdx = getSourceEndIdx(batchEndIdx, opts.sourceEndIdx);
+    const summarizedBoundary = getCurrentSummarizedBoundary(chat, store);
     trace('  startIdx:', startIdx, 'endIdx:', endIdx);
-    trace('  store.summarizedUpTo:', store.summarizedUpTo);
+    trace('  resolved summarized boundary:', summarizedBoundary);
 
     info(`Summarizing ${batch.length} assistant turns (indices ${startIdx}–${endIdx})`);
 
     ensureLayer0(store);
-    const passageStart = store.summarizedUpTo < 0 ? 0 : store.summarizedUpTo + 1;
-
+    const passageStart = summarizedBoundary < 0 ? 0 : summarizedBoundary + 1;
     if (!isPassageRangeValid(passageStart, endIdx)) {
         return false;
     }
@@ -152,10 +157,10 @@ async function summarizeAtomicLayer0PartitionsCore(partitions, { showToasts }) {
     let contextText = buildFullContext(0);
     const snapshots = [];
     const pendingSnippets = [];
-    const baseSummarizedUpTo = store.summarizedUpTo;
+    const baseMutationEpoch = getSummaryStoreSnapshotEpoch(store);
 
     for (const partition of usablePartitions) {
-        if (store.summarizedUpTo !== baseSummarizedUpTo) {
+        if (getSummaryStoreSnapshotEpoch(store) !== baseMutationEpoch) {
             return false;
         }
 
@@ -319,14 +324,24 @@ async function traceTextTokens(label, text) {
  */
 async function captureLayer0Snapshot({ chat, store, passageStart, endIdx, contextText }) {
     const ctx = getContext();
+    const sourceMessageIds = chat
+        .slice(passageStart, endIdx + 1)
+        .map((message) => message?.sc_id);
+    const stableSourceMessageIds = /** @type {string[]} */ (sourceMessageIds);
+    if (
+        sourceMessageIds.length !== endIdx - passageStart + 1 ||
+        sourceMessageIds.some((id) => typeof id !== 'string' || id.trim() === '')
+    ) {
+        throw new Error('Cannot summarize messages without stable Summaryception IDs.');
+    }
     const passage = await buildPassageFromRangeWithStats(chat, passageStart, endIdx);
     const resolvedContextText = contextText ?? buildFullContext(0);
 
     return {
         chatId: getChatIdentity(ctx),
         chatRef: chat,
-        summarizedUpTo: store.summarizedUpTo,
         sourceRange: [passageStart, endIdx],
+        sourceMessageIds: stableSourceMessageIds,
         sourceFingerprint: fingerprintSourceRange(chat, passageStart, endIdx),
         summaryStoreEpoch: getSummaryStoreSnapshotEpoch(store),
         passageText: passage.text,
@@ -361,16 +376,14 @@ async function commitLayer0Snippet({ snapshot, summary, showToasts }) {
         store,
         passageStart,
         endIdx,
-        showToasts,
         rollbackMessage: 'Layer 0 commit persistence failed, rolling back store state:',
         onRollback: () => {
             debug('Layer 0 commit rolled back: post-save persistence failed.');
         },
         mutate: () => {
             store.layers[0].push(buildLayer0Snippet(snapshot, summary));
-            store.summarizedUpTo = Math.max(store.summarizedUpTo, endIdx);
             bumpSummaryStoreMutationEpoch(store);
-            trace('  Updated store.summarizedUpTo to:', store.summarizedUpTo);
+            trace('  Added Layer 0 snippet for current source IDs.');
         },
     });
 
@@ -387,7 +400,6 @@ async function commitAtomicLayer0Snippets({ snapshots, pendingSnippets, showToas
 
     const store = getChatStore();
     ensureLayer0(store);
-
     const passageStart = snapshots[0].sourceRange[0];
     const endIdx = snapshots[snapshots.length - 1].sourceRange[1];
 
@@ -395,7 +407,6 @@ async function commitAtomicLayer0Snippets({ snapshots, pendingSnippets, showToas
         store,
         passageStart,
         endIdx,
-        showToasts: false, // Suppress the generic toast; cache-break toast is shown below.
         rollbackMessage: 'Layer 0 commit persistence failed, rolling back store state:',
         onRollback: () => {
             debug('Atomic Layer 0 commit rolled back: post-save persistence failed.');
@@ -404,8 +415,6 @@ async function commitAtomicLayer0Snippets({ snapshots, pendingSnippets, showToas
             for (const snippet of pendingSnippets) {
                 store.layers[0].push(snippet);
             }
-
-            store.summarizedUpTo = Math.max(store.summarizedUpTo, endIdx);
             bumpSummaryStoreMutationEpoch(store);
         },
     });
@@ -421,23 +430,10 @@ async function commitAtomicLayer0Snippets({ snapshots, pendingSnippets, showToas
     return true;
 }
 
-/**
- * Commit a Layer 0 mutation and run downstream persistence effects transactionally.
- * @param {object} p
- * @param {SummaryceptionStore} p.store
- * @param {number} p.passageStart
- * @param {number} p.endIdx
- * @param {boolean} p.showToasts
- * @param {() => void} p.mutate
- * @param {string} p.rollbackMessage
- * @param {() => void} [p.onRollback]
- * @returns {Promise<void>}
- */
 async function executeLayer0Commit({
     store,
     passageStart,
     endIdx,
-    showToasts,
     mutate,
     rollbackMessage,
     onRollback,
@@ -454,67 +450,13 @@ async function executeLayer0Commit({
             await persistChatState({ chatSave: 'deferred' });
         },
     });
-
-    const deletedWorldInfoIndices = await deleteBakedWorldInfoMessages();
-    if (deletedWorldInfoIndices.length > 0) {
-        rebaseStoreAfterMessageDeletion(store, passageStart, endIdx, deletedWorldInfoIndices);
-        await persistChatState();
-    }
-
-    if (showToasts) {
-        toastr.success(
-            `Summary saved (Layer 0: ${store.layers[0].length} snippets)`,
-            'Summaryception',
-            { timeOut: 2000 },
-        );
-    }
-}
-/**
- * Rebase chat-index metadata after native deletion of temporary WI messages.
- * @param {SummaryceptionStore} store
- * @param {number} startIdx
- * @param {number} endIdx
- * @param {number[]} deletedIndices
- * @returns {[number, number]}
- */
-export function rebaseStoreAfterMessageDeletion(store, startIdx, endIdx, deletedIndices) {
-    if (deletedIndices.length === 0) {
-        return [startIdx, endIdx];
-    }
-
-    const rebaseStart = (index) => index - deletedIndices.filter((item) => item < index).length;
-    const rebaseEnd = (index) => index - deletedIndices.filter((item) => item <= index).length;
-
-    for (const snippet of store.layers[0] || []) {
-        if (Array.isArray(snippet.turnRange)) {
-            snippet.turnRange = [
-                rebaseStart(snippet.turnRange[0]),
-                rebaseEnd(snippet.turnRange[1]),
-            ];
-        }
-        if (Array.isArray(snippet.sourceRange)) {
-            snippet.sourceRange = [
-                rebaseStart(snippet.sourceRange[0]),
-                rebaseEnd(snippet.sourceRange[1]),
-            ];
-        }
-    }
-
-    store.summarizedUpTo = rebaseEnd(store.summarizedUpTo);
-    store.ghostedIndices = store.ghostedIndices
-        .filter((index) => !deletedIndices.includes(index))
-        .map(rebaseStart);
-    bumpSummaryStoreMutationEpoch(store);
-    return [rebaseStart(startIdx), rebaseEnd(endIdx)];
 }
 
 function buildLayer0Snippet(snapshot, summary) {
-    const [passageStart, endIdx] = snapshot.sourceRange;
     const parsed = parseSnippet(summary);
     return {
         text: summary,
-        turnRange: /** @type {[number, number]} */ ([passageStart, endIdx]),
-        sourceRange: /** @type {[number, number]} */ ([passageStart, endIdx]),
+        sourceMessageIds: [...snapshot.sourceMessageIds],
         ...buildSnippetMetadataFromState(parsed.state),
         stateMode: /** @type {'snapshot-v1'} */ (STATE_SNAPSHOT_MODE),
         timestamp: Date.now(),
@@ -563,9 +505,6 @@ function isLayer0SnapshotValid(snapshot) {
     const [startIdx, endIdx] = snapshot.sourceRange;
 
     if (!isSameChatSnapshot(snapshot, ctx)) {
-        return false;
-    }
-    if (store.summarizedUpTo !== snapshot.summarizedUpTo) {
         return false;
     }
     if (fingerprintSourceRange(ctx.chat, startIdx, endIdx) !== snapshot.sourceFingerprint) {

@@ -46,6 +46,7 @@ export function fingerprintSourceRange(chat, startIdx, endIdx) {
         const msg = chat[i];
         messages.push([
             i,
+            msg?.sc_id || '',
             msg?.mes || '',
             Boolean(msg?.is_user),
             Boolean(msg?.is_system),

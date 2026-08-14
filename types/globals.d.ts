@@ -8,6 +8,7 @@ declare module '/script.js' {
 }
 
 interface ChatMessage {
+    sc_id?: string;
     is_user: boolean;
     is_system: boolean;
     is_hidden?: boolean;
@@ -19,7 +20,6 @@ interface ChatMessage {
 }
 
 interface ChatMessageExtra {
-    sc_ghosted?: boolean;
     sc_token_count?: unknown;
     [key: string]: unknown;
 }
@@ -34,8 +34,7 @@ interface SlashCommand {
 
 interface SummaryceptionSnippet {
     text: string;
-    turnRange?: [number, number];
-    sourceRange?: [number, number];
+    sourceMessageIds: string[];
     currentDateTime?: string;
     promoted?: boolean;
     seedFromLayer?: number;
@@ -48,8 +47,7 @@ interface SummaryceptionSnippet {
 
 interface SummaryceptionStore {
     layers: SummaryceptionSnippet[][];
-    summarizedUpTo: number;
-    ghostedIndices: number[];
+    ghostedMessageIds: string[];
     mutationEpoch: number;
 }
 

@@ -14,8 +14,10 @@ export function makeMessage({
     mes = 'Hello, world.',
     name = 'Assistant',
     ghosted = false,
+    scId,
 } = {}) {
     return {
+        sc_id: scId,
         is_user: isUser,
         is_system: isSystem,
         is_hidden: isHidden,
@@ -23,13 +25,14 @@ export function makeMessage({
         name,
         extra: ghosted ? { sc_ghosted: true } : {},
     };
-}
 
-/** Build repeated chat messages. */
+}
 export function makeMessages(count, options = {}) {
-    return Array.from({ length: count }, (_value, index) =>
-        makeMessage(typeof options === 'function' ? options(index) : options),
-    );
+    return Array.from({ length: count }, (_value, index) => {
+        const messageOptions = typeof options === 'function' ? options(index) : options;
+        return makeMessage({ scId: `message-${index}`, ...messageOptions });
+    });
+
 }
 
 /** Build repeated long assistant messages for budget-window tests. */
@@ -88,8 +91,7 @@ export function makeSummarySettings(overrides = {}) {
 export function makeSummaryStore(overrides = {}) {
     return {
         layers: [],
-        summarizedUpTo: -1,
-        ghostedIndices: [],
+        ghostedMessageIds: [],
         mutationEpoch: 0,
         ...overrides,
     };

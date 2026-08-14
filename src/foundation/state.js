@@ -19,6 +19,7 @@ import {
     saveMetadata,
     saveSettingsDebounced,
 } from './context.js';
+import { resolveScIdsToIndices } from './message-identity.js';
 
 const PROMPT_PRESET_VALUES = Object.freeze(['narrative', 'custom']);
 const PROMPT_SETTING_BINDINGS = Object.freeze([
@@ -110,8 +111,8 @@ export function saveSettings() {
 }
 
 /**
- * Get the chat-specific store for summary data.
- * @returns {SummaryceptionStore} The chat store with layers, summarizedUpTo, ghostedIndices
+ * Get the chat-specific summary store.
+ * @returns {SummaryceptionStore}
  */
 export function getChatStore() {
     const chatMetadata = getChatMetadata();
@@ -149,25 +150,17 @@ export function bumpSummaryStoreMutationEpoch(store) {
 }
 
 /**
- * Calculate the last summarized index covered by contiguous Layer 0 ranges.
+ * Resolve the highest current chat index owned by a Layer 0 snippet.
+ * @param {ChatMessage[]} chat
  * @param {SummaryceptionStore} store
  * @returns {number}
  */
-export function calculateContiguousSummarizedUpTo(store) {
-    const ranges = (store.layers[0] || [])
-        .map((snippet) => snippet.turnRange)
-        .filter(isValidTurnRange)
-        .sort((a, b) => a[0] - b[0]);
-    let cursor = -1;
-
-    for (const [start, end] of ranges) {
-        if (start > cursor + 1) {
-            break;
-        }
-        cursor = Math.max(cursor, end);
-    }
-
-    return cursor;
+export function getCurrentSummarizedBoundary(chat, store) {
+    const sourceMessageIds = (store?.layers?.[0] || []).flatMap(
+        (snippet) => snippet.sourceMessageIds || [],
+    );
+    const indices = resolveScIdsToIndices(chat, sourceMessageIds);
+    return indices.length > 0 ? indices[indices.length - 1] : -1;
 }
 
 /**
@@ -177,10 +170,12 @@ export function calculateContiguousSummarizedUpTo(store) {
  */
 function normalizeChatStore(store) {
     store.layers = normalizeLayers(store.layers);
-    store.summarizedUpTo = normalizeSummarizedUpTo(store.summarizedUpTo);
-    store.ghostedIndices = normalizeGhostedIndices(store.ghostedIndices);
+    store.ghostedMessageIds = normalizeStringArray(store.ghostedMessageIds);
     store.mutationEpoch = normalizeMutationEpoch(store.mutationEpoch);
-    return store;
+    const storeRecord = /** @type {Record<string, unknown>} */ (store);
+    delete storeRecord.summarizedUpTo;
+    delete storeRecord.ghostedIndices;
+    return /** @type {SummaryceptionStore} */ (store);
 }
 
 /**
@@ -534,15 +529,14 @@ function normalizeLayers(layers) {
         if (!Array.isArray(layer)) {
             return [];
         }
-        return layer.filter(isValidSnippet);
+        return layer.filter(isValidSnippet).map(normalizeSnippet);
     });
 }
 
 function createDefaultChatStore() {
     return {
         layers: [],
-        summarizedUpTo: -1,
-        ghostedIndices: [],
+        ghostedMessageIds: [],
         mutationEpoch: 0,
     };
 }
@@ -553,10 +547,18 @@ function createDefaultChatStore() {
  * @returns {snippet is SummaryceptionSnippet}
  */
 function isValidSnippet(snippet) {
-    if (!isPlainObject(snippet)) {
-        return false;
-    }
-    return typeof snippet.text === 'string';
+    return (
+        isPlainObject(snippet) &&
+        typeof snippet.text === 'string' &&
+        normalizeStringArray(snippet.sourceMessageIds).length > 0
+    );
+}
+
+function normalizeSnippet(snippet) {
+    snippet.sourceMessageIds = normalizeStringArray(snippet.sourceMessageIds);
+    delete snippet.turnRange;
+    delete snippet.sourceRange;
+    return snippet;
 }
 
 /**
@@ -573,15 +575,24 @@ function isPlainObject(value) {
 }
 
 /**
- * Normalize the summarized cursor.
- * @param {unknown} value
- * @returns {number}
+ * Normalize a stable message ID array.
+ * @param {unknown} values
+ * @returns {string[]}
  */
-function normalizeSummarizedUpTo(value) {
-    if (typeof value !== 'number' || !Number.isFinite(value) || !Number.isInteger(value)) {
-        return -1;
+function normalizeStringArray(values) {
+    if (!Array.isArray(values)) {
+        return [];
     }
-    return Math.max(-1, value);
+    const result = [];
+    const seen = new Set();
+    for (const value of values) {
+        if (typeof value !== 'string' || value.trim() === '' || seen.has(value)) {
+            continue;
+        }
+        seen.add(value);
+        result.push(value);
+    }
+    return result;
 }
 
 /**
@@ -596,56 +607,6 @@ function normalizeMutationEpoch(value) {
     return Math.max(0, value);
 }
 
-/**
- * Normalize ghosted message indices.
- * @param {unknown} indices
- * @returns {number[]}
- */
-function normalizeGhostedIndices(indices) {
-    if (!Array.isArray(indices)) {
-        return [];
-    }
-    const result = [];
-    const seen = new Set();
-    for (const value of indices) {
-        const index = normalizeIndex(value);
-        if (index === null || seen.has(index)) {
-            continue;
-        }
-        seen.add(index);
-        result.push(index);
-    }
-    return result;
-}
-
-/**
- * Normalize one stored index.
- * @param {unknown} value
- * @returns {number | null}
- */
-function normalizeIndex(value) {
-    const index = typeof value === 'string' && value.trim() !== '' ? Number(value) : value;
-    if (typeof index !== 'number' || !Number.isFinite(index) || !Number.isInteger(index)) {
-        return null;
-    }
-    return index >= 0 ? index : null;
-}
-
-/**
- * Check whether a stored turn range can contribute to cursor coverage.
- * @param {unknown} range
- * @returns {range is [number, number]}
- */
-function isValidTurnRange(range) {
-    return (
-        Array.isArray(range) &&
-        range.length >= 2 &&
-        Number.isInteger(range[0]) &&
-        Number.isInteger(range[1]) &&
-        range[0] >= 0 &&
-        range[1] >= range[0]
-    );
-}
 
 /**
  * Get the player's display name.

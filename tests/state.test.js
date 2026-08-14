@@ -3,15 +3,19 @@ import { describe, expect, it } from 'vitest';
 import { MASK_USER_ROLE_MODES, UI_MODES } from '../src/foundation/constants.js';
 import {
     bumpSummaryStoreMutationEpoch,
-    calculateContiguousSummarizedUpTo,
     getChatStore,
+    getCurrentSummarizedBoundary,
     getEffectiveSettings,
+    getPlayerName,
     getSettings,
     getSummaryStoreMutationEpoch,
-    getPlayerName,
 } from '../src/foundation/state.js';
-import { makeSummaryStore } from './test-helpers.js';
-import { installSummaryContext, installSillyTavernStub } from './test-helpers.js';
+import {
+    installSummaryContext,
+    installSillyTavernStub,
+    makeMessages,
+    makeSummaryStore,
+} from './test-helpers.js';
 
 describe('getSettings', () => {
     it('returns a settings object and reuses the same reference on subsequent calls', () => {
@@ -156,31 +160,35 @@ describe('getChatStore', () => {
     it('creates a normalized default store on a fresh context', () => {
         installSummaryContext();
         const store = getChatStore();
-        expect(Array.isArray(store.layers)).toBe(true);
-        expect(store.summarizedUpTo).toBe(-1);
-        expect(Array.isArray(store.ghostedIndices)).toBe(true);
-        expect(typeof store.mutationEpoch).toBe('number');
+        expect(store).toMatchObject({ layers: [], ghostedMessageIds: [], mutationEpoch: 0 });
+        expect(store).not.toHaveProperty('summarizedUpTo');
+        expect(store).not.toHaveProperty('ghostedIndices');
     });
 
-    it('repairs garbage metadata in place', () => {
+    it('normalizes UUID arrays and rejects old or source-less snippets', () => {
         installSummaryContext({
             metadata: {
                 summaryception: {
-                    layers: 'junk',
-                    summarizedUpTo: 'x',
-                    ghostedIndices: [1, 'a', -2, 3],
+                    layers: [
+                        [
+                            { text: 'valid', sourceMessageIds: ['a', '', 'a', 'b'] },
+                            { text: 'old', turnRange: [0, 2] },
+                        ],
+                    ],
+                    summarizedUpTo: 2,
+                    ghostedIndices: [1, 2],
+                    ghostedMessageIds: ['b', '', 'b', 'a'],
                     mutationEpoch: NaN,
                 },
             },
         });
+
         const store = getChatStore();
-        expect(Array.isArray(store.layers)).toBe(true);
-        expect(typeof store.summarizedUpTo).toBe('number');
-        // Only non-negative integer indices survive; 1 and 3 are preserved.
-        expect(store.ghostedIndices).toContain(1);
-        expect(store.ghostedIndices).toContain(3);
-        expect(store.ghostedIndices).not.toContain(-2);
-        expect(Number.isFinite(store.mutationEpoch)).toBe(true);
+        expect(store.layers).toEqual([[{ text: 'valid', sourceMessageIds: ['a', 'b'] }]]);
+        expect(store.ghostedMessageIds).toEqual(['b', 'a']);
+        expect(store.mutationEpoch).toBe(0);
+        expect(store).not.toHaveProperty('summarizedUpTo');
+        expect(store).not.toHaveProperty('ghostedIndices');
     });
 });
 
@@ -199,30 +207,20 @@ describe('summary store mutation epoch', () => {
     });
 });
 
-describe('calculateContiguousSummarizedUpTo', () => {
-    it('returns -1 when layer 0 is empty', () => {
-        installSummaryContext();
-        const store = getChatStore();
-        expect(calculateContiguousSummarizedUpTo(store)).toBe(-1);
+describe('getCurrentSummarizedBoundary', () => {
+    it('returns -1 when no Layer 0 source ID resolves', () => {
+        expect(getCurrentSummarizedBoundary(makeMessages(2), makeSummaryStore())).toBe(-1);
     });
 
-    it('extends across contiguous layer-0 ranges', () => {
+    it('tracks surviving source IDs after a live message deletion shifts indices', () => {
+        const chat = makeMessages(5);
         const store = makeSummaryStore({
-            layers: [[{ turnRange: [0, 2] }, { turnRange: [3, 5] }]],
+            layers: [[{ text: 'summary', sourceMessageIds: ['message-1', 'message-4'] }]],
         });
-        expect(calculateContiguousSummarizedUpTo(store)).toBe(5);
-    });
 
-    it('stops the cursor at the first gap and ignores later ranges, even when input is unsorted', () => {
-        const sortedGap = makeSummaryStore({
-            layers: [[{ turnRange: [0, 2] }, { turnRange: [4, 6] }]],
-        });
-        expect(calculateContiguousSummarizedUpTo(sortedGap)).toBe(2);
-
-        const unsorted = makeSummaryStore({
-            layers: [[{ turnRange: [4, 6] }, { turnRange: [0, 2] }]],
-        });
-        expect(calculateContiguousSummarizedUpTo(unsorted)).toBe(2);
+        expect(getCurrentSummarizedBoundary(chat, store)).toBe(4);
+        chat.splice(2, 1);
+        expect(getCurrentSummarizedBoundary(chat, store)).toBe(3);
     });
 });
 
