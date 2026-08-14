@@ -172,6 +172,8 @@ export const defaultSettings = Object.freeze({
     stripChineseIdeographs: true, // true = strip Han ideographs from summarizer responses
     maskUserRoleAsAssistant: false, // true = rewrite outgoing user-role request blocks as assistant
     maskUserRoleMode: MASK_USER_ROLE_MODES.MARKER_FIRST,
+    replaceKimiReasoning: false,
+    kimiReasoningReplacement: 'I should continue the story.',
 
     stripPatterns: [
         '<|channel>thought',

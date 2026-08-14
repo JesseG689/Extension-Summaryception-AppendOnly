@@ -33,6 +33,7 @@ import {
 import {
     SETTING_SLIDER_SELECTOR,
     syncDataSettingElements,
+    syncKimiReasoningReplacementControl,
     syncRoleMaskModeControl,
     syncSliderSettingPairs,
 } from './ui-bind.js';
@@ -81,6 +82,11 @@ export async function updateUI() {
             s.maskUserRoleAsAssistant,
             effectiveSettings.memoryMode === MEMORY_MODES.APPEND_ONLY,
         );
+        syncKimiReasoningReplacementControl(
+            effectiveSettings.memoryMode === MEMORY_MODES.APPEND_ONLY,
+        );
+        $('#sc_replace_kimi_reasoning').prop('checked', Boolean(s.replaceKimiReasoning));
+        $('#sc_kimi_reasoning_replacement').val(s.kimiReasoningReplacement);
         $('#sc_strip_patterns').val((s.stripPatterns || []).join('\n'));
         $('#sc_summarizer_response_length').val(s.summarizerResponseLength || 0);
         syncConnectionInputs(s);

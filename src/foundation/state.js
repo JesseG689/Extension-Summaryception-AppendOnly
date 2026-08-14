@@ -391,6 +391,9 @@ function buildEasyEffectiveSettings(settings) {
         bakedWorldInfoTokenBudget: settings.bakedWorldInfoTokenBudget,
         appendOnlySystemBlockTemplate:
             settings.appendOnlySystemBlockTemplate || defaultSettings.appendOnlySystemBlockTemplate,
+        replaceKimiReasoning: settings.replaceKimiReasoning,
+        kimiReasoningReplacement:
+            settings.kimiReasoningReplacement ?? defaultSettings.kimiReasoningReplacement,
     });
 
     const sourceCap = deriveEasySourceCap(settings.easySummarizerContextTokens);

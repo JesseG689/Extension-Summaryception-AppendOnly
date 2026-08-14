@@ -36,6 +36,8 @@
 - Update summary memory at flush completion because its text changes the prefix.
 - Keep time and date macros stable when using Append-Only mode.
 - Prefix Cache uses a larger stable live window for providers with native prefix caching.
+- Kimi reasoning replacement must rewrite final request history only. Do not mutate saved chat reasoning.
+- Replace only assistant messages that already contain saved reasoning. Do not add a partial assistant tail.
 - Balanced mode uses the rolling verbatim window without cache-specific baking.
 
 ## Migration And Cleanup

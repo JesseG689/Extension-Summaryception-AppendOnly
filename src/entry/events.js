@@ -4,6 +4,7 @@ import { ensureChatScIds } from '../foundation/message-identity.js';
 import { getChatStore, getEffectiveSettings } from '../foundation/state.js';
 import { repairMissingGhostingForSummaries } from '../core/ghosting-reconcile.js';
 import { maskUserRoleAsAssistantInGenerateData } from '../core/assistant-role-mask.js';
+import { replaceKimiReasoningInRequest } from '../core/kimi-reasoning-replacement.js';
 import { setWorldInfoBakeGenerationType } from '../core/world-info-bake.js';
 import {
     beginForegroundGeneration,
@@ -248,6 +249,19 @@ export function onGenerateAfterData(generateData, _dryRun) {
         maskUserRoleAsAssistantInGenerateData(generateData, getEffectiveSettings());
     } catch (e) {
         warn('onGenerateAfterData error:', e);
+    }
+}
+
+/**
+ * Replace persisted Kimi thinking in the final chat-completion payload.
+ * @param {unknown} generateData - Mutable SillyTavern request payload.
+ * @returns {void}
+ */
+export function onChatCompletionSettingsReady(generateData) {
+    try {
+        replaceKimiReasoningInRequest(generateData, getEffectiveSettings());
+    } catch (e) {
+        warn('onChatCompletionSettingsReady error:', e);
     }
 }
 
