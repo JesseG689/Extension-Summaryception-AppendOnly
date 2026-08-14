@@ -166,14 +166,14 @@
                         <div class="sc-tuning-group">
                             <div class="sc-tuning-title">
                                 <span class="fa-solid fa-clock-rotate-left"></span>
-                                <span>Memory Style</span>
+                                <span>Memory Mode</span>
                             </div>
-                            <div class="sc-radio-grid" role="radiogroup" aria-label="Easy Memory Style">
+                            <div class="sc-radio-grid" role="radiogroup" aria-label="Easy Memory Mode">
                                 <label class="checkbox_label sc-toggle-row" for="sc_easy_memory_mode_balanced">
                                     <span class="sc-toggle-icon fa-solid fa-layer-group"></span>
                                     <span class="sc-toggle-copy">
-                                        <span class="sc-toggle-title">Balanced</span>
-                                        <small class="sc-hint">Summarizes overflow continuously to keep the main prompt smaller and steadier.</small>
+                                        <span class="sc-toggle-title">Default</span>
+                                        <small class="sc-hint">Keeps recent chat near the useful range and summarizes overflow as it arrives.</small>
                                     </span>
                                     <input type="radio" id="sc_easy_memory_mode_balanced" name="sc_easy_memory_mode" value="balanced" />
                                 </label>
@@ -181,7 +181,7 @@
                                     <span class="sc-toggle-icon fa-solid fa-box-archive"></span>
                                     <span class="sc-toggle-copy">
                                         <span class="sc-toggle-title">Prefix Cache</span>
-                                        <small class="sc-hint">Uses a larger 32k live window for providers that discount cached input.</small>
+                                        <small class="sc-hint">For normal caches that can reuse the unchanged start of a prompt, such as AB -> AC.</small>
                                     </span>
                                     <input type="radio" id="sc_easy_memory_mode_prefix_cache" name="sc_easy_memory_mode" value="prefix_cache" />
                                 </label>
@@ -189,7 +189,7 @@
                                     <span class="sc-toggle-icon fa-solid fa-arrow-down-long"></span>
                                     <span class="sc-toggle-copy">
                                         <span class="sc-toggle-title">Append Only</span>
-                                        <small class="sc-hint">Bakes activated lore into the chat tail to preserve a stable provider-cache prefix.</small>
+                                        <small class="sc-hint">For strict caches that need every request to extend the last one: A -> AB -> ABC.</small>
                                     </span>
                                     <input type="radio" id="sc_easy_memory_mode_append_only" name="sc_easy_memory_mode" value="append_only" />
                                 </label>
@@ -564,8 +564,8 @@
                             <label class="checkbox_label sc-mode-card" for="sc_memory_mode_balanced">
                                 <span class="sc-toggle-icon fa-solid fa-layer-group"></span>
                                 <span class="sc-toggle-copy">
-                                    <span class="sc-toggle-title">Balanced</span>
-                                    <small class="sc-hint">Summarizes overflow continuously to keep the main prompt smaller and steadier.</small>
+                                    <span class="sc-toggle-title">Default</span>
+                                    <small class="sc-hint">Keeps recent chat near the useful range and summarizes overflow as it arrives.</small>
                                 </span>
                                 <input type="radio" id="sc_memory_mode_balanced" name="sc_memory_mode" value="balanced" />
                             </label>
@@ -573,7 +573,7 @@
                                 <span class="sc-toggle-icon fa-solid fa-box-archive"></span>
                                 <span class="sc-toggle-copy">
                                     <span class="sc-toggle-title">Prefix Cache</span>
-                                    <small class="sc-hint">Uses a larger 32k live window for providers that discount cached input.</small>
+                                    <small class="sc-hint">For normal caches that can reuse the unchanged start of a prompt, such as AB -> AC.</small>
                                 </span>
                                 <input type="radio" id="sc_memory_mode_prefix_cache" name="sc_memory_mode" value="prefix_cache" />
                             </label>
@@ -581,7 +581,7 @@
                                 <span class="sc-toggle-icon fa-solid fa-arrow-down-long"></span>
                                 <span class="sc-toggle-copy">
                                     <span class="sc-toggle-title">Append Only</span>
-                                    <small class="sc-hint">Bakes activated lore into the chat tail to preserve a stable provider-cache prefix.</small>
+                                    <small class="sc-hint">For strict caches that need every request to extend the last one: A -> AB -> ABC.</small>
                                 </span>
                                 <input type="radio" id="sc_memory_mode_append_only" name="sc_memory_mode" value="append_only" />
                             </label>
@@ -589,15 +589,15 @@
                     </div>
                     <div id="sc_memory_help_balanced" class="sc-note">
                         <span class="fa-solid fa-circle-info"></span>
-                        <small>Balanced keeps raw chat near the live window by summarizing overflow continuously. It avoids large context spikes and usually gives steadier quality when prompt caching is unavailable or weak.</small>
+                        <small>Default keeps raw chat near the 22k live window and summarizes overflow as it arrives. Use it to keep context in a useful range when prompt caching is unavailable, weak, or not worth planning around.</small>
                     </div>
                     <div id="sc_memory_help_prefix_cache" class="sc-note" style="display: none;">
                         <span class="fa-solid fa-circle-info"></span>
-                        <small>Prefix Cache lets live chat grow to a 32k budget, protects a 4k-8k tail, and flushes older chat in one commit. On cached-input providers this can be cheaper per turn, but total context is larger.</small>
+                        <small>Prefix Cache lets live chat grow to 32k. Most providers can reuse the longest unchanged prefix, so AB -> AC still reuses A. Normal lorebooks work as usual. Context is larger, and a summary flush starts a new cache prefix.</small>
                     </div>
                     <div id="sc_memory_help_append_only" class="sc-note" style="display: none;">
                         <span class="fa-solid fa-circle-info"></span>
-                        <small>Append Only stores activated <code>sc_bake</code> outlet lore between the assistant and current user. Run <code>/sc-migrate-wi</code> once to move dynamic lore entries; <code>/sc-unbake-wi</code> restores them and removes baked chat messages.</small>
+                        <small>Append Only is for strict caches where only A -> AB -> ABC gets a hit. Run <code>/sc-migrate-wi</code> once, then close and reopen the lorebook editor to see dynamic entries under <code>Outlet</code>. Group chats and depth-positioned lore are not supported. <code>/sc-unbake-wi</code> restores the old positions.</small>
                     </div>
                     <div class="sc-tuning-grid">
                         <div class="sc-tuning-group">

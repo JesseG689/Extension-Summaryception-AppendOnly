@@ -36,25 +36,26 @@ const basicHelp = ({ selector, title, short, controls, controlsText, when, risk 
 
 const MEMORY_MODE_HELP = Object.freeze({
     balanced: {
-        title: 'Balanced',
-        short: 'Summarizes overflow as it comes, so the main prompt stays smaller and steadier.',
-        controlsText: 'Uses the rolling verbatim window with continuous summaries.',
-        when: 'Use it for steadier context size or when prompt caching is unavailable or weak.',
+        title: 'Default',
+        short: 'Keeps recent chat near the useful range and summarizes overflow as it arrives.',
+        controlsText: 'Uses the 22k rolling verbatim window with continuous summaries.',
+        when: 'Use it when prompt caching is unavailable, weak, or not worth planning around.',
         risk: 'The changing prompt may be billed at full input price on every turn.',
     },
     prefix_cache: {
         title: 'Prefix Cache',
-        short: 'Uses a bigger 32k live window for providers that discount cached input.',
-        controlsText: 'Holds off flushing until the larger live window fills.',
-        when: 'Use it when your provider supports prompt caching and discounts cached tokens.',
-        risk: 'Total context grows larger, and a manual summary can reset cache savings.',
+        short: 'For normal caches that can reuse the unchanged start of a prompt, such as AB -> AC.',
+        controlsText: 'Lets live chat grow to 32k before flushing older chat in one commit.',
+        when: 'Use it when cached input is cheaper and your provider can reuse a partial prompt prefix.',
+        risk: 'The prompt is larger, and a summary flush starts a new cache prefix. Normal lorebooks need no changes.',
     },
     append_only: {
         title: 'Append Only',
-        short: 'Bakes activated World Info into an append-only chat tail for stable prompt prefixes.',
-        controlsText: 'Use /sc-migrate-wi once to move dynamic lore entries to the sc_bake outlet.',
-        when: 'Use it with providers that discount stable cached input.',
-        risk: 'Depth-positioned lore and group chats are not supported; /sc-unbake-wi restores migrated entries.',
+        short: 'For strict caches that need every request to extend the last one: A -> AB -> ABC.',
+        controlsText:
+            'Run /sc-migrate-wi once, then close and reopen the lorebook editor to see dynamic entries under Outlet.',
+        when: 'Use it when your provider requires an exact growing prefix and gives a deep cached-input discount.',
+        risk: 'Group chats and depth-positioned lore are not supported. /sc-unbake-wi restores migrated entries.',
     },
 });
 

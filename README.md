@@ -59,14 +59,42 @@ Set Fast Summarizer to your normal API or a SillyTavern Connection Profile. This
 
 Smart Deep Memory is optional. Use it when you want Layer 1+ merges to use a stronger model than the raw-chat summarizer.
 
-Then pick a memory style:
+Then pick a memory mode. The provider's cache rules decide whether the fancy options save money or merely make the prompt fatter.
 
-- Standard keeps the main prompt smaller and summarizes overflow continuously.
-- Cache Friendly keeps a larger live window and a stable memory prefix for providers with prompt caching discounts.
+### Default
 
-Cache Friendly is now split into 2 modes: 1) prefix that most providers support. Example, AB -> AC works fine. It just find biggest stable start chunk and cache. Lore book works fine here too. And restrictive append only. AB -> AC will give you 0% cache hit. Only A -> AB -> ABC works
+Use this unless you have a good reason not to. Default keeps recent chat near the 22k verbatim target and summarizes overflow as it arrives. The goal is simple: keep the model inside a useful context range without relying on provider caching.
 
-The defaults are intentionally conservative: 22k recent verbatim tokens, 10k injected memory, 200 token Layer 0 targets, and promotion after old memories stack up.
+This mode works everywhere and keeps context size fairly steady. If cached input is not much cheaper than normal input, stop here. You are done.
+
+### Prefix Cache
+
+Use Prefix Cache with the normal prompt caches offered by most providers. It lets live chat grow to 32k so more of each request can stay cached.
+
+Suppose the old prompt is `AB` and the next one is `AC`. A normal prefix cache can still reuse `A`, the longest unchanged part at the start. Your usual lorebooks work normally; no migration or special outlet is needed.
+
+Pick this mode when cached input is cheaper and your provider supports that kind of partial prefix reuse. The tradeoff is a larger prompt. A summary flush also gives the provider a new prefix to cache.
+
+### Append Only
+
+Append Only is for stricter providers. They only give a useful cache hit when the old request is the exact start of the new one: `A -> AB -> ABC`. Changing `AB` into `AC` breaks the chain.
+
+To keep that chain intact, Summaryception leaves its memory prefix alone between flushes and bakes newly activated lore into the chat tail. It is fussy, but on providers with a deep cached-input discount it is often the cheapest mode.
+
+Dynamic lorebooks need a one-time move:
+
+1. Select Append Only.
+2. Run `/sc-migrate-wi` in chat. Constant entries stay where they are; dynamic entries move to Summaryception's `sc_bake` outlet.
+3. Close the lorebook editor and open it again. SillyTavern does not refresh the list in place. The moved entries should now show `Outlet` under Position.
+4. Continue the chat. Only lore activated during new, normal generations is baked; old chat cannot be retrofitted with a tiny time machine.
+
+<img src="img/lorebook_migration.png" width="900" alt="Dynamic lorebook entries moved to the Outlet position after running sc-migrate-wi" />
+
+Run `/sc-unbake-wi` to put migrated entries back in their original positions and remove Summaryception's baked lore messages from the current chat.
+
+Append Only does not support group chats or depth-positioned lore. Anything else that rewrites the earlier prompt, such as rotating macros or dynamic injections outside the bake outlet, can still spoil the cache. Use a stable preset.
+
+The defaults are intentionally conservative: 22k recent verbatim tokens, 10k injected memory, 280-token Layer 0 targets, and promotion after old memories stack up.
 
 ## Controls you will actually use
 
@@ -117,6 +145,10 @@ OpenAI-compatible local endpoints may need SillyTavern's CORS proxy. Streaming r
 
 `/sc-clear` clears Summaryception memory for the current chat and unghosts Summaryception-owned messages.
 
+`/sc-migrate-wi` moves dynamic lorebook entries to the Append Only bake outlet. Close and reopen the lorebook editor afterward to refresh its Position column.
+
+`/sc-unbake-wi` restores those entries to their original positions and removes baked lore messages from the current chat.
+
 ## Safety notes
 
 Summaryception is designed to be non-destructive. Summaries live in chat metadata. Settings live in extension settings. Ghosting ownership is stored as stable message IDs in chat metadata, so the extension can tell its own hidden messages apart from messages you hid yourself.
@@ -125,11 +157,14 @@ If something looks off, use Clear or `/sc-clear`. That removes Summaryception's 
 
 ## Version history
 
-Switch branches in SillyTavern if you prefer an older major version.
+Older major versions are still available as branches. Open SillyTavern's extension list and use the branch button beside Summaryception.
 
-<img width="1872" height="478" alt="{CD4618DD-C2B9-45E6-9132-F57E0AAD1575}" src="https://github.com/user-attachments/assets/68db41f0-c873-4eb5-84f6-2aaebf74f235" />
+<img src="img/how_to_switch_branch.png" width="700" alt="Branch button beside Summaryception in SillyTavern's extension list" />
 
-- **v21:** New provider https://hapuppy.com/register?invite=CKxDPfUL support. Model "kimi-k3" is dirt cheap but requires special append only mode. If you keep around 40k context you will get around 10 000 messages for $20. It requires special preset without any macros, dynamic inject position! https://gist.githubusercontent.com/vadash/e1e801688c68fb468e41d760881f3e87/raw/2bef10797e76ee35e88ce26528184d1d5ef949bf/FF_APPEND_ONLY_5.1.5.json based on FF 5.0
+- **v21:** Added Append Only for strict prompt caches, including [Hapuppy's Kimi K3](https://hapuppy.com/register?invite=CKxDPfUL). Cached input is very cheap there, but the model needs a stable preset with no rotating macros or dynamic injection positions. This [modified FF5.0 preset](https://gist.githubusercontent.com/vadash/e1e801688c68fb468e41d760881f3e87/raw/2bef10797e76ee35e88ce26528184d1d5ef949bf/FF_APPEND_ONLY_5.1.5.json) is set up for Append Only. The screenshot below shows roughly 49k-58k cache reads on 56k-59k input prompts. That is the whole point of this slightly fussy mode.
+
+<img src="img/hapuppy_kimi_cache.png" width="900" alt="Kimi K3 usage showing most input tokens served from cache" />
+
 - **v20:** Stop now pauses. Modular [STATE] experiment
 - **v19:** Changed prompts so less repair needed (second LLM pass).
 - **v18:** Improved UI + tooltip.
