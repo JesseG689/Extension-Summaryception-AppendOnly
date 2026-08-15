@@ -219,6 +219,14 @@ function normalizeMemorySettings(settings) {
         settings.appendOnlySystemBlockTemplate = defaultSettings.appendOnlySystemBlockTemplate;
         changed = true;
     }
+    if (
+        typeof settings.appendOnlyEmptySystemBlockTemplate !== 'string' ||
+        !settings.appendOnlyEmptySystemBlockTemplate.trim()
+    ) {
+        settings.appendOnlyEmptySystemBlockTemplate =
+            defaultSettings.appendOnlyEmptySystemBlockTemplate;
+        changed = true;
+    }
     return changed;
 }
 
@@ -391,6 +399,9 @@ function buildEasyEffectiveSettings(settings) {
         bakedWorldInfoTokenBudget: settings.bakedWorldInfoTokenBudget,
         appendOnlySystemBlockTemplate:
             settings.appendOnlySystemBlockTemplate || defaultSettings.appendOnlySystemBlockTemplate,
+        appendOnlyEmptySystemBlockTemplate:
+            settings.appendOnlyEmptySystemBlockTemplate ||
+            defaultSettings.appendOnlyEmptySystemBlockTemplate,
         replaceKimiReasoning: settings.replaceKimiReasoning,
         kimiReasoningReplacement:
             settings.kimiReasoningReplacement ?? defaultSettings.kimiReasoningReplacement,

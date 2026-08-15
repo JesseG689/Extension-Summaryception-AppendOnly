@@ -70,6 +70,7 @@ interface ExtensionSettings {
     maxBakedWorldInfoEntries: number;
     bakedWorldInfoTokenBudget: number;
     appendOnlySystemBlockTemplate: string;
+    appendOnlyEmptySystemBlockTemplate: string;
     stateCatDateTime: boolean;
     stateCatBonds: boolean;
     stateCatChekhov: boolean;

@@ -450,11 +450,19 @@ function enforceRetentionConstraints(changedKey) {
  * @returns {void}
  */
 function bindTextareaHandlers() {
-    /** @type {Array<{ id: string, key: 'injectionTemplate' | 'appendOnlySystemBlockTemplate' | 'kimiReasoningReplacement' }>} */
+    /** @type {Array<{ id: string, key: 'injectionTemplate' | 'appendOnlySystemBlockTemplate' | 'appendOnlyEmptySystemBlockTemplate' | 'kimiReasoningReplacement' }>} */
     const textareas = [
         { id: '#sc_injection_template', key: 'injectionTemplate' },
         { id: '#sc_easy_append_only_system_block_template', key: 'appendOnlySystemBlockTemplate' },
+        {
+            id: '#sc_easy_append_only_empty_system_block_template',
+            key: 'appendOnlyEmptySystemBlockTemplate',
+        },
         { id: '#sc_append_only_system_block_template', key: 'appendOnlySystemBlockTemplate' },
+        {
+            id: '#sc_append_only_empty_system_block_template',
+            key: 'appendOnlyEmptySystemBlockTemplate',
+        },
         { id: '#sc_kimi_reasoning_replacement', key: 'kimiReasoningReplacement' },
     ];
 

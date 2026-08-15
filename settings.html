@@ -157,10 +157,17 @@
                             </div>
                             <div class="sc-row sc-prompt-secondary">
                                 <label for="sc_easy_append_only_system_block_template">
-                                    <span>System Block Template</span>
-                                    <small class="sc-hint">Uses <code>{{entry_count}}</code> and <code>{{entries}}</code>. SillyTavern macros such as <code>{{roll::1d20}}</code> run once when a new user turn is baked.</small>
+                                    <span>With Memories Template</span>
+                                    <small class="sc-hint">Uses <code>{{entry_count}}</code> and <code>{{entries}}</code>. SillyTavern macros run once when at least one new memory is baked.</small>
                                 </label>
                                 <textarea id="sc_easy_append_only_system_block_template" class="text_pole sc-textarea sc-textarea-tall" rows="8"></textarea>
+                            </div>
+                            <div class="sc-row sc-prompt-secondary">
+                                <label for="sc_easy_append_only_empty_system_block_template">
+                                    <span>Without Memories Template</span>
+                                    <small class="sc-hint">Used when no new memories fit this turn. SillyTavern macros run once when the block is baked.</small>
+                                </label>
+                                <textarea id="sc_easy_append_only_empty_system_block_template" class="text_pole sc-textarea sc-textarea-tall" rows="4"></textarea>
                             </div>
                         </div>
                         <div class="sc-tuning-group">
@@ -623,10 +630,17 @@
                             </div>
                             <div class="sc-row sc-prompt-secondary">
                                 <label for="sc_append_only_system_block_template">
-                                    <span>System Block Template</span>
-                                    <small class="sc-hint">Uses <code>{{entry_count}}</code> and <code>{{entries}}</code>. SillyTavern macros such as <code>{{roll::1d20}}</code> run once when a new user turn is baked.</small>
+                                    <span>With Memories Template</span>
+                                    <small class="sc-hint">Uses <code>{{entry_count}}</code> and <code>{{entries}}</code>. SillyTavern macros run once when at least one new memory is baked.</small>
                                 </label>
                                 <textarea id="sc_append_only_system_block_template" class="text_pole sc-textarea sc-textarea-tall" rows="8"></textarea>
+                            </div>
+                            <div class="sc-row sc-prompt-secondary">
+                                <label for="sc_append_only_empty_system_block_template">
+                                    <span>Without Memories Template</span>
+                                    <small class="sc-hint">Used when no new memories fit this turn. SillyTavern macros run once when the block is baked.</small>
+                                </label>
+                                <textarea id="sc_append_only_empty_system_block_template" class="text_pole sc-textarea sc-textarea-tall" rows="4"></textarea>
                             </div>
                         </div>
                     </div>

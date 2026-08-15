@@ -22,6 +22,7 @@
 - Store one compact narrator block for every normal user turn.
 - Store resolved macro output once before sending or persisting it.
 - Keep baked lore as background reference that cannot change the established scene.
+- Use separate configurable system-block templates for turns with selected entries and turns with zero selected entries.
 - Use the host compact narrator presentation for baked lore.
 - Exclude baked narrator messages from summarizer accounting.
 - Baked narrator messages remain visible in the chat interface.

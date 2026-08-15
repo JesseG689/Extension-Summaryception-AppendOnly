@@ -144,6 +144,22 @@ describe('getEffectiveSettings', () => {
             bakedWorldInfoTokenBudget: 7000,
         });
     });
+
+    it('preserves both Append Only templates in Easy runtime settings', () => {
+        installSummaryContext({
+            settings: {
+                uiMode: UI_MODES.EASY,
+                easyMemoryMode: 'append_only',
+                appendOnlySystemBlockTemplate: 'WITH {{entries}}',
+                appendOnlyEmptySystemBlockTemplate: 'WITHOUT',
+            },
+        });
+
+        expect(getEffectiveSettings()).toMatchObject({
+            appendOnlySystemBlockTemplate: 'WITH {{entries}}',
+            appendOnlyEmptySystemBlockTemplate: 'WITHOUT',
+        });
+    });
 });
 
 describe('getChatStore', () => {

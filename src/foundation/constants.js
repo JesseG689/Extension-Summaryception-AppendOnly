@@ -25,6 +25,8 @@ export const DEFAULT_APPEND_ONLY_SYSTEM_BLOCK_TEMPLATE = `<details>
 {{entries}}
 Rolls — User: {{roll::1d20}} | Assistant: {{roll::1d20}} | Chekhov: {{roll::1d20}}, {{roll::1d20}}, {{roll::1d20}}, {{roll::1d20}}, {{roll::1d20}}
 </details>`;
+export const DEFAULT_APPEND_ONLY_EMPTY_SYSTEM_BLOCK_TEMPLATE =
+    'Rolls — User: {{roll::1d20}} | Assistant: {{roll::1d20}} | Chekhov: {{roll::1d20}}, {{roll::1d20}}, {{roll::1d20}}, {{roll::1d20}}, {{roll::1d20}}';
 
 export const DEFAULT_KIMI_REASONING_REPLACEMENT = 'I should continue the story.';
 
@@ -130,6 +132,7 @@ export const defaultSettings = Object.freeze({
     maxBakedWorldInfoEntries: 10,
     bakedWorldInfoTokenBudget: 5000,
     appendOnlySystemBlockTemplate: DEFAULT_APPEND_ONLY_SYSTEM_BLOCK_TEMPLATE,
+    appendOnlyEmptySystemBlockTemplate: DEFAULT_APPEND_ONLY_EMPTY_SYSTEM_BLOCK_TEMPLATE,
     // ─── Modular STATE categories (stateCat*) ─────────────────────────
     // Most categories ship enabled: the extension's [CURRENT STATE] injection
     // is meant to be the sole carrier, so users should disable the equivalent

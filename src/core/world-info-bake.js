@@ -100,25 +100,30 @@ export async function injectPendingWorldInfoBake(eventData, dryRun = false) {
         }
 
         const entries = pendingEntries.filter((entry) => !wasEntryBaked(entry, chat));
-        const protectedTemplate = String(settings.appendOnlySystemBlockTemplate)
-            .replaceAll(TEMPLATE_ENTRY_COUNT, ENTRY_COUNT_SENTINEL)
-            .replaceAll(TEMPLATE_ENTRIES, ENTRIES_SENTINEL);
-        const expandedTemplate = (await expandSillyTavernMacros(protectedTemplate))
-            .replaceAll(ENTRY_COUNT_SENTINEL, TEMPLATE_ENTRY_COUNT)
-            .replaceAll(ENTRIES_SENTINEL, TEMPLATE_ENTRIES);
-
-        const selected = await selectBakeEntries({
-            entries,
-            entryLimit: settings.maxBakedWorldInfoEntries,
-            textBudget: settings.bakedWorldInfoTokenBudget,
-            prompt,
-            insertIndex: userPromptIndex,
-            template: expandedTemplate,
-        });
-        const content = renderSystemBlock(
-            expandedTemplate,
-            selected.map((entry) => entry.block),
-        );
+        let expandedTemplate = '';
+        let selected = [];
+        if (entries.length) {
+            const protectedTemplate = String(settings.appendOnlySystemBlockTemplate)
+                .replaceAll(TEMPLATE_ENTRY_COUNT, ENTRY_COUNT_SENTINEL)
+                .replaceAll(TEMPLATE_ENTRIES, ENTRIES_SENTINEL);
+            expandedTemplate = (await expandSillyTavernMacros(protectedTemplate))
+                .replaceAll(ENTRY_COUNT_SENTINEL, TEMPLATE_ENTRY_COUNT)
+                .replaceAll(ENTRIES_SENTINEL, TEMPLATE_ENTRIES);
+            selected = await selectBakeEntries({
+                entries,
+                entryLimit: settings.maxBakedWorldInfoEntries,
+                textBudget: settings.bakedWorldInfoTokenBudget,
+                prompt,
+                insertIndex: userPromptIndex,
+                template: expandedTemplate,
+            });
+        }
+        const content = selected.length
+            ? renderSystemBlock(
+                  expandedTemplate,
+                  selected.map((entry) => entry.block),
+              )
+            : await expandSillyTavernMacros(String(settings.appendOnlyEmptySystemBlockTemplate));
         if ((await countTextTokens(content)).count > settings.bakedWorldInfoTokenBudget) {
             debug('WI bake skipped: system block template exceeds the available token budget');
             return false;

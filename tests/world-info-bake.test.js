@@ -17,6 +17,8 @@ function installBakeContext({
     outlet = 'formatted lore',
     budget = 5000,
     maxEntries = 10,
+    appendOnlySystemBlockTemplate,
+    appendOnlyEmptySystemBlockTemplate,
 } = {}) {
     const runtime = installSummaryContext({
         chat: chat || [
@@ -28,6 +30,12 @@ function installBakeContext({
             memoryMode: 'append_only',
             bakedWorldInfoTokenBudget: budget,
             maxBakedWorldInfoEntries: maxEntries,
+            ...(appendOnlySystemBlockTemplate === undefined
+                ? {}
+                : { appendOnlySystemBlockTemplate }),
+            ...(appendOnlyEmptySystemBlockTemplate === undefined
+                ? {}
+                : { appendOnlyEmptySystemBlockTemplate }),
         },
         extensionPrompts: {
             customWIOutlet_sc_bake: { value: outlet },
@@ -168,8 +176,10 @@ describe('world info bake', () => {
         },
     );
 
-    it('inserts a zero-entry roll block when all lore is already baked', async () => {
-        const runtime = installBakeContext();
+    it('uses the empty template when all lore is already baked', async () => {
+        const runtime = installBakeContext({
+            appendOnlyEmptySystemBlockTemplate: 'EMPTY {{roll::1d20}}',
+        });
         const prompt = [
             { role: 'assistant', content: 'assistant reply' },
             { role: 'user', content: 'latest user' },
@@ -183,9 +193,18 @@ describe('world info bake', () => {
             { role: 'assistant', content: 'new assistant' },
             { role: 'user', content: 'next user' },
         ];
+        context.expandSillyTavernMacros.mockClear();
+        context.expandSillyTavernMacros.mockImplementation(async (template) =>
+            template.replaceAll('{{roll::1d20}}', '17'),
+        );
         activateBakeEntries();
+
         expect(await injectPendingWorldInfoBake({ chat: secondPrompt })).toBe(true);
-        expect(secondPrompt.at(-2)?.content).toContain('Injected 0 memories');
+        expect(secondPrompt.at(-2)?.content).toBe('EMPTY 17');
+        expect(runtime.chat.at(-2)?.mes).toBe('EMPTY 17');
+        expect(secondPrompt.at(-2)?.content).not.toContain('Injected 0 memories');
+        expect(secondPrompt.at(-2)?.content).not.toContain('<!--');
+        expect(context.expandSillyTavernMacros).toHaveBeenCalledTimes(1);
     });
 
     it('does not reroll or duplicate the current user turn block', async () => {
@@ -393,7 +412,9 @@ describe('world info bake', () => {
                 ],
             }),
         ).toBe(true);
-        expect(runtime.chat.at(-2)?.mes).toContain('Injected 0 memories');
+        expect(runtime.chat.at(-2)?.mes).toBe(
+            'Rolls — User: {{roll::1d20}} | Assistant: {{roll::1d20}} | Chekhov: {{roll::1d20}}, {{roll::1d20}}, {{roll::1d20}}, {{roll::1d20}}, {{roll::1d20}}',
+        );
     });
 
     it('deletes marked and legacy SC-WI blocks from the full chat without DOM deletion', async () => {
