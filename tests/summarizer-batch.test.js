@@ -4,7 +4,12 @@ const callSummarizer = vi.hoisted(() => vi.fn());
 vi.mock('../src/core/summarizer-request.js', () => ({ callSummarizer }));
 
 import { summarizeBatchFromTurns } from '../src/core/summarizer-batch.js';
-import { installSummaryContext, makeMessage, makeSummaryStore } from './test-helpers.js';
+import {
+    installBrowserRuntimeStub,
+    installSummaryContext,
+    makeMessage,
+    makeSummaryStore,
+} from './test-helpers.js';
 
 describe('Layer 0 deferred cleanup commit', () => {
     afterEach(() => {
@@ -19,6 +24,37 @@ describe('Layer 0 deferred cleanup commit', () => {
             makeMessage({ scId: 'assistant-id', mes: 'Assistant scene.' }),
         ];
     }
+
+    it('shows one start toast and a completion toast after commit', async () => {
+        const { toastr } = installBrowserRuntimeStub();
+        const chat = buildChat();
+        installSummaryContext({ chat, metadata: { summaryception: makeSummaryStore() } });
+        callSummarizer.mockResolvedValue(
+            `[NARRATIVE]\nA concise summary.\n[STATE]\nlocation: room`,
+        );
+
+        await expect(summarizeBatchFromTurns([{ index: 2 }], { showToasts: true })).resolves.toBe(
+            true,
+        );
+
+        expect(toastr.info).toHaveBeenCalledOnce();
+        expect(toastr.info).toHaveBeenCalledWith(
+            'Updating conversation memory…',
+            'Summaryception',
+            {
+                timeOut: 0,
+                extendedTimeOut: 0,
+                tapToDismiss: false,
+                progressBar: true,
+            },
+        );
+        expect(toastr.clear).toHaveBeenCalledOnce();
+        expect(toastr.success).toHaveBeenCalledWith(
+            'Conversation memory updated.',
+            'Summaryception',
+            { timeOut: 3000 },
+        );
+    });
 
     it('keeps non-conversation records until the summarizer resolves and commits', async () => {
         const chat = buildChat();
