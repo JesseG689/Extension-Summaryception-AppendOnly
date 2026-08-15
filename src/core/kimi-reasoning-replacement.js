@@ -1,16 +1,18 @@
 import { MEMORY_MODES } from '../foundation/constants.js';
 
 const MODEL_MARKERS = ['kimi', 'moonshot'];
+/** @type {WeakMap<object, Array<{ content: unknown, replacement: string }>>} */
+const assignedReplacements = new WeakMap();
 
 /**
- * Seed every assistant history message in the final Kimi request payload with
- * one stable reasoning line. Saved reasoning traces are discarded, and the
- * uniform pattern keeps the model reasoning on every assistant reply.
+ * Seed assistant history in the final Kimi request payload. Once assigned, a
+ * message keeps its seed so setting edits affect only newly appended history.
  * @param {unknown} generateData - Mutable CHAT_COMPLETION_SETTINGS_READY payload.
  * @param {Partial<ExtensionSettings>} settings - Effective Summaryception settings.
+ * @param {object} [scope] - Stable identity for the active chat.
  * @returns {number} Number of assistant messages changed.
  */
-export function replaceKimiReasoningInRequest(generateData, settings = {}) {
+export function replaceKimiReasoningInRequest(generateData, settings = {}, scope = generateData) {
     if (!isPlainObject(generateData)) {
         return 0;
     }
@@ -21,7 +23,7 @@ export function replaceKimiReasoningInRequest(generateData, settings = {}) {
     }
 
     const replacement = String(settings.kimiReasoningReplacement ?? '').trim();
-    return replacement ? replaceMessages(payload.messages, replacement) : 0;
+    return replacement ? replaceMessages(payload.messages, replacement, scope) : 0;
 }
 
 /**
@@ -45,26 +47,53 @@ function isEligibleRequest(payload, settings) {
 /**
  * @param {unknown[]} messages
  * @param {string} replacement
+ * @param {object} scope
  * @returns {number}
  */
-function replaceMessages(messages, replacement) {
-    let replaced = 0;
-    for (let index = 0; index < messages.length; index++) {
-        const message = messages[index];
-        if (!isPlainObject(message) || message.role !== 'assistant') {
-            continue;
-        }
-        // A trailing assistant message is the generation slot: a partial
-        // prefill, not history. Seeding it merges thinking into content and
-        // adds no steering, so leave it untouched and never append one.
-        if (index === messages.length - 1) {
-            continue;
-        }
-        message.reasoning_content = replacement;
-        delete message.reasoning;
-        replaced++;
+function replaceMessages(messages, replacement, scope) {
+    const history = /** @type {Record<string, unknown>[]} */ (
+        messages.filter(
+            (message, index) =>
+                isPlainObject(message) &&
+                message.role === 'assistant' &&
+                index !== messages.length - 1,
+        )
+    );
+    const prior = assignedReplacements.get(scope) || [];
+    const overlap = findSuffixPrefixOverlap(prior, history);
+    const assigned = history.map(
+        (message, index) =>
+            prior[prior.length - overlap + index] || {
+                content: message.content,
+                replacement,
+            },
+    );
+
+    for (let index = 0; index < history.length; index++) {
+        history[index].reasoning_content = assigned[index].replacement;
+        delete history[index].reasoning;
     }
-    return replaced;
+    assignedReplacements.set(scope, assigned);
+    return history.length;
+}
+
+/**
+ * @param {Array<{ content: unknown, replacement: string }>} prior
+ * @param {Record<string, unknown>[]} history
+ * @returns {number}
+ */
+function findSuffixPrefixOverlap(prior, history) {
+    for (let length = Math.min(prior.length, history.length); length > 0; length--) {
+        const offset = prior.length - length;
+        if (
+            history
+                .slice(0, length)
+                .every((message, index) => prior[offset + index].content === message.content)
+        ) {
+            return length;
+        }
+    }
+    return 0;
 }
 
 /**

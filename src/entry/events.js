@@ -253,13 +253,13 @@ export function onGenerateAfterData(generateData, _dryRun) {
 }
 
 /**
- * Replace persisted Kimi thinking in the final chat-completion payload.
+ * Replace saved Kimi thinking only in the final chat-completion payload.
  * @param {unknown} generateData - Mutable SillyTavern request payload.
  * @returns {void}
  */
 export function onChatCompletionSettingsReady(generateData) {
     try {
-        replaceKimiReasoningInRequest(generateData, getEffectiveSettings());
+        replaceKimiReasoningInRequest(generateData, getEffectiveSettings(), getChatStore());
     } catch (e) {
         warn('onChatCompletionSettingsReady error:', e);
     }
