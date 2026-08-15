@@ -55,6 +55,24 @@ describe('Layer 0 deferred cleanup commit', () => {
             { timeOut: 3000 },
         );
     });
+    it('assigns missing IDs on the live chat before capturing the source snapshot', async () => {
+        vi.spyOn(globalThis.crypto, 'randomUUID').mockReturnValue('assistant-id');
+        const chat = buildChat();
+        delete chat[2].sc_id;
+        const metadata = { summaryception: makeSummaryStore() };
+        installSummaryContext({ chat, metadata });
+        callSummarizer.mockResolvedValue(
+            `[NARRATIVE]\nA concise summary.\n[STATE]\nlocation: room`,
+        );
+
+        await expect(summarizeBatchFromTurns([{ index: 2 }])).resolves.toBe(true);
+
+        expect(metadata.summaryception.layers[0][0].sourceMessageIds).toEqual([
+            'user-id',
+            'lore-id',
+            'assistant-id',
+        ]);
+    });
 
     it('keeps non-conversation records until the summarizer resolves and commits', async () => {
         const chat = buildChat();

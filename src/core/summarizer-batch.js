@@ -1,5 +1,5 @@
 import { getContext, getChat } from '../foundation/context.js';
-import { resolveScIdsToIndices } from '../foundation/message-identity.js';
+import { ensureChatScIds, resolveScIdsToIndices } from '../foundation/message-identity.js';
 import {
     bumpSummaryStoreMutationEpoch,
     getChatStore,
@@ -45,6 +45,9 @@ export async function summarizeBatchFromTurns(
     trace('  visibleTurns:', visibleTurns?.length ?? 'UNDEFINED');
 
     const chat = getChat();
+    if (ensureChatScIds(chat)) {
+        await persistChatState({ chatSave: 'deferred' });
+    }
     const store = getChatStore();
     const summarizedBoundary = getCurrentSummarizedBoundary(chat, store);
 
