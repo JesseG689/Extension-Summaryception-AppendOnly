@@ -3,7 +3,9 @@ import { MEMORY_MODES } from '../foundation/constants.js';
 const MODEL_MARKERS = ['kimi', 'moonshot'];
 
 /**
- * Replace stored assistant reasoning in the final Kimi request payload.
+ * Seed every assistant history message in the final Kimi request payload with
+ * one stable reasoning line. Saved reasoning traces are discarded, and the
+ * uniform pattern keeps the model reasoning on every assistant reply.
  * @param {unknown} generateData - Mutable CHAT_COMPLETION_SETTINGS_READY payload.
  * @param {Partial<ExtensionSettings>} settings - Effective Summaryception settings.
  * @returns {number} Number of assistant messages changed.
@@ -47,12 +49,15 @@ function isEligibleRequest(payload, settings) {
  */
 function replaceMessages(messages, replacement) {
     let replaced = 0;
-    for (const message of messages) {
-        if (
-            !isPlainObject(message) ||
-            message.role !== 'assistant' ||
-            !hasStoredReasoning(message)
-        ) {
+    for (let index = 0; index < messages.length; index++) {
+        const message = messages[index];
+        if (!isPlainObject(message) || message.role !== 'assistant') {
+            continue;
+        }
+        // A trailing assistant message is the generation slot: a partial
+        // prefill, not history. Seeding it merges thinking into content and
+        // adds no steering, so leave it untouched and never append one.
+        if (index === messages.length - 1) {
             continue;
         }
         message.reasoning_content = replacement;
@@ -60,13 +65,6 @@ function replaceMessages(messages, replacement) {
         replaced++;
     }
     return replaced;
-}
-/**
- * @param {Record<string, unknown>} message
- * @returns {boolean}
- */
-function hasStoredReasoning(message) {
-    return typeof message.reasoning === 'string' && message.reasoning.trim().length > 0;
 }
 
 /**

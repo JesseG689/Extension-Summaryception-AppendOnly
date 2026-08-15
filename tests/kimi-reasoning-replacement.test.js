@@ -16,14 +16,15 @@ function payload(overrides = {}) {
         messages: [
             { role: 'assistant', content: 'old', reasoning: 'bad prior thought' },
             { role: 'system', content: 'lore' },
-            { role: 'assistant', content: 'new', reasoning: 'another prior thought' },
+            { role: 'assistant', content: 'mid' },
+            { role: 'user', content: 'go on' },
         ],
         ...overrides,
     };
 }
 
 describe('replaceKimiReasoningInRequest', () => {
-    it('replaces stored assistant reasoning without changing message order', () => {
+    it('seeds every assistant history message, with or without saved reasoning', () => {
         const request = payload();
 
         expect(replaceKimiReasoningInRequest(request, settings)).toBe(2);
@@ -36,10 +37,25 @@ describe('replaceKimiReasoningInRequest', () => {
             { role: 'system', content: 'lore' },
             {
                 role: 'assistant',
-                content: 'new',
+                content: 'mid',
                 reasoning_content: 'I should continue the story.',
             },
+            { role: 'user', content: 'go on' },
         ]);
+    });
+
+    it('leaves a trailing assistant prefill message untouched', () => {
+        const request = payload({
+            messages: [
+                { role: 'assistant', content: 'old', reasoning: 'bad prior thought' },
+                { role: 'user', content: 'go on' },
+                { role: 'assistant', content: 'partial prefill' },
+            ],
+        });
+
+        expect(replaceKimiReasoningInRequest(request, settings)).toBe(1);
+        expect(request.messages[0].reasoning_content).toBe('I should continue the story.');
+        expect(request.messages[2]).toEqual({ role: 'assistant', content: 'partial prefill' });
     });
 
     it.each([
@@ -67,5 +83,6 @@ describe('replaceKimiReasoningInRequest', () => {
             }),
         ).toBe(0);
         expect(request.messages[0].reasoning).toBe('bad prior thought');
+        expect(request.messages[2].reasoning_content).toBeUndefined();
     });
 });

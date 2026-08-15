@@ -37,7 +37,9 @@
 - Keep time and date macros stable when using Append-Only mode.
 - Prefix Cache uses a larger stable live window for providers with native prefix caching.
 - Kimi reasoning replacement must rewrite final request history only. Do not mutate saved chat reasoning.
-- Replace only assistant messages that already contain saved reasoning. Do not add a partial assistant tail.
+- Seed the replacement reasoning onto every assistant history message, with or without saved reasoning. Old reasoning traces are discarded, and the uniform pattern forces reasoning on every assistant reply.
+- Never append a partial assistant tail. Leave a trailing assistant prefill message untouched.
+- Enabling the feature or editing the replacement text rewrites request history once and costs one full-price request. Keep the replacement text stable afterwards.
 - Balanced mode uses the rolling verbatim window without cache-specific baking.
 
 ## Migration And Cleanup

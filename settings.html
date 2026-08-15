@@ -690,7 +690,7 @@
                                 <span class="sc-toggle-icon fa-solid fa-brain"></span>
                                 <span class="sc-toggle-copy">
                                     <span class="sc-toggle-title">Replace Kimi Reasoning</span>
-                                    <small class="sc-hint">Replace saved assistant thinking in outgoing Kimi requests with one stable line. This avoids carrying bad reasoning forward and preserves the Append Only cache shape.</small>
+                                    <small class="sc-hint">Seed every assistant history message in outgoing Kimi requests with one stable reasoning line. Old thinking traces are discarded, the model keeps reasoning every reply, and the Append Only cache shape is preserved.</small>
                                 </span>
                                 <input type="checkbox" id="sc_replace_kimi_reasoning" />
                             </label>
@@ -698,7 +698,7 @@
                                 <div class="sc-setting-row">
                                     <label for="sc_kimi_reasoning_replacement">
                                         <span>Replacement reasoning</span>
-                                        <small class="sc-hint">Sent as reasoning_content for assistant messages that contain saved reasoning. Leave blank to skip replacement.</small>
+                                        <small class="sc-hint">Sent as reasoning_content for every assistant history message. The default carries the --- delimiter contract. Leave blank to skip replacement.</small>
                                     </label>
                                     <textarea id="sc_kimi_reasoning_replacement" class="text_pole sc-textarea" rows="3"></textarea>
                                 </div>

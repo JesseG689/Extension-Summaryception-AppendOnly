@@ -6,6 +6,8 @@ Browser-only SillyTavern extension for recursive layered summarization. Summariz
 
 - Husky owns lint, format, repomix output, and version bumps. Never run formatters manually.
 - Preserve unrelated changes. Never commit, push, or sync without explicit authorization.
+- No migration shims or legacy constants. When a default changes, cut the old value.
+- New defaults load for all users. Never detect or upgrade old stored values.
 
 ## Global Boundaries
 
