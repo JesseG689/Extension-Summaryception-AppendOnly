@@ -1,4 +1,4 @@
-import { getChat } from '../foundation/context.js';
+import { getChat, isDryRunEvent } from '../foundation/context.js';
 import { debug, info, isDebugEnabled, warn } from '../foundation/logger.js';
 import { ensureChatScIds } from '../foundation/message-identity.js';
 import { getChatStore, getEffectiveSettings } from '../foundation/state.js';
@@ -28,15 +28,8 @@ let previousPromptSectionHashes = [];
  * @returns {void}
  */
 export function onChatCompletionPromptReady(...args) {
-    const [eventData, dryRun = false] = args;
-    if (
-        dryRun === true ||
-        (eventData &&
-            typeof eventData === 'object' &&
-            /** @type {{ dryRun?: unknown }} */ (eventData).dryRun === true) ||
-        !eventData ||
-        typeof eventData !== 'object'
-    ) {
+    const [eventData, dryRun] = args;
+    if (isDryRunEvent(eventData, dryRun) || !eventData || typeof eventData !== 'object') {
         return;
     }
     const chat = /** @type {{ chat?: unknown }} */ (eventData).chat;
@@ -197,8 +190,7 @@ export function bindPromptFreezeRecoveryEvents() {
  *
  */
 export function onGenerationStarted(...args) {
-    const dryRun = args[2] === true;
-    if (dryRun) {
+    if (isDryRunEvent(args[1], args[2])) {
         debug('Ignoring generation start from SillyTavern dry run.');
         return;
     }
@@ -240,11 +232,13 @@ export function onGenerationEnded() {
 
 /**
  * Rewrite final foreground prompt roles after ST assembles generation data.
- * @param {unknown} generateData - Mutable SillyTavern generation payload.
- * @param {unknown} _dryRun - Whether this is a prompt-inspection dry run.
+ * @param {unknown} dryRun - Whether this is a prompt-inspection dry run.
  * @returns {void}
  */
-export function onGenerateAfterData(generateData, _dryRun) {
+export function onGenerateAfterData(generateData, dryRun) {
+    if (isDryRunEvent(generateData, dryRun)) {
+        return;
+    }
     try {
         maskUserRoleAsAssistantInGenerateData(generateData, getEffectiveSettings());
     } catch (e) {

@@ -6,6 +6,7 @@ import {
     getChat,
     getPromptTokenCapacity,
     getWorldInfoNames,
+    isDryRunEvent,
     loadWorldInfo,
     processWorldInfoText,
     reloadCurrentChat,
@@ -60,12 +61,11 @@ export function captureWorldInfoBake(activatedEntries) {
  */
 export async function injectPendingWorldInfoBake(eventData, dryRun = false) {
     try {
-        const isDryRun = dryRun === true || getEventDryRun(eventData);
-        const settings = getEffectiveSettings();
-        if (isDryRun) {
+        if (isDryRunEvent(eventData, dryRun)) {
             debug('WI bake skipped: dry run');
             return false;
         }
+        const settings = getEffectiveSettings();
         if (generationType !== 'normal') {
             debug(`WI bake skipped: generation type is ${generationType}`);
             return false;
@@ -272,10 +272,6 @@ function toPendingEntry(entry) {
         title: typeof entry.comment === 'string' ? entry.comment.trim() : '',
         depth: Number.isFinite(Number(entry.depth)) ? Number(entry.depth) : null,
     };
-}
-
-function getEventDryRun(eventData) {
-    return Boolean(eventData && typeof eventData === 'object' && eventData.dryRun === true);
 }
 
 function getPromptChat(eventData) {

@@ -38,7 +38,7 @@ import {
 import { updateInjection } from '../features/injection.js';
 import { persistAndRefresh } from '../features/persist.js';
 import { clearSummaryceptionMemory } from '../features/memory.js';
-import { refreshMainLLMContextEstimate, updateUI, syncLLMContextPreview } from './ui.js';
+import { updateUI, syncLLMContextPreview } from './ui.js';
 import {
     clearManualProgressToast,
     confirmSlopBreaker,
@@ -874,7 +874,6 @@ function bindClickHandlers() {
     $(document).on('click', '#sc_resume_summarize, #sc_easy_resume_summarize', onResumeSummarize);
 
     $(document).on('click', '#sc_refresh_preview', () => updateUI());
-    $(document).on('click', '#sc_estimate_main_context', () => refreshMainLLMContextEstimate());
 
     $(document).on('click', '#sc_export', function () {
         const store = getChatStore();

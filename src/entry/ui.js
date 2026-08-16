@@ -4,11 +4,7 @@ import {
     UI_MODES,
     defaultSettings,
 } from '../foundation/constants.js';
-import {
-    estimateMainPromptTokens,
-    getChat,
-    isSendButtonInStopMode,
-} from '../foundation/context.js';
+import { getChat } from '../foundation/context.js';
 import { resolveScIdsToIndices } from '../foundation/message-identity.js';
 import { warn } from '../foundation/logger.js';
 import {
@@ -160,39 +156,6 @@ export function syncLLMContextPreview(s = getEffectiveSettings()) {
     setContextValueColor($l1Value, l1Total);
 }
 
-/**
- * Refresh the current SillyTavern main prompt estimate on demand.
- * @returns {Promise<void>}
- */
-export async function refreshMainLLMContextEstimate() {
-    const $value = $('#sc_llm_context_main');
-    const $button = $('#sc_estimate_main_context');
-    if (!$value.length) {
-        return;
-    }
-    if (isSendButtonInStopMode()) {
-        $value.text('Busy').removeClass(CONTEXT_COLOR_CLASSES).addClass('sc-ctx-caution');
-        return;
-    }
-
-    setMainEstimateButtonBusy($button, true);
-    $value.text('Estimating...').removeClass(CONTEXT_COLOR_CLASSES);
-    try {
-        const tokens = await estimateMainPromptTokens();
-        if (typeof tokens !== 'number' || !Number.isFinite(tokens)) {
-            $value.text('Unavailable').addClass('sc-ctx-caution');
-            return;
-        }
-        $value.text(`Actual ~${formatContextTokenCount(tokens)} tokens`);
-        setContextValueColor($value, tokens);
-    } catch (e) {
-        warn('Main prompt estimate failed:', e);
-        $value.text('Unavailable').addClass('sc-ctx-caution');
-    } finally {
-        setMainEstimateButtonBusy($button, false);
-    }
-}
-
 function readTokenSetting(value, fallback) {
     const number = Number(value);
     return Number.isFinite(number) ? number : fallback;
@@ -208,19 +171,6 @@ function formatContextTokenCount(tokens) {
 
 function setContextValueColor($element, tokens) {
     $element.removeClass(CONTEXT_COLOR_CLASSES).addClass(getContextColorClass(tokens));
-}
-
-function setMainEstimateButtonBusy($button, busy) {
-    if (!$button.length) {
-        return;
-    }
-    $button.prop('disabled', busy);
-    const $icon = $button.find('i');
-    if (busy) {
-        $icon.removeClass('fa-calculator').addClass('fa-spinner fa-spin');
-    } else {
-        $icon.removeClass('fa-spinner fa-spin').addClass('fa-calculator');
-    }
 }
 
 /**

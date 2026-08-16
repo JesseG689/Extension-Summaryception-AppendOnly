@@ -268,17 +268,18 @@ export async function processWorldInfoText(text, depth = null) {
 }
 
 /**
- * Estimate the current foreground ST prompt by running Generate in dry-run mode.
- * This is intentionally button-driven UI work because prompt assembly can be slow.
- * @param {{ timeoutMs?: number }} [options] - Optional timeout in milliseconds
- * @returns {Promise<number | null>} Token count, or null when ST cannot expose it
+ * Check both supported SillyTavern dry-run event signatures.
+ * @param {unknown} eventData
+ * @param {unknown} dryRunArg
+ * @returns {boolean}
  */
-export async function estimateMainPromptTokens(options = {}) {
-    const payload = await captureMainPromptPayload(options);
-    if (payload === null || payload === undefined) {
-        return null;
-    }
-    return await countPromptPayloadTokens(payload);
+export function isDryRunEvent(eventData, dryRunArg) {
+    return (
+        dryRunArg === true ||
+        (eventData !== null &&
+            typeof eventData === 'object' &&
+            /** @type {{ dryRun?: unknown }} */ (eventData).dryRun === true)
+    );
 }
 
 /**
@@ -417,55 +418,8 @@ function hasStopButtonMarker(element) {
     return text.includes('fa-stop') || text.includes('fa-circle-stop') || text.includes('stop');
 }
 
-async function captureMainPromptPayload({ timeoutMs = 15000 } = {}) {
-    const ctx = getContext();
-    const eventSource = ctx.eventSource;
-    const eventName = getContextEventTypes(ctx)?.GENERATE_AFTER_DATA;
-    if (typeof ctx.generate !== 'function' || !eventSource || !eventName) {
-        return null;
-    }
-
-    let promptPayload = null;
-    const handler = (generateData, dryRun) => {
-        if (dryRun) {
-            promptPayload = extractPromptPayload(generateData);
-        }
-    };
-    if (!addRuntimeListener(eventSource, eventName, handler)) {
-        return null;
-    }
-
-    const controller = createAbortController();
-    const timeout = createDryRunTimeout(timeoutMs, () => controller?.abort());
-    try {
-        await Promise.race([
-            ctx.generate.call(ctx, 'normal', controller ? { signal: controller.signal } : {}, true),
-            timeout.promise,
-        ]);
-    } catch (_e) {
-        return null;
-    } finally {
-        timeout.cleanup();
-        removeRuntimeListener(eventSource, eventName, handler);
-    }
-    return timeout.didTimeout() ? null : promptPayload;
-}
-
 function getContextEventTypes(ctx) {
     return ctx.eventTypes || ctx.event_types || null;
-}
-
-function extractPromptPayload(generateData) {
-    if (!generateData || typeof generateData !== 'object') {
-        return null;
-    }
-    if (Object.hasOwn(generateData, 'prompt')) {
-        return generateData.prompt;
-    }
-    if (Object.hasOwn(generateData, 'input')) {
-        return generateData.input;
-    }
-    return null;
 }
 
 /**
@@ -575,51 +529,6 @@ function normalizeTokenCount(count) {
         return null;
     }
     return Math.max(0, Math.ceil(number));
-}
-
-function addRuntimeListener(eventSource, eventName, handler) {
-    if (typeof eventSource.on === 'function') {
-        eventSource.on(eventName, handler);
-        return true;
-    }
-    if (typeof eventSource.addEventListener === 'function') {
-        eventSource.addEventListener(eventName, handler);
-        return true;
-    }
-    return false;
-}
-
-function removeRuntimeListener(eventSource, eventName, handler) {
-    if (typeof eventSource.removeListener === 'function') {
-        eventSource.removeListener(eventName, handler);
-    } else if (typeof eventSource.removeEventListener === 'function') {
-        eventSource.removeEventListener(eventName, handler);
-    }
-}
-
-function createAbortController() {
-    if (typeof AbortController !== 'function') {
-        return null;
-    }
-    return new AbortController();
-}
-
-function createDryRunTimeout(timeoutMs, onTimeout) {
-    let timedOut = false;
-    const ms = Math.max(1000, Number(timeoutMs) || 15000);
-    let timer = null;
-    const promise = new Promise((resolve) => {
-        timer = setTimeout(() => {
-            timedOut = true;
-            onTimeout();
-            resolve(null);
-        }, ms);
-    });
-    return {
-        promise,
-        cleanup: () => clearTimeout(timer),
-        didTimeout: () => timedOut,
-    };
 }
 
 /**

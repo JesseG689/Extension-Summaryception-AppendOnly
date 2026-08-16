@@ -46,7 +46,7 @@ const foundationMocks = vi.hoisted(() => {
         generateRaw: vi.fn(),
         callTokenCountAsync: vi.fn(),
         processWorldInfoText: vi.fn(),
-        estimateMainPromptTokens: vi.fn(),
+        isDryRunEvent: vi.fn(),
         getRequestHeaders: vi.fn(),
         getPromptManager: vi.fn(),
         getConnectionManagerRequestService: vi.fn(),
@@ -151,7 +151,9 @@ const foundationMocks = vi.hoisted(() => {
             }
             return await ctx.getTokenCountAsync(text);
         });
-        context.estimateMainPromptTokens.mockImplementation(async () => null);
+        context.isDryRunEvent.mockImplementation(
+            (eventData, dryRunArg) => dryRunArg === true || eventData?.dryRun === true,
+        );
         context.getRequestHeaders.mockImplementation(() => {
             try {
                 const fn = getContext().getRequestHeaders;

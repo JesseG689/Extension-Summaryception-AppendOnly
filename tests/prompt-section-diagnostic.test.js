@@ -1,6 +1,6 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 
-import { onChatCompletionPromptReady } from '../src/entry/events.js';
+import { onChatCompletionPromptReady, onGenerateAfterData } from '../src/entry/events.js';
 
 const { logger } = globalThis.summaryceptionFoundationMocks;
 
@@ -48,5 +48,11 @@ describe('onChatCompletionPromptReady', () => {
         onChatCompletionPromptReady({ chat: [{ role: 'system', content: 'dry' }] }, true);
         onChatCompletionPromptReady({ chat: [{ role: 'system', content: 'dry' }], dryRun: true });
         expect(logger.debug).not.toHaveBeenCalled();
+    });
+
+    it('does not mutate generation data during a dry run', () => {
+        const payload = { prompt: [{ role: 'user', content: 'dry' }] };
+        onGenerateAfterData(payload, true);
+        expect(payload).toEqual({ prompt: [{ role: 'user', content: 'dry' }] });
     });
 });
