@@ -11,11 +11,11 @@ import {
     getLayer0SummaryTokenTarget,
     isLayer0SizeGuardCall,
 } from './layer0-compression.js';
-import { buildRepairDiagnostics } from './repair-diagnostics.js';
+import { buildRepairDiagnostics, buildStructuralRepairFeedback } from './repair-diagnostics.js';
 import { compactStateSnapshotText, parseSnippet } from './summarizer-state.js';
 import { normalizeStructuralHeaderLines } from './structural-headers.js';
 import { countTextTokens } from './token-count.js';
-import { buildStructuralRepairFeedback, getSourceTokenCount } from './token-budget.js';
+import { getSourceTokenCount } from './token-budget.js';
 
 // ─── Output Cleaning ─────────────────────────────────────────────────
 

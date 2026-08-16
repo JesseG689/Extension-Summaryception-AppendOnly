@@ -67,4 +67,13 @@ describe('parseSnippet current_date_time weekday normalization', () => {
         expect(parsed.state.current_date_time).toBe('2024-12-03 06 Tue');
         expect(parsed.state.location).toBe("Vova's house");
     });
+
+    it('keeps headerless key-value lines in narrative instead of guessing state', () => {
+        const parsed = parseSnippet('[NARRATIVE]\nScene.\nlocation: rooftop\nbonds: wary');
+
+        expect(parsed).toEqual({
+            narrative: 'Scene.\nlocation: rooftop\nbonds: wary',
+            state: {},
+        });
+    });
 });

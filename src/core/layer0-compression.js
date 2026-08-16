@@ -3,7 +3,11 @@ import {
     STATE_SNAPSHOT_MAX_TOKENS,
     STATE_SNAPSHOT_SOFT_TARGET_TOKENS,
 } from '../foundation/prompt-constants.js';
-import { buildRepairDiagnostics, formatRepairDiagnostics } from './repair-diagnostics.js';
+import {
+    buildRepairDiagnostics,
+    countSentences,
+    formatRepairDiagnostics,
+} from './repair-diagnostics.js';
 import {
     insertBeforeTrigger,
     EXECUTION_TRIGGER_L0,
@@ -13,7 +17,6 @@ import {
     buildSizeConstraintsBlock,
     buildSizeTargetLine,
     computeSentenceCap,
-    countSentences,
     LAYER_HARD_MAX_RATIO,
     LAYER_MIN_RATIO,
     LAYER0_REPAIR_RATIO,
@@ -110,12 +113,11 @@ export function buildLayer0SizeRepairFeedback({ diagnostics, reason, outputToken
     return formatRepairDiagnostics(resolvedDiagnostics, {
         wrapperTag: 'summaryception_l0_repair_feedback',
         rejectedSectionTagPrefix: 'rejected_',
-    }).replace(
-        '</summaryception_l0_repair_feedback>',
-        'Aim for each section soft target, not merely its hard maximum. Rewrite only the rejected section or sections. Reproduce every preserved section exactly.\n' +
-            'Output exactly one [NARRATIVE] section followed by exactly one [STATE] section.\n' +
-            '</summaryception_l0_repair_feedback>',
-    );
+        instructions: [
+            'Aim for each section soft target, not merely its hard maximum. Rewrite only the rejected section or sections. Reproduce every preserved section exactly.',
+            'Output exactly one [NARRATIVE] section followed by exactly one [STATE] section.',
+        ],
+    });
 }
 
 /**

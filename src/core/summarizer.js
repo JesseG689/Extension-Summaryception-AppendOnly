@@ -3,17 +3,18 @@ import { abortCurrentSummarizerRequest } from './summarizer-request.js';
 import { SummarizerQueue } from './summarizer-queue.js';
 import { withUsageRun } from './summarizer-usage.js';
 import { flushPendingChatSave } from './persist-state.js';
-import { runAutoWorkerCycle, yieldWorkerCycle } from './summarizer-auto.js';
+import {
+    runCatchup as runEngineCatchup,
+    runElasticAutoCycle,
+    runSlopBreaker as runEngineSlopBreaker,
+    yieldWorkerCycle,
+} from './summarizer-engine.js';
 import {
     beginForegroundGeneration as beginCommitFreeze,
     endForegroundGeneration as endCommitFreeze,
     isPromptMutationFrozen,
     setCommitCallbacks,
 } from './summarizer-commit.js';
-import {
-    runCatchup as runManualCatchup,
-    runSlopBreaker as runManualSlopBreaker,
-} from './summarizer-manual.js';
 
 export { callSummarizer, hasActiveAbortController } from './summarizer-request.js';
 export { summarizeOneBatchFromTurns } from './summarizer-batch.js';
@@ -21,13 +22,13 @@ export { maybePromoteLayer } from './summarizer-promotion.js';
 export { recoverStalePromptFreeze, resetPromptMutationGuard } from './summarizer-commit.js';
 
 /** @typedef {'auto'} SummarizationMode */
-/** @typedef {import('./summarizer-manual.js').ManualRunOptions} ManualRunOptions */
-/** @typedef {import('./summarizer-manual.js').ManualRunOutcome} ManualRunOutcome */
+/** @typedef {import('./summarizer-engine.js').ManualRunOptions} ManualRunOptions */
+/** @typedef {import('./summarizer-engine.js').ManualRunOutcome} ManualRunOutcome */
 
 let uiUpdater = null;
 
 const summarizerQueue = new SummarizerQueue({
-    drainOneCycle: (queue) => runAutoWorkerCycle(queue, { refreshUi: refreshUI }),
+    drainOneCycle: (queue) => runElasticAutoCycle(queue, { refreshUi: refreshUI }),
     abort: abortCurrentSummarizerRequest,
     refreshUi: refreshUI,
     withUsageRun,
@@ -164,7 +165,7 @@ export async function summarizeOneBatch(visibleTurns) {
  * @returns {Promise<ManualRunOutcome>}
  */
 export async function runCatchup(visibleTurns, overflow, options = {}) {
-    return await runManualCatchup(getManualRunnerDeps(), visibleTurns, overflow, options);
+    return await runEngineCatchup(getManualRunnerDeps(), visibleTurns, overflow, options);
 }
 
 /**
@@ -173,7 +174,7 @@ export async function runCatchup(visibleTurns, overflow, options = {}) {
  * @returns {Promise<ManualRunOutcome>}
  */
 export async function runSlopBreaker(options = {}) {
-    return await runManualSlopBreaker(getManualRunnerDeps(), options);
+    return await runEngineSlopBreaker(getManualRunnerDeps(), options);
 }
 
 /**
@@ -188,7 +189,7 @@ function refreshUI() {
 
 /**
  * Build dependencies for manual runner calls.
- * @returns {import('./summarizer-manual.js').ManualRunnerDeps}
+ * @returns {import('./summarizer-engine.js').ManualRunnerDeps}
  */
 function getManualRunnerDeps() {
     return {

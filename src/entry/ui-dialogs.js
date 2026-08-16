@@ -8,7 +8,7 @@ export function showSlopBreakerNoop() {
 
 /**
  * Show the appropriate toast after a catch-up run finishes.
- * @param {import('../core/summarizer-manual.js').ManualRunOutcome} outcome
+ * @param {import('../core/summarizer-engine.js').ManualRunOutcome} outcome
  * @returns {void}
  */
 export function showCatchupOutcome(outcome) {
@@ -55,7 +55,7 @@ export function showCatchupOutcome(outcome) {
 
 /**
  * Show the Slop Breaker completion, abort, or failure toast.
- * @param {import('../core/summarizer-manual.js').ManualRunOutcome} outcome
+ * @param {import('../core/summarizer-engine.js').ManualRunOutcome} outcome
  * @returns {void}
  */
 export function showSlopBreakerOutcome(outcome) {
@@ -97,7 +97,7 @@ export function showSlopBreakerOutcome(outcome) {
 
 /**
  * Create a persistent manual run progress toast.
- * @param {import('../core/summarizer-manual.js').ManualRunProgress & { onCancel: () => void }} progress
+ * @param {import('../core/summarizer-engine.js').ManualRunProgress & { onCancel: () => void }} progress
  * @returns {unknown}
  */
 export function createManualProgressToast(progress) {
@@ -113,7 +113,7 @@ export function createManualProgressToast(progress) {
 /**
  * Update an existing manual run progress toast.
  * @param {unknown} progressToast
- * @param {import('../core/summarizer-manual.js').ManualRunProgress} progress
+ * @param {import('../core/summarizer-engine.js').ManualRunProgress} progress
  * @returns {void}
  */
 export function updateManualProgressToast(progressToast, progress) {
@@ -180,7 +180,7 @@ export function confirmSlopBreaker() {
 
 /**
  * Build manual run progress text.
- * @param {import('../core/summarizer-manual.js').ManualRunProgress} progress
+ * @param {import('../core/summarizer-engine.js').ManualRunProgress} progress
  * @returns {string}
  */
 function getProgressText(progress) {

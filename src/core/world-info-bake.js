@@ -99,33 +99,13 @@ export async function injectPendingWorldInfoBake(eventData, dryRun = false) {
             return false;
         }
 
-        const entries = pendingEntries.filter((entry) => !wasEntryBaked(entry, chat));
-        let expandedTemplate = '';
-        let selected = [];
-        if (entries.length) {
-            const protectedTemplate = String(settings.appendOnlySystemBlockTemplate)
-                .replaceAll(TEMPLATE_ENTRY_COUNT, ENTRY_COUNT_SENTINEL)
-                .replaceAll(TEMPLATE_ENTRIES, ENTRIES_SENTINEL);
-            expandedTemplate = (await expandSillyTavernMacros(protectedTemplate))
-                .replaceAll(ENTRY_COUNT_SENTINEL, TEMPLATE_ENTRY_COUNT)
-                .replaceAll(ENTRIES_SENTINEL, TEMPLATE_ENTRIES);
-            selected = await selectBakeEntries({
-                entries,
-                entryLimit: settings.maxBakedWorldInfoEntries,
-                textBudget: settings.bakedWorldInfoTokenBudget,
-                prompt,
-                insertIndex: userPromptIndex,
-                template: expandedTemplate,
-            });
-        }
-        const content = selected.length
-            ? renderSystemBlock(
-                  expandedTemplate,
-                  selected.map((entry) => entry.block),
-              )
-            : await expandSillyTavernMacros(String(settings.appendOnlyEmptySystemBlockTemplate));
-        if ((await countTextTokens(content)).count > settings.bakedWorldInfoTokenBudget) {
-            debug('WI bake skipped: system block template exceeds the available token budget');
+        const { content, selected } = await buildPendingBakeContent(
+            pendingEntries.filter((entry) => !wasEntryBaked(entry, chat)),
+            settings,
+            prompt,
+            userPromptIndex,
+        );
+        if (!content) {
             return false;
         }
 
@@ -191,12 +171,13 @@ function isConversationMessage(message) {
     if (message?.is_user === true) {
         return true;
     }
-    if (
-        !message?.mes?.trim() ||
-        message?.extra?.sc_wi ||
-        message?.name === 'SC-WI' ||
-        message?.extra?.type
-    ) {
+    const excluded = [
+        !message?.mes?.trim(),
+        Boolean(message?.extra?.sc_wi),
+        message?.name === 'SC-WI',
+        Boolean(message?.extra?.type),
+    ].some(Boolean);
+    if (excluded) {
         return false;
     }
     if (message?.is_system !== true) {
@@ -302,6 +283,38 @@ function getPromptChat(eventData) {
         return null;
     }
     return eventData.chat;
+}
+
+async function buildPendingBakeContent(entries, settings, prompt, userPromptIndex) {
+    let expandedTemplate = '';
+    let selected = [];
+    if (entries.length) {
+        const protectedTemplate = String(settings.appendOnlySystemBlockTemplate)
+            .replaceAll(TEMPLATE_ENTRY_COUNT, ENTRY_COUNT_SENTINEL)
+            .replaceAll(TEMPLATE_ENTRIES, ENTRIES_SENTINEL);
+        expandedTemplate = (await expandSillyTavernMacros(protectedTemplate))
+            .replaceAll(ENTRY_COUNT_SENTINEL, TEMPLATE_ENTRY_COUNT)
+            .replaceAll(ENTRIES_SENTINEL, TEMPLATE_ENTRIES);
+        selected = await selectBakeEntries({
+            entries,
+            entryLimit: settings.maxBakedWorldInfoEntries,
+            textBudget: settings.bakedWorldInfoTokenBudget,
+            prompt,
+            insertIndex: userPromptIndex,
+            template: expandedTemplate,
+        });
+    }
+    const content = selected.length
+        ? renderSystemBlock(
+              expandedTemplate,
+              selected.map((entry) => entry.block),
+          )
+        : await expandSillyTavernMacros(String(settings.appendOnlyEmptySystemBlockTemplate));
+    if ((await countTextTokens(content)).count > settings.bakedWorldInfoTokenBudget) {
+        debug('WI bake skipped: system block template exceeds the available token budget');
+        return { content: '', selected: [] };
+    }
+    return { content, selected };
 }
 
 function hasCurrentTurnBake(chat) {

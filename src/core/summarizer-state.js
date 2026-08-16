@@ -2,8 +2,6 @@ import { STATE_SNAPSHOT_COMPACTION_TARGET_CHARS } from '../foundation/prompt-con
 import { normalizeStructuralHeaderLines } from './structural-headers.js';
 
 const STATE_LINE_RE = /^\s*[-*]?\s*([a-zA-Z_][\w\s]*?)\s*[:=-]\s*(.+?)\s*$/;
-const STATE_HEADER_RE = /^\s*\[STATE\]\s*$/i;
-const NARRATIVE_HEADER_RE = /^\s*\[NARRATIVE\]\s*$/i;
 const ANY_SECTION_HEADER_RE = /^\s*\[[^\]]+\]\s*$/;
 const NULLIFY_VALUES = new Set(['none', 'empty', 'null', 'cleared', 'resolved', 'removed']);
 const IGNORED_STATE_KEYS = new Set(['timeline_start', 'timeline_end', 'start_time', 'end_time']);
@@ -41,7 +39,6 @@ const KEY_ALIASES = Object.freeze({
     current_datetime: 'current_date_time',
     current_time: 'current_date_time',
 });
-const CANONICAL_STATE_KEYS = new Set(Object.values(KEY_ALIASES));
 const SNAPSHOT_STATE_KEYS = Object.freeze([
     'current_date_time',
     'bonds',
@@ -78,24 +75,16 @@ export function parseSnippet(text) {
     }
 
     const lines = source.split(/\r?\n/);
-    const explicitStateStart = findHeaderLine(lines, STATE_HEADER_RE);
-    const stateStart =
-        explicitStateStart === -1 ? findImplicitStateBoundary(lines) : explicitStateStart;
+    const stateStart = lines.findIndex((line) => /^\s*\[STATE\]\s*$/i.test(line));
     if (stateStart === -1) {
         return { narrative: stripNarrativeHeader(source), state: {} };
     }
 
-    const narrativeLines = extractNarrativeLines(lines, stateStart);
-    const stateLines =
-        explicitStateStart === -1
-            ? extractImplicitStateLines(lines, stateStart)
-            : extractExplicitStateLines(lines, stateStart);
     return {
-        narrative: stripNarrativeHeader(narrativeLines.join('\n').trim()),
-        state: parseStateLines(stateLines),
+        narrative: stripNarrativeHeader(lines.slice(0, stateStart).join('\n')),
+        state: parseStateLines(extractExplicitStateLines(lines, stateStart)),
     };
 }
-
 /**
  * Serialize state to the stored [STATE] block format.
  * @param {Record<string, string>} state
@@ -210,70 +199,11 @@ function compactStateValueToLength(value, maxLength) {
     return clipped.slice(0, boundary > 0 ? boundary : maxLength).trim();
 }
 
-function findHeaderLine(lines, regex) {
-    return lines.findIndex((line) => regex.test(line));
-}
-
-function findImplicitStateBoundary(lines) {
-    let boundary = -1;
-    let matchCount = 0;
-    let recognizedCount = 0;
-
-    for (let i = lines.length - 1; i >= 0; i--) {
-        const trimmed = lines[i].trim();
-        if (!trimmed) {
-            continue;
-        }
-
-        const match = trimmed.match(STATE_LINE_RE);
-        if (!match) {
-            break;
-        }
-
-        boundary = i;
-        matchCount++;
-        if (isCanonicalStateKey(match[1])) {
-            recognizedCount++;
-        }
-    }
-
-    if (!isPlausibleImplicitStateBlock({ boundary, matchCount, recognizedCount })) {
-        return -1;
-    }
-    return boundary;
-}
-
-function isPlausibleImplicitStateBlock({ boundary, matchCount, recognizedCount }) {
-    if (boundary === -1 || matchCount === 0 || recognizedCount === 0) {
-        return false;
-    }
-    if (matchCount >= 2) {
-        return true;
-    }
-    return boundary > 0 && recognizedCount > 0;
-}
-
-function isCanonicalStateKey(rawKey) {
-    return CANONICAL_STATE_KEYS.has(normalizeKey(rawKey));
-}
-
-function extractNarrativeLines(lines, stateStart) {
-    const narrativeStart = findHeaderLine(lines, NARRATIVE_HEADER_RE);
-    if (narrativeStart !== -1 && narrativeStart < stateStart) {
-        return lines.slice(narrativeStart + 1, stateStart);
-    }
-    return lines.slice(0, stateStart);
-}
-
 function extractExplicitStateLines(lines, stateStart) {
     const end = lines.findIndex(
         (line, index) => index > stateStart && ANY_SECTION_HEADER_RE.test(line),
     );
     return lines.slice(stateStart + 1, end === -1 ? undefined : end);
-}
-
-function extractImplicitStateLines(lines, stateStart) {
-    return lines.slice(stateStart);
 }
 
 function parseStateLines(lines) {

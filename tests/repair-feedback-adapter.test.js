@@ -1,7 +1,10 @@
 import { describe, expect, it } from 'vitest';
 
-import { buildRepairDiagnostics } from '../src/core/repair-diagnostics.js';
-import { buildStructuralRepairFeedback, countSentences } from '../src/core/token-budget.js';
+import {
+    buildRepairDiagnostics,
+    buildStructuralRepairFeedback,
+    countSentences,
+} from '../src/core/repair-diagnostics.js';
 import { computeSentenceCap, computeStateLineCap } from '../src/core/token-budget.js';
 
 describe('countSentences', () => {
