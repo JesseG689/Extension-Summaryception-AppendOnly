@@ -12,11 +12,11 @@ import { estimateSummarizerUsage, recordSummarizerUsage } from './summarizer-usa
 import { countTextTokens, formatTokenCount } from './token-count.js';
 import { getLayer0SummaryTokenTarget, isLayer0SizeGuardCall } from './layer0-compression.js';
 import {
+    buildLayer0BudgetHint,
     countLayer0SourceBudget,
     getSourceTokenCount,
-} from './token-budget/source-token-counter.js';
+} from './token-budget.js';
 import { buildStateSchemaText } from '../foundation/state-categories.js';
-import { buildLayer0BudgetHint } from './token-budget/budget-hint-builder.js';
 
 /**
  * @typedef {object} SummarizerPipelineInputRequest

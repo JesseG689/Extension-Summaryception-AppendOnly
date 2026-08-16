@@ -170,6 +170,34 @@ export function getPromptDepthsByChatIndex(chat) {
 
     return depths;
 }
+/**
+ * Format a chat message as the summarizer sees it.
+ * @param {ChatMessage} message
+ * @param {string} text
+ * @returns {string}
+ */
+export function formatMessageSpeakerLine(message, text) {
+    return `${message.is_user ? 'Player' : 'Assistant'}: ${text}`;
+}
+
+/**
+ * Apply source regex scripts and count one rendered chat message.
+ * @param {ChatMessage} message
+ * @param {number | undefined} depth
+ * @param {ExtensionSettings} settings
+ * @returns {Promise<{ rawTokens: number, finalTokens: number, rawTokensEstimated: boolean, finalTokensEstimated: boolean, changed: boolean }>}
+ */
+export async function countProcessedMessage(message, depth, settings) {
+    const rawText = String(message.mes || '').trim();
+    const finalText = settings.applyRegexScripts
+        ? await applyRegexToMessage(rawText, Boolean(message.is_user), depth)
+        : rawText;
+    const rawLine = formatMessageSpeakerLine(message, rawText);
+    const finalLine = formatMessageSpeakerLine(message, finalText);
+    const tokens = await countMessageTokens(message, rawLine, finalLine);
+
+    return { ...tokens, changed: rawLine !== finalLine };
+}
 
 /**
  * @typedef {object} PassageRegexStats
@@ -246,13 +274,14 @@ async function renderPassageMessage({ message, depth, applyRegexScripts }) {
         depth,
         applyRegexScripts,
     });
-    const speaker = message.is_user ? 'Player' : 'Assistant';
+    const rawLine = formatMessageSpeakerLine(message, rawText);
+    const finalLine = formatMessageSpeakerLine(message, finalText);
 
     return {
         message,
-        rawLine: `${speaker}: ${rawText}`,
-        finalLine: `${speaker}: ${finalText}`,
-        changed: finalText !== rawText,
+        rawLine,
+        finalLine,
+        changed: rawLine !== finalLine,
     };
 }
 

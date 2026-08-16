@@ -22,7 +22,7 @@ import {
     LAYER0_REPAIR_RATIO,
     LAYER_HARD_MAX_RATIO,
     LAYER_MIN_RATIO,
-} from '../src/core/token-budget/structural-constraints.js';
+} from '../src/core/token-budget.js';
 
 function makeLayer0Prompt(triggerLine) {
     return buildUserPrompt({

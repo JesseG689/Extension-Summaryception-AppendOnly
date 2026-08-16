@@ -1,12 +1,12 @@
 import { getCurrentSummarizedBoundary } from '../foundation/state.js';
 import {
+    countProcessedMessage,
     findLastMessage,
     getPromptDepthsByChatIndex,
     isSummarizerConversationMessage,
     iterateChatRange,
 } from './chatutils.js';
-import { applyRegexToMessage } from './regex-proxy.js';
-import { addBudgetStats, countMessageTokens, createBudgetStats } from './token-count.js';
+import { addBudgetStats, createBudgetStats } from './token-count.js';
 import { buildLayer0Partitions } from './partition-planner.js';
 
 /**
@@ -155,31 +155,13 @@ async function collectLiveTokenData(chat, startIdx, settings) {
 
     for (const { index, message } of iterateChatRange(chat, startIdx, chat.length - 1)) {
         if (isSummarizerConversationMessage(message)) {
-            const counted = await countLiveMessage(message, promptDepths.get(index), settings);
+            const counted = await countProcessedMessage(message, promptDepths.get(index), settings);
             addBudgetStats(stats, counted);
             indexTokens.set(index, counted.finalTokens);
         }
     }
 
     return { stats, indexTokens };
-}
-
-async function countLiveMessage(message, depth, settings) {
-    const rawText = String(message.mes || '').trim();
-    const finalText = settings.applyRegexScripts
-        ? await applyRegexToMessage(rawText, Boolean(message.is_user), depth)
-        : rawText;
-    const rawLine = getMessageLine(message, rawText);
-    const finalLine = getMessageLine(message, finalText);
-    const tokens = await countMessageTokens(message, rawLine, finalLine);
-
-    return {
-        rawTokens: tokens.rawTokens,
-        finalTokens: tokens.finalTokens,
-        rawTokensEstimated: tokens.rawTokensEstimated,
-        finalTokensEstimated: tokens.finalTokensEstimated,
-        changed: rawLine !== finalLine,
-    };
 }
 
 function isAssistantTriggered(chat, startIdx) {
@@ -232,9 +214,4 @@ function getRangeStats(liveData, startIdx, endIdx) {
         stats.rawTokens += finalTokens;
     }
     return stats;
-}
-
-function getMessageLine(message, text) {
-    const speaker = message.is_user ? 'Player' : 'Assistant';
-    return `${speaker}: ${text}`;
 }

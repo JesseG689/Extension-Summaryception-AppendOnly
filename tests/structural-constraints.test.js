@@ -4,12 +4,12 @@ import {
     STATE_KEY_CEILING,
     computeSentenceCap,
     computeStateLineCap,
-} from '../src/core/token-budget/structural-constraints.js';
+} from '../src/core/token-budget.js';
 import {
     buildLayer0BudgetHint,
     buildSizeConstraintsBlock,
     buildSizeTargetLine,
-} from '../src/core/token-budget/budget-hint-builder.js';
+} from '../src/core/token-budget.js';
 import { getActiveLineCap } from '../src/foundation/state-categories.js';
 import { defaultSettings } from '../src/foundation/constants.js';
 

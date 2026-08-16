@@ -1,4 +1,5 @@
 import {
+    countProcessedMessage,
     getAssistantTurns,
     getPromptDepthsByChatIndex,
     isSummarizerConversationMessage,
@@ -6,8 +7,7 @@ import {
     iterateChatRange,
 } from './chatutils.js';
 import { getCurrentSummarizedBoundary } from '../foundation/state.js';
-import { applyRegexToMessage } from './regex-proxy.js';
-import { addBudgetStats, countMessageTokens, createBudgetStats } from './token-count.js';
+import { addBudgetStats, createBudgetStats } from './token-count.js';
 import { buildLayer0Partitions } from './partition-planner.js';
 
 /**
@@ -193,7 +193,7 @@ async function getTokenBudgetBoundary(chat, settings) {
             continue;
         }
 
-        const counted = await countBudgetMessage(message, promptDepths.get(index), settings);
+        const counted = await countProcessedMessage(message, promptDepths.get(index), settings);
         addBudgetStats(stats, counted);
         totalTokens += counted.finalTokens;
         if (!exceeded && totalTokens > settings.verbatimTokenBudget) {
@@ -203,32 +203,4 @@ async function getTokenBudgetBoundary(chat, settings) {
     }
 
     return { boundaryIndex, exceeded, stats };
-}
-
-async function countBudgetMessage(message, depth, settings) {
-    const rawText = String(message.mes || '').trim();
-    const finalText = await getBudgetMessageText(message, rawText, depth, settings);
-    const rawLine = getBudgetMessageLine(message, rawText);
-    const finalLine = getBudgetMessageLine(message, finalText);
-    const tokens = await countMessageTokens(message, rawLine, finalLine);
-
-    return {
-        rawTokens: tokens.rawTokens,
-        finalTokens: tokens.finalTokens,
-        rawTokensEstimated: tokens.rawTokensEstimated,
-        finalTokensEstimated: tokens.finalTokensEstimated,
-        changed: rawLine !== finalLine,
-    };
-}
-
-async function getBudgetMessageText(message, rawText, depth, settings) {
-    if (!settings.applyRegexScripts) {
-        return rawText;
-    }
-    return await applyRegexToMessage(rawText, Boolean(message.is_user), depth);
-}
-
-function getBudgetMessageLine(message, text) {
-    const speaker = message.is_user ? 'Player' : 'Assistant';
-    return `${speaker}: ${text}`;
 }

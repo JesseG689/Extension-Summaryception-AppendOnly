@@ -1,14 +1,8 @@
 import { describe, expect, it } from 'vitest';
 
 import { buildRepairDiagnostics } from '../src/core/repair-diagnostics.js';
-import {
-    buildStructuralRepairFeedback,
-    countSentences,
-} from '../src/core/token-budget/repair-feedback-adapter.js';
-import {
-    computeSentenceCap,
-    computeStateLineCap,
-} from '../src/core/token-budget/structural-constraints.js';
+import { buildStructuralRepairFeedback, countSentences } from '../src/core/token-budget.js';
+import { computeSentenceCap, computeStateLineCap } from '../src/core/token-budget.js';
 
 describe('countSentences', () => {
     it.each([

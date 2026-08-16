@@ -10,16 +10,14 @@ import {
     EXECUTION_TRIGGER_PROMO,
 } from './prompt-parts.js';
 import {
+    buildSizeConstraintsBlock,
+    buildSizeTargetLine,
     computeSentenceCap,
+    countSentences,
     LAYER_HARD_MAX_RATIO,
     LAYER_MIN_RATIO,
     LAYER0_REPAIR_RATIO,
-} from './token-budget/structural-constraints.js';
-import { countSentences } from './token-budget/repair-feedback-adapter.js';
-import {
-    buildSizeConstraintsBlock,
-    buildSizeTargetLine,
-} from './token-budget/budget-hint-builder.js';
+} from './token-budget.js';
 
 const MIN_LAYER0_TARGET_TOKENS = 80;
 const MAX_LAYER0_TARGET_TOKENS = 700;

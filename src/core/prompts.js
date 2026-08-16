@@ -15,8 +15,7 @@ import { buildRepairDiagnostics } from './repair-diagnostics.js';
 import { compactStateSnapshotText, parseSnippet } from './summarizer-state.js';
 import { normalizeStructuralHeaderLines } from './structural-headers.js';
 import { countTextTokens } from './token-count.js';
-import { getSourceTokenCount } from './token-budget/source-token-counter.js';
-import { buildStructuralRepairFeedback } from './token-budget/repair-feedback-adapter.js';
+import { buildStructuralRepairFeedback, getSourceTokenCount } from './token-budget.js';
 
 // ─── Output Cleaning ─────────────────────────────────────────────────
 
@@ -434,5 +433,4 @@ function rejectLayer0Size(diagnostics, sourceBudget = {}) {
     };
 }
 
-// Re-export so historical callers importing getSourceTokenCount from prompts.js keep working.
-export { getSourceTokenCount } from './token-budget/source-token-counter.js';
+export { getSourceTokenCount } from './token-budget.js';
