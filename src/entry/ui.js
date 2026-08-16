@@ -31,14 +31,11 @@ import {
     updateSnippetTextAt,
 } from '../features/snippet-manager.js';
 import {
-    SETTING_SLIDER_SELECTOR,
-    syncDataSettingElements,
+    syncAllSettingsToDOM,
     syncKimiReasoningReplacementControl,
     syncRoleMaskModeControl,
-    syncSliderSettingPairs,
 } from './ui-bind.js';
 
-const CONNECTION_DATA_SETTING_SELECTOR = '#summaryception_connection_settings [data-sc-setting]';
 const CONTEXT_COLOR_CLASSES = 'sc-ctx-safe sc-ctx-warn sc-ctx-caution sc-ctx-danger';
 
 /**
@@ -54,30 +51,6 @@ export async function updateUI() {
         syncSettingsInputs(s, effectiveSettings);
         syncEnabledContent(s);
 
-        $('#sc_summarizer_system_prompt_preset').val(s.summarizerSystemPromptPreset);
-        $('#sc_prompt_preset').val(s.promptPreset);
-        $('#sc_summarizer_repair_prompt_preset').val(s.summarizerRepairPromptPreset);
-        $('#sc_promotion_system_prompt_preset').val(s.promotionSystemPromptPreset);
-        $('#sc_promotion_prompt_preset').val(s.promotionPromptPreset);
-        $('#sc_promotion_repair_prompt_preset').val(s.promotionRepairPromptPreset);
-        $('#sc_debug_mode').prop('checked', s.debugMode);
-        $('#sc_trace_mode').prop('checked', s.traceMode);
-        $('#sc_prompt_input_log_mode').prop('checked', s.promptInputLogMode);
-        $('#sc_prompt_output_log_mode').prop('checked', s.promptOutputLogMode);
-        $('#sc_apply_regex_scripts').prop('checked', s.applyRegexScripts);
-        $('#sc_hide_non_text_messages').prop('checked', s.hideNonTextMessages !== false);
-        $('#sc_strip_chinese_ideographs').prop('checked', s.stripChineseIdeographs !== false);
-        $('#sc_inject_current_state').prop('checked', Boolean(s.injectCurrentState));
-        // alwaysOn category: the input is disabled in markup, so reflect it as
-        // permanently ticked rather than reading the (ignored) persisted flag.
-        $('#sc_state_cat_date_time').prop('checked', true);
-        $('#sc_state_cat_bonds').prop('checked', s.stateCatBonds);
-        $('#sc_state_cat_chekhov').prop('checked', s.stateCatChekhov);
-        $('#sc_state_cat_gm_notes').prop('checked', s.stateCatGmNotes);
-        $('#sc_state_cat_inventory').prop('checked', s.stateCatInventory);
-        $('#sc_state_cat_location').prop('checked', s.stateCatLocation);
-        $('#sc_mask_user_role_as_assistant').prop('checked', s.maskUserRoleAsAssistant);
-        $('#sc_mask_user_role_mode').val(s.maskUserRoleMode);
         syncRoleMaskModeControl(
             s.maskUserRoleAsAssistant,
             effectiveSettings.memoryMode === MEMORY_MODES.APPEND_ONLY,
@@ -85,11 +58,9 @@ export async function updateUI() {
         syncKimiReasoningReplacementControl(
             effectiveSettings.memoryMode === MEMORY_MODES.APPEND_ONLY,
         );
-        $('#sc_replace_kimi_reasoning').prop('checked', Boolean(s.replaceKimiReasoning));
-        $('#sc_kimi_reasoning_replacement').val(s.kimiReasoningReplacement);
-        $('#sc_strip_patterns').val((s.stripPatterns || []).join('\n'));
-        $('#sc_summarizer_response_length').val(s.summarizerResponseLength || 0);
-        syncConnectionInputs(s);
+        // alwaysOn category: the input is disabled in markup, so reflect it as
+        // permanently ticked rather than reading the (ignored) persisted flag.
+        $('#sc_state_cat_date_time').prop('checked', true);
 
         await renderOverview(effectiveSettings, store);
         await renderEasyOverview(effectiveSettings, store);
@@ -110,29 +81,7 @@ export async function updateUI() {
  * @returns {void}
  */
 function syncSettingsInputs(s, effectiveSettings) {
-    $('#sc_enabled').prop('checked', s.enabled);
-    $(`input[name="sc_ui_mode"][value="${s.uiMode}"]`).prop('checked', true);
-    $('#sc_easy_connection_source').val(s.connectionSource || 'default');
-    $('#sc_easy_connection_profile').val(s.connectionProfileId || '');
-    $('#sc_easy_merge_connection_source').val(s.mergeConnectionSource || 'inherit');
-    $('#sc_easy_merge_connection_profile').val(s.mergeConnectionProfileId || '');
-    $(`input[name="sc_easy_memory_mode"][value="${s.memoryMode}"]`).prop('checked', true);
-    $(`input[name="sc_memory_mode"][value="${s.memoryMode}"]`).prop('checked', true);
-    $('#sc_custom_memory_position').val(s.customMemoryPosition);
-    $('#sc_custom_memory_role').val(s.customMemoryRole);
-    $('#sc_custom_memory_depth').val(s.customMemoryDepth);
-    syncSliderSettingPairs(SETTING_SLIDER_SELECTOR, s);
-    $('#sc_injection_template').val(s.injectionTemplate);
-    $('#sc_easy_append_only_system_block_template').val(s.appendOnlySystemBlockTemplate);
-    $('#sc_append_only_system_block_template').val(s.appendOnlySystemBlockTemplate);
-    $('#sc_easy_append_only_empty_system_block_template').val(s.appendOnlyEmptySystemBlockTemplate);
-    $('#sc_append_only_empty_system_block_template').val(s.appendOnlyEmptySystemBlockTemplate);
-    $('#sc_summarizer_system_prompt').val(s.summarizerSystemPrompt);
-    $('#sc_summarizer_user_prompt').val(s.summarizerUserPrompt);
-    $('#sc_summarizer_repair_prompt').val(s.summarizerRepairPrompt);
-    $('#sc_promotion_system_prompt').val(s.promotionSystemPrompt);
-    $('#sc_promotion_user_prompt').val(s.promotionUserPrompt);
-    $('#sc_promotion_repair_prompt').val(s.promotionRepairPrompt);
+    syncAllSettingsToDOM(s);
     syncEasyPayloadSchematic(effectiveSettings);
     syncMemoryModeControls(s);
     syncLLMContextPreview(s);
@@ -292,25 +241,6 @@ function getContextColorClass(tokens) {
     return 'sc-ctx-safe';
 }
 
-/**
- * Sync connection inputs that can change outside initConnectionUI.
- * @param {ReturnType<typeof getSettings>} s
- * @returns {void}
- */
-function syncConnectionInputs(s) {
-    syncDataSettingElements(CONNECTION_DATA_SETTING_SELECTOR, s);
-    $('#sc_easy_connection_source').val(s.connectionSource || 'default');
-    $('#sc_easy_connection_profile').val(s.connectionProfileId || '');
-    $('#sc_easy_merge_connection_source').val(s.mergeConnectionSource || 'inherit');
-    $('#sc_easy_merge_connection_profile').val(s.mergeConnectionProfileId || '');
-    $('#summaryception_connection_source').val(s.connectionSource || 'default');
-    $('#summaryception_connection_profile').val(s.connectionProfileId);
-    $('#summaryception_merge_connection_source').val(s.mergeConnectionSource || 'inherit');
-    $('#summaryception_merge_connection_profile').val(s.mergeConnectionProfileId);
-    $('#summaryception_fallback_connection_source').val(s.fallbackConnectionSource || 'disabled');
-    $('#summaryception_fallback_connection_profile').val(s.fallbackConnectionProfileId);
-}
-
 function syncEasyConnectionPanels(s) {
     $('#sc_easy_profile_settings').toggle(s.connectionSource === 'profile');
     $('#sc_easy_merge_profile_settings').toggle(s.mergeConnectionSource === 'profile');
@@ -325,7 +255,6 @@ async function renderOverview(s, store) {
     $('#sc_status_snippets').text(String(metrics.totalSnippets));
     $('#sc_status_ghosted').text(String(ghostedCount));
 }
-
 async function renderEasyOverview(s, store) {
     const metrics = getLayerMetrics(store);
     const ghostedCount = getGhostedCount();

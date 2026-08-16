@@ -4,7 +4,11 @@ import { bindDataSettingElements, bindElementSetting, readString } from './ui-bi
 
 // Connection settings UI - jQuery-based DOM access consistent with the rest of the UI layer.
 
-const CONNECTION_DATA_SETTING_SELECTOR = '#summaryception_connection_settings [data-sc-setting]';
+const CONNECTION_DATA_SETTING_SELECTOR = [
+    '#sc_summarizer_response_length',
+    '#sc_merge_summarizer_response_length',
+    '#sc_fallback_summarizer_response_length',
+].join(', ');
 
 const CONNECTION_ROUTE_BINDINGS = Object.freeze([
     {
