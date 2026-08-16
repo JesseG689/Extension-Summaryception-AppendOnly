@@ -1,5 +1,3 @@
-import { getRequestHeaders } from '../foundation/context.js';
-import { warn } from '../foundation/logger.js';
 import { populateProfileDropdown } from '../core/connectionutil.js';
 import { getSettings } from '../foundation/state.js';
 import { bindDataSettingElements, bindElementSetting, readString } from './ui-bind.js';
@@ -11,18 +9,18 @@ const CONNECTION_DATA_SETTING_SELECTOR = '#summaryception_connection_settings [d
 const CONNECTION_ROUTE_BINDINGS = Object.freeze([
     {
         sourceId: 'sc_easy_connection_source',
-        sourceKey: 'easyConnectionSource',
+        sourceKey: 'connectionSource',
         sourceFallback: 'default',
         profileId: 'sc_easy_connection_profile',
-        profileKey: 'easyConnectionProfileId',
+        profileKey: 'connectionProfileId',
         updatePanels: updateEasyConnectionSubPanels,
     },
     {
         sourceId: 'sc_easy_merge_connection_source',
-        sourceKey: 'easyMergeConnectionSource',
+        sourceKey: 'mergeConnectionSource',
         sourceFallback: 'inherit',
         profileId: 'sc_easy_merge_connection_profile',
-        profileKey: 'easyMergeConnectionProfileId',
+        profileKey: 'mergeConnectionProfileId',
         updatePanels: updateEasyMergeConnectionSubPanels,
     },
     {
@@ -61,8 +59,8 @@ export function initConnectionUI() {
     bindConnectionRoutes(settings);
     bindConnectionInputs();
 
-    updateEasyConnectionSubPanels(settings.easyConnectionSource || 'default');
-    updateEasyMergeConnectionSubPanels(settings.easyMergeConnectionSource || 'inherit');
+    updateEasyConnectionSubPanels(settings.connectionSource || 'default');
+    updateEasyMergeConnectionSubPanels(settings.mergeConnectionSource || 'inherit');
     updateConnectionSubPanels(settings.connectionSource || 'default');
     updateMergeConnectionSubPanels(settings.mergeConnectionSource || 'inherit');
     updateFallbackConnectionSubPanels(settings.fallbackConnectionSource || 'disabled');
@@ -94,10 +92,7 @@ function bindConnectionProfile(settings, binding) {
     if (!$profileSelect.length) {
         return;
     }
-    const populated = populateProfileDropdown($profileSelect[0], settings[binding.profileKey]);
-    if (!populated) {
-        fetchProfilesFallback($profileSelect, settings[binding.profileKey]);
-    }
+    populateProfileDropdown($profileSelect[0], settings[binding.profileKey]);
     bindElementSetting($profileSelect, {
         eventName: 'change',
         key: binding.profileKey,
@@ -195,53 +190,5 @@ function toggleRouteSubPanels(prefix, source, { toggleResponseLength = false } =
 
     if (source === 'profile') {
         $profile.show();
-    }
-}
-
-/**
- * Fallback fetch for connection profiles from ST connection-manager API.
- * @param {object} $select jQuery-wrapped <select> element to populate
- * @param {string} currentValue
- * @returns {Promise<void>}
- */
-export async function fetchProfilesFallback($select, currentValue) {
-    try {
-        const response = await fetch('/api/connection-manager/profiles', {
-            method: 'GET',
-            headers: getRequestHeaders(),
-        });
-
-        if (!response.ok) {
-            warn('Could not fetch connection profiles from API');
-            return;
-        }
-
-        const profiles = await response.json();
-
-        $select.html('<option value="">-- Select a Profile --</option>');
-
-        if (Array.isArray(profiles)) {
-            for (const profile of profiles) {
-                $select.append(
-                    $('<option></option>')
-                        .val(profile.id || profile.name)
-                        .text(profile.name || profile.id),
-                );
-            }
-        } else if (typeof profiles === 'object') {
-            for (const [id, profile] of Object.entries(profiles)) {
-                $select.append(
-                    $('<option></option>')
-                        .val(id)
-                        .text(profile.name || id),
-                );
-            }
-        }
-
-        if (currentValue) {
-            $select.val(currentValue);
-        }
-    } catch (error) {
-        warn('Could not fetch connection profiles:', error);
     }
 }

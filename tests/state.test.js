@@ -77,16 +77,16 @@ describe('getSettings', () => {
         expect(getSettings().maskUserRoleMode).toBe(MASK_USER_ROLE_MODES.MARKER_FIRST);
     });
 
-    it('repairs an Easy setting after switching from a forbidden mask mode to Append Only', () => {
+    it('repairs a canonical setting after switching Easy UI to Append Only', () => {
         installSummaryContext({
             settings: {
                 uiMode: UI_MODES.EASY,
-                easyMemoryMode: 'balanced',
+                memoryMode: 'balanced',
                 maskUserRoleMode: MASK_USER_ROLE_MODES.KEEP_LAST_USER,
             },
         });
         const settings = getSettings();
-        settings.easyMemoryMode = 'append_only';
+        settings.memoryMode = 'append_only';
 
         expect(getSettings().maskUserRoleMode).toBe(MASK_USER_ROLE_MODES.MARKER_FIRST);
     });
@@ -112,20 +112,12 @@ describe('getEffectiveSettings', () => {
         expect(getEffectiveSettings()).toBe(getSettings());
     });
 
-    it('returns an enabled object with the derived Easy-mode values', () => {
-        // installSummaryContext defaults uiMode to 'easy' (the makeSummarySettings
-        // default), so an explicit Easy override exercises the same path.
-        installSummaryContext({ settings: { uiMode: UI_MODES.EASY } });
-        const effective = getEffectiveSettings();
-        expect(typeof effective).toBe('object');
-        expect(effective.enabled).toBe(true);
-    });
-
-    it('projects the selected Easy memory mode into runtime settings', () => {
+    it('returns the canonical settings object in Easy mode', () => {
         installSummaryContext({
-            settings: { uiMode: UI_MODES.EASY, easyMemoryMode: 'append_only' },
+            settings: { uiMode: UI_MODES.EASY, memoryMode: 'append_only' },
         });
 
+        expect(getEffectiveSettings()).toBe(getSettings());
         expect(getEffectiveSettings().memoryMode).toBe('append_only');
     });
 
@@ -133,7 +125,7 @@ describe('getEffectiveSettings', () => {
         installSummaryContext({
             settings: {
                 uiMode: UI_MODES.EASY,
-                easyMemoryMode: 'append_only',
+                memoryMode: 'append_only',
                 maxBakedWorldInfoEntries: 7,
                 bakedWorldInfoTokenBudget: 7000,
             },
@@ -149,7 +141,7 @@ describe('getEffectiveSettings', () => {
         installSummaryContext({
             settings: {
                 uiMode: UI_MODES.EASY,
-                easyMemoryMode: 'append_only',
+                memoryMode: 'append_only',
                 appendOnlySystemBlockTemplate: 'WITH {{entries}}',
                 appendOnlyEmptySystemBlockTemplate: 'WITHOUT',
             },

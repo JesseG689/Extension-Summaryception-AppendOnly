@@ -871,7 +871,7 @@ async function checkEasyContextGuard(settings, systemPrompt, prompt, metadata = 
         return { ok: true };
     }
 
-    const limit = Number(settings.easySummarizerContextTokens);
+    const limit = Number(settings.advancedModelContext);
     if (!Number.isFinite(limit) || limit <= 0) {
         return { ok: true };
     }

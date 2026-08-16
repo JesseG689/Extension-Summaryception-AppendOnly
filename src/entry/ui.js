@@ -112,11 +112,11 @@ export async function updateUI() {
 function syncSettingsInputs(s, effectiveSettings) {
     $('#sc_enabled').prop('checked', s.enabled);
     $(`input[name="sc_ui_mode"][value="${s.uiMode}"]`).prop('checked', true);
-    $('#sc_easy_connection_source').val(s.easyConnectionSource || 'default');
-    $('#sc_easy_connection_profile').val(s.easyConnectionProfileId || '');
-    $('#sc_easy_merge_connection_source').val(s.easyMergeConnectionSource || 'inherit');
-    $('#sc_easy_merge_connection_profile').val(s.easyMergeConnectionProfileId || '');
-    $(`input[name="sc_easy_memory_mode"][value="${s.easyMemoryMode}"]`).prop('checked', true);
+    $('#sc_easy_connection_source').val(s.connectionSource || 'default');
+    $('#sc_easy_connection_profile').val(s.connectionProfileId || '');
+    $('#sc_easy_merge_connection_source').val(s.mergeConnectionSource || 'inherit');
+    $('#sc_easy_merge_connection_profile').val(s.mergeConnectionProfileId || '');
+    $(`input[name="sc_easy_memory_mode"][value="${s.memoryMode}"]`).prop('checked', true);
     $(`input[name="sc_memory_mode"][value="${s.memoryMode}"]`).prop('checked', true);
     $('#sc_custom_memory_position').val(s.customMemoryPosition);
     $('#sc_custom_memory_role').val(s.customMemoryRole);
@@ -299,10 +299,10 @@ function getContextColorClass(tokens) {
  */
 function syncConnectionInputs(s) {
     syncDataSettingElements(CONNECTION_DATA_SETTING_SELECTOR, s);
-    $('#sc_easy_connection_source').val(s.easyConnectionSource || 'default');
-    $('#sc_easy_connection_profile').val(s.easyConnectionProfileId || '');
-    $('#sc_easy_merge_connection_source').val(s.easyMergeConnectionSource || 'inherit');
-    $('#sc_easy_merge_connection_profile').val(s.easyMergeConnectionProfileId || '');
+    $('#sc_easy_connection_source').val(s.connectionSource || 'default');
+    $('#sc_easy_connection_profile').val(s.connectionProfileId || '');
+    $('#sc_easy_merge_connection_source').val(s.mergeConnectionSource || 'inherit');
+    $('#sc_easy_merge_connection_profile').val(s.mergeConnectionProfileId || '');
     $('#summaryception_connection_source').val(s.connectionSource || 'default');
     $('#summaryception_connection_profile').val(s.connectionProfileId);
     $('#summaryception_merge_connection_source').val(s.mergeConnectionSource || 'inherit');
@@ -312,8 +312,8 @@ function syncConnectionInputs(s) {
 }
 
 function syncEasyConnectionPanels(s) {
-    $('#sc_easy_profile_settings').toggle(s.easyConnectionSource === 'profile');
-    $('#sc_easy_merge_profile_settings').toggle(s.easyMergeConnectionSource === 'profile');
+    $('#sc_easy_profile_settings').toggle(s.connectionSource === 'profile');
+    $('#sc_easy_merge_profile_settings').toggle(s.mergeConnectionSource === 'profile');
 }
 
 async function renderOverview(s, store) {

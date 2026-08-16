@@ -1,7 +1,6 @@
 import {
     BATCH_TRIGGER_LIMITS,
     EASY_CONTEXT_LIMITS,
-    EASY_MEMORY_LIMITS,
     L0_SOURCE_LIMITS,
     MASK_USER_ROLE_MODES,
     MEMORY_MODES,
@@ -94,13 +93,7 @@ export function getSettings() {
  */
 export function getEffectiveSettings() {
     const settings = getSettings();
-    if (settings.uiMode === UI_MODES.ADVANCED) {
-        return settings;
-    }
-    if (settings.uiMode === UI_MODES.OFF) {
-        return { ...settings, enabled: false };
-    }
-    return buildEasyEffectiveSettings(settings);
+    return settings.uiMode === UI_MODES.OFF ? { ...settings, enabled: false } : settings;
 }
 
 /**
@@ -187,16 +180,12 @@ function normalizeMemorySettings(settings) {
         settings.memoryMode = defaultSettings.memoryMode;
         changed = true;
     }
-    if (!isSettingValue(validModes, settings.easyMemoryMode)) {
-        settings.easyMemoryMode = defaultSettings.easyMemoryMode;
+    if (!isSettingValue(['default', 'profile'], settings.connectionSource)) {
+        settings.connectionSource = defaultSettings.connectionSource;
         changed = true;
     }
-    if (!isSettingValue(['default', 'profile'], settings.easyConnectionSource)) {
-        settings.easyConnectionSource = defaultSettings.easyConnectionSource;
-        changed = true;
-    }
-    if (!isSettingValue(['inherit', 'profile'], settings.easyMergeConnectionSource)) {
-        settings.easyMergeConnectionSource = defaultSettings.easyMergeConnectionSource;
+    if (!isSettingValue(['inherit', 'profile'], settings.mergeConnectionSource)) {
+        settings.mergeConnectionSource = defaultSettings.mergeConnectionSource;
         changed = true;
     }
     if (!isSettingValue(Object.values(MEMORY_POSITIONS), settings.customMemoryPosition)) {
@@ -239,9 +228,7 @@ function normalizeMemorySettings(settings) {
 function normalizeRoleMaskSettings(settings, hadMode) {
     const validMode =
         hadMode && isSettingValue(Object.values(MASK_USER_ROLE_MODES), settings.maskUserRoleMode);
-    const appendOnly =
-        (settings.uiMode === UI_MODES.EASY ? settings.easyMemoryMode : settings.memoryMode) ===
-        MEMORY_MODES.APPEND_ONLY;
+    const appendOnly = settings.memoryMode === MEMORY_MODES.APPEND_ONLY;
     const prefixBreakingMode = /** @type {string[]} */ ([
         MASK_USER_ROLE_MODES.MARKER_LAST,
         MASK_USER_ROLE_MODES.KEEP_LAST_USER,
@@ -269,23 +256,11 @@ function isSettingValue(values, value) {
  * @returns {void}
  */
 function normalizeVerbatimWindowSettings(settings) {
-    settings.easySummarizerContextTokens = clampToStep(
-        settings.easySummarizerContextTokens,
-        EASY_CONTEXT_LIMITS.MIN,
-        EASY_CONTEXT_LIMITS.MAX,
-        EASY_CONTEXT_LIMITS.STEP,
-    );
     settings.advancedModelContext = clampToStep(
         settings.advancedModelContext,
         EASY_CONTEXT_LIMITS.MIN,
         EASY_CONTEXT_LIMITS.MAX,
         EASY_CONTEXT_LIMITS.STEP,
-    );
-    settings.easyMemoryTokenBudget = clampToStep(
-        settings.easyMemoryTokenBudget,
-        EASY_MEMORY_LIMITS.MIN,
-        EASY_MEMORY_LIMITS.MAX,
-        EASY_MEMORY_LIMITS.STEP,
     );
     settings.minSummaryTurns = clampInteger(settings.minSummaryTurns, 2, 10);
     settings.maxSummaryTurns = clampInteger(settings.maxSummaryTurns, 3, 20);
@@ -373,62 +348,6 @@ function normalizeModeSettings(settings, hadMode) {
     return changed;
 }
 
-function buildEasyEffectiveSettings(settings) {
-    const effective = /** @type {ExtensionSettings} */ ({
-        ...structuredClone(defaultSettings),
-        uiMode: UI_MODES.EASY,
-        enabled: true,
-        easySummarizerContextTokens: settings.easySummarizerContextTokens,
-        easyMemoryTokenBudget: settings.easyMemoryTokenBudget,
-        easyMemoryMode: settings.easyMemoryMode,
-        easyConnectionSource: settings.easyConnectionSource,
-        easyConnectionProfileId: settings.easyConnectionProfileId,
-        easyMergeConnectionSource: settings.easyMergeConnectionSource,
-        easyMergeConnectionProfileId: settings.easyMergeConnectionProfileId,
-        // Modular STATE category toggles must take effect in Easy mode too:
-        // the spread above seeds them from defaultSettings, but an explicit key
-        // set to `undefined` would clobber that, so each falls back to its own
-        // default when the persisted settings omit it.
-        stateCatDateTime: settings.stateCatDateTime ?? defaultSettings.stateCatDateTime,
-        stateCatBonds: settings.stateCatBonds ?? defaultSettings.stateCatBonds,
-        stateCatChekhov: settings.stateCatChekhov ?? defaultSettings.stateCatChekhov,
-        stateCatGmNotes: settings.stateCatGmNotes ?? defaultSettings.stateCatGmNotes,
-        stateCatInventory: settings.stateCatInventory ?? defaultSettings.stateCatInventory,
-        stateCatLocation: settings.stateCatLocation ?? defaultSettings.stateCatLocation,
-        maxBakedWorldInfoEntries: settings.maxBakedWorldInfoEntries,
-        bakedWorldInfoTokenBudget: settings.bakedWorldInfoTokenBudget,
-        appendOnlySystemBlockTemplate:
-            settings.appendOnlySystemBlockTemplate || defaultSettings.appendOnlySystemBlockTemplate,
-        appendOnlyEmptySystemBlockTemplate:
-            settings.appendOnlyEmptySystemBlockTemplate ||
-            defaultSettings.appendOnlyEmptySystemBlockTemplate,
-        replaceKimiReasoning: settings.replaceKimiReasoning,
-        kimiReasoningReplacement:
-            settings.kimiReasoningReplacement ?? defaultSettings.kimiReasoningReplacement,
-    });
-
-    const sourceCap = deriveEasySourceCap(settings.easySummarizerContextTokens);
-    effective.maxL0SourceTokens = sourceCap;
-    effective.minSummaryBudget = sourceCap;
-    effective.memoryMode = settings.easyMemoryMode;
-    effective.verbatimTokenBudget =
-        settings.easyMemoryMode === MEMORY_MODES.PREFIX_CACHE
-            ? 32000
-            : defaultSettings.verbatimTokenBudget;
-    effective.memoryTokenBudget = settings.easyMemoryTokenBudget;
-    effective.connectionSource = settings.easyConnectionSource;
-    effective.connectionProfileId =
-        settings.easyConnectionSource === 'profile' ? settings.easyConnectionProfileId : '';
-    effective.mergeConnectionSource = settings.easyMergeConnectionSource;
-    effective.mergeConnectionProfileId =
-        settings.easyMergeConnectionSource === 'profile'
-            ? settings.easyMergeConnectionProfileId
-            : '';
-
-    copyFallbackRouteSettings(effective, settings);
-    return effective;
-}
-
 function deriveEasySourceCap(contextTokens) {
     const context = clampToStep(
         contextTokens,
@@ -458,15 +377,6 @@ export function deriveAdvancedEngineTuning(settings) {
         700,
         10,
     );
-}
-
-function copyFallbackRouteSettings(effective, settings) {
-    if (settings.fallbackConnectionSource === 'disabled') {
-        return;
-    }
-    effective.fallbackConnectionSource = settings.fallbackConnectionSource;
-    effective.fallbackSummarizerResponseLength = settings.fallbackSummarizerResponseLength;
-    effective.fallbackConnectionProfileId = settings.fallbackConnectionProfileId;
 }
 
 function normalizePromptSettings(settings) {

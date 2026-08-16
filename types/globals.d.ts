@@ -55,13 +55,6 @@ interface ExtensionSettings {
     autoPaused: boolean;
     configMode: string;
     uiMode: string;
-    easySummarizerContextTokens: number;
-    easyMemoryTokenBudget: number;
-    easyMemoryMode: string;
-    easyConnectionSource: string;
-    easyConnectionProfileId: string;
-    easyMergeConnectionSource: string;
-    easyMergeConnectionProfileId: string;
     memoryMode: string;
     customMemoryPosition: string;
     customMemoryRole: string;

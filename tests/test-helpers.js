@@ -65,13 +65,6 @@ export function makeSummarySettings(overrides = {}) {
     return {
         enabled: true,
         uiMode: 'advanced',
-        easySummarizerContextTokens: 16000,
-        easyMemoryTokenBudget: 10000,
-        easyMemoryMode: 'balanced',
-        easyConnectionSource: 'default',
-        easyConnectionProfileId: '',
-        easyMergeConnectionSource: 'inherit',
-        easyMergeConnectionProfileId: '',
         memoryMode: 'balanced',
         customMemoryPosition: 'in_prompt',
         customMemoryRole: 'system',

@@ -268,11 +268,11 @@ function bindEasyMemoryModeHandler() {
         if (mode === MEMORY_MODES.APPEND_ONLY) {
             s.maskUserRoleMode = MASK_USER_ROLE_MODES.MARKER_FIRST;
         }
-        if (s.easyMemoryMode === mode) {
+        if (s.memoryMode === mode) {
             return;
         }
 
-        s.easyMemoryMode = mode;
+        s.memoryMode = mode;
         saveSettings();
         updateInjection();
         updateUI();
@@ -315,25 +315,25 @@ function bindCustomPlacementHandlers() {
         {
             eventName: 'change',
             selector: '#sc_easy_connection_source',
-            key: 'easyConnectionSource',
+            key: 'connectionSource',
             read: readString,
         },
         {
             eventName: 'change',
             selector: '#sc_easy_connection_profile',
-            key: 'easyConnectionProfileId',
+            key: 'connectionProfileId',
             read: readString,
         },
         {
             eventName: 'change',
             selector: '#sc_easy_merge_connection_source',
-            key: 'easyMergeConnectionSource',
+            key: 'mergeConnectionSource',
             read: readString,
         },
         {
             eventName: 'change',
             selector: '#sc_easy_merge_connection_profile',
-            key: 'easyMergeConnectionProfileId',
+            key: 'mergeConnectionProfileId',
             read: readString,
         },
         {

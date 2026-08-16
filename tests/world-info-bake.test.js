@@ -222,7 +222,7 @@ describe('world info bake', () => {
         expect(runtime.chat.filter((message) => message.extra?.sc_wi)).toHaveLength(1);
     });
 
-    it('scopes duplicate identities by lorebook and reads legacy UID markers', async () => {
+    it('scopes duplicate identities by lorebook and ignores legacy UID markers', async () => {
         const runtime = installBakeContext();
         runtime.chat.unshift(
             {
@@ -241,7 +241,7 @@ describe('world info bake', () => {
                 world: 'book',
                 order: 20,
                 outletName: 'sc_bake',
-                content: 'legacy duplicate',
+                content: 'legacy marker ignored',
             },
         ]);
         const prompt = [
@@ -250,7 +250,8 @@ describe('world info bake', () => {
         ];
 
         expect(await injectPendingWorldInfoBake({ chat: prompt })).toBe(true);
-        expect(prompt.at(-2)?.content).toContain('<wi>\nnew book lore\n</wi>');
+        expect(prompt.at(-2)?.content).toContain('new book lore');
+        expect(prompt.at(-2)?.content).toContain('legacy marker ignored');
     });
 
     it('applies World Info regex processing to each entry before wrapping', async () => {

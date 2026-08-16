@@ -338,12 +338,12 @@ function findLastUserPromptIndex(prompt) {
 function wasEntryBaked(entry, chat) {
     return chat.some((message) => {
         const marker = message?.extra?.sc_wi;
-        if (Array.isArray(marker?.entries)) {
-            return marker.entries.some(
-                (baked) => baked?.uid === entry.uid && baked?.world === entry.world,
-            );
+        if (!Array.isArray(marker?.entries)) {
+            return false;
         }
-        return Array.isArray(marker?.uids) && marker.uids.includes(entry.uid);
+        return marker.entries.some(
+            (baked) => baked?.uid === entry.uid && baked?.world === entry.world,
+        );
     });
 }
 

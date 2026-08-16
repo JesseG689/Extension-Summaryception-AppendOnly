@@ -16,5 +16,5 @@
 
 - Per-chat summaries live in chat metadata. They survive with the chat, not with the extension.
 - Global configuration lives in extension settings.
-- Effective settings apply the Off, Easy, or Advanced operating mode over raw settings. Runtime code reads effective settings. Persistence and UI forms read raw settings.
+- Easy and Advanced views edit the same settings. Effective settings only disable runtime behavior when the extension is Off.
 - Any snippet or layer edit must bump the store mutation epoch, then save. Consumers cache on the epoch and will show stale data without the bump.

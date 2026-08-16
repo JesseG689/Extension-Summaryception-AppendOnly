@@ -117,13 +117,6 @@ export const defaultSettings = Object.freeze({
     // shown even when the extension is off so config stays editable.
     configMode: UI_MODES.EASY,
     uiMode: UI_MODES.EASY,
-    easySummarizerContextTokens: 16000,
-    easyMemoryTokenBudget: 10000,
-    easyMemoryMode: MEMORY_MODES.BALANCED,
-    easyConnectionSource: 'default', // 'default' | 'profile'
-    easyConnectionProfileId: '',
-    easyMergeConnectionSource: 'inherit', // 'inherit' | 'profile'
-    easyMergeConnectionProfileId: '',
     memoryMode: MEMORY_MODES.BALANCED,
     customMemoryPosition: MEMORY_POSITIONS.IN_PROMPT,
     customMemoryRole: MEMORY_ROLES.SYSTEM,
