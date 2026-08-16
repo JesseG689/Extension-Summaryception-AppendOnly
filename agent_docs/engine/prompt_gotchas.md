@@ -1,33 +1,14 @@
-# Prompt Assembly
+# Prompt Gotchas
 
-## Section Order
-
-- Prompts assemble in a fixed order: input, output schema, task rules, critical rules, execution trigger.
-- The bare imperative trigger must be the final line of the prompt.
-- Dynamic blocks, including the source budget and repair feedback, insert above the trigger. Never append them after it.
-
-## Budget Hints
-
-- Budget hints speak only in units a model can count, such as sentences and lines. Never express a hint in tokens or percentages.
-- Sentence caps derive from the layer and the token target.
-
-## Schema
-
-- The state schema placeholder resolves at build time from the enabled state categories. Editing the category list changes the prompt.
-- Token caps never appear in category definitions.
-
-## Output Policy
-
-- An ideograph output filter strips unwanted script from summaries.
-- Configurable strip patterns run over model output before parsing.
-
-## Prompt Diagnostics
-
-- Prompt-ready dry runs can mark either the event payload or a separate argument. Ignore both forms before updating comparison state.
-- Report one contiguous-prefix verdict per real request. Per-section logs obscure duplicate events and make cache failures difficult to identify.
-- A broken-prefix verdict includes the complete first changed block in a collapsed, copyable JSON payload.
-- SillyTavern can omit the system flag on normal assistant messages. Treat only an explicit true value as a system message.
-
-## Append-Only Prompts
-
-- For baked World Info assembly, limits, and regeneration rules, read `append_only_gotchas.md`.
+- Prompt sections have a fixed order: input, schema, task rules, critical rules, trigger.
+- The bare imperative trigger is the final prompt line.
+- Insert dynamic budget and repair blocks above the trigger.
+- Budget hints use countable units such as sentences and lines.
+- State schema content follows enabled state categories.
+- Keep token limits out of state category definitions.
+- Strip configured output patterns before parsing.
+- Dry runs may mark the payload or a separate argument.
+- Ignore both dry-run forms before updating comparison state.
+- Report one contiguous-prefix verdict for each real request.
+- A broken-prefix report includes the complete first changed block.
+- Treat only an explicit system flag as a system message.
