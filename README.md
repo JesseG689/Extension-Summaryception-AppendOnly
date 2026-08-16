@@ -207,6 +207,22 @@ v15, need to redo it
 
 <img src="img/kimi_connection_profile_2.png" width="900" alt="Kimi K3 setup #2" />
 
+## Troubleshooting
+
+### Ext refuses to update
+
+Remove and install it again
+
+### Ext stopped working
+
+v20 -> v21 -> v22 was rough. Some settings could be reset to default or some other bugs. One of examples is instead of indexes, we now assign each message unique ID.
+
+It would be best if you "clear" memories (ui->tools). best way to update extention is when you start new RP. If you want stable work stick with named "vXX" branches.
+
+### Append only mode debug
+
+Press F12 and watch log. It has useful messages like showing when preset breaks. Good to hunt those pesky macros/dynamic injects that break append only mode.
+
 ## License
 
 AGPL-3.0. See [LICENSE](LICENSE).
