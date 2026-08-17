@@ -68,9 +68,10 @@ export function registerSlashCommands() {
                 name: 'sc-migrate-wi',
                 callback: async () => {
                     const result = await migrateWorldInfoToBakeOutlet();
-                    return `Moved ${result.entries} dynamic entries in ${result.books} lorebooks to sc_bake.`;
+                    return `Cloned ${result.books} lorebooks and migrated ${result.entries} dynamic entries to sc_bake.`;
                 },
-                helpString: 'Move dynamic World Info entries to the Summaryception bake outlet',
+                helpString:
+                    'Clone lorebooks and move their dynamic World Info entries to the Summaryception bake outlet',
             }),
         );
 

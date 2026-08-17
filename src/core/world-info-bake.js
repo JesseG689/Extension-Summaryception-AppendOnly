@@ -26,6 +26,7 @@ const TEMPLATE_ENTRIES = '{{entries}}';
 
 const WORLD_INFO_OUTLET_POSITION = 7;
 const MIGRATION_MARKER = 'summaryceptionBake';
+const SC_CLONE_PREFIX = 'SC - ';
 let pendingEntries = [];
 let generationType = 'normal';
 
@@ -127,23 +128,63 @@ export async function injectPendingWorldInfoBake(eventData, dryRun = false) {
 }
 
 /**
- * Move dynamic entries in all available lorebooks to the bake outlet.
+ * Clone every world info book not already prefixed with the SC clone marker, then migrate the
+ * clone's dynamic entries to the bake outlet. Source books are never mutated, saved, or
+ * reassociated. Existing clones are skipped so repeated invocations are idempotent.
  * @returns {Promise<{ books: number, entries: number }>}
  */
 export async function migrateWorldInfoToBakeOutlet() {
-    return await rewriteWorldInfoEntries((entry) => {
-        if (entry.constant || entry.position === WORLD_INFO_OUTLET_POSITION) {
-            return false;
+    const names = getWorldInfoNames();
+    const existing = new Set(names);
+    let books = 0;
+    let entries = 0;
+    for (const name of names) {
+        if (name.startsWith(SC_CLONE_PREFIX)) {
+            continue;
         }
-        const extensions = getEntryExtensions(entry);
-        extensions[MIGRATION_MARKER] = {
-            position: entry.position,
-            outletName: entry.outletName,
-        };
-        entry.position = WORLD_INFO_OUTLET_POSITION;
-        entry.outletName = BAKE_OUTLET_NAME;
-        return true;
-    });
+        const cloneName = `${SC_CLONE_PREFIX}${name}`;
+        if (existing.has(cloneName)) {
+            continue;
+        }
+        const data = await loadWorldInfo(name);
+        if (!data || !isRecord(data.entries)) {
+            continue;
+        }
+        let changed = 0;
+        for (const entry of Object.values(/** @type {Record<string, unknown>} */ (data.entries))) {
+            if (
+                isRecord(entry) &&
+                migrateEntryToBakeOutlet(/** @type {Record<string, unknown>} */ (entry))
+            ) {
+                changed++;
+            }
+        }
+        if (changed > 0 && (await saveWorldInfo(cloneName, data))) {
+            books++;
+            entries += changed;
+        }
+    }
+    return { books, entries };
+}
+
+/**
+ * Move one dynamic entry to the bake outlet and record its original position for restoration.
+ * Constant and already-outlet entries are left unchanged.
+ * @param {Record<string, unknown>} entry
+ * @returns {boolean} true when the entry was modified
+ */
+function migrateEntryToBakeOutlet(entry) {
+    if (entry.constant || entry.position === WORLD_INFO_OUTLET_POSITION) {
+        return false;
+    }
+    const extensions = getEntryExtensions(entry);
+    extensions[MIGRATION_MARKER] = {
+        position: entry.position,
+        outletName: entry.outletName,
+    };
+    entry.position = WORLD_INFO_OUTLET_POSITION;
+    entry.outletName = BAKE_OUTLET_NAME;
+    return true;
 }
 
 /**

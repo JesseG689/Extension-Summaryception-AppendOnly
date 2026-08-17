@@ -81,12 +81,13 @@ Append Only is for stricter providers. They only give a useful cache hit when th
 
 To keep that chain intact, Summaryception leaves its memory prefix alone between flushes and bakes newly activated lore into the chat tail. It is fussy, but on providers with a deep cached-input discount it is often the cheapest mode.
 
-Dynamic lorebooks need a one-time move:
+Dynamic lorebooks need a one-time clone:
 
 1. Select Append Only.
-2. Run `/sc-migrate-wi` in chat. Constant entries stay where they are; dynamic entries move to Summaryception's `sc_bake` outlet.
-3. Close the lorebook editor and open it again. SillyTavern does not refresh the list in place. The moved entries should now show `Outlet` under Position.
-4. Continue the chat. Only lore activated during new, normal generations is baked; old chat cannot be retrofitted with a tiny time machine.
+2. Run `/sc-migrate-wi` in chat. Summaryception creates an `SC - <original>` copy of each lorebook and moves only the copy's dynamic entries to the `sc_bake` outlet. Originals stay unchanged, and existing `SC - ` clones are never overwritten.
+3. Close the lorebook editor and open it again. SillyTavern does not refresh the list in place. The new clone shows up alongside the original.
+4. Select the clone wherever you want Summaryception baking. You can switch back to the original at any time to roll it off.
+5. Continue the chat. Only lore activated during new, normal generations is baked; old chat cannot be retrofitted with a tiny time machine.
 
 <img src="img/lorebook_migration.png" width="900" alt="Dynamic lorebook entries moved to the Outlet position after running sc-migrate-wi" />
 
@@ -142,8 +143,7 @@ OpenAI-compatible local endpoints may need SillyTavern's CORS proxy. Streaming r
 `/sc-preview` prints the memory block that would be injected.
 
 `/sc-clear` clears Summaryception memory for the current chat and unghosts Summaryception-owned messages.
-
-`/sc-migrate-wi` moves dynamic lorebook entries to the Append Only bake outlet. Close and reopen the lorebook editor afterward to refresh its Position column.
+`/sc-migrate-wi` clones each lorebook as `SC - <original>`, moves the clone's dynamic entries to the Append Only bake outlet, and leaves the original unchanged. Close and reopen the lorebook editor afterward to see the new clone.
 
 `/sc-unbake-wi` restores those entries to their original positions and removes baked lore messages from the current chat.
 

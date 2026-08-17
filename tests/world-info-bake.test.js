@@ -468,13 +468,14 @@ describe('world info bake', () => {
 });
 
 describe('world info migration', () => {
-    it('moves dynamic entries and restores their exact positions during unbake', async () => {
+    it('clones books, preserves originals, and restores exact positions during unbake', async () => {
         const chat = [
             makeMessage({ mes: 'assistant reply' }),
             { ...makeMessage({ mes: 'baked lore' }), extra: { sc_wi: { version: 1 } } },
             makeMessage({ isUser: true, mes: 'latest user' }),
         ];
         installBakeContext({ chat });
+
         const book = {
             entries: {
                 1: { uid: 1, constant: false, position: 0 },
@@ -483,28 +484,95 @@ describe('world info migration', () => {
                 4: { uid: 4, constant: false, position: 7, outletName: 'existing' },
             },
         };
-        context.getWorldInfoNames.mockReturnValue(['book', 'missing']);
-        context.loadWorldInfo.mockImplementation(async (name) => (name === 'book' ? book : null));
-        context.saveWorldInfo.mockResolvedValue(true);
+        const existingClone = {
+            entries: {
+                1: { uid: 1, constant: false, position: 7, outletName: 'sc_bake' },
+            },
+        };
+        const bookFixture = structuredClone(book);
+        const existingCloneFixture = structuredClone(existingClone);
+
+        const books = {
+            book,
+            existing: { entries: { 1: { uid: 1, constant: false, position: 0 } } },
+            'SC - existing': existingClone,
+        };
+        const names = ['book', 'existing', 'SC - existing', 'missing'];
+        context.getWorldInfoNames.mockImplementation(() => [...names]);
+        context.loadWorldInfo.mockImplementation(async (name) => {
+            const source = books[name];
+            return source ? structuredClone(source) : null;
+        });
+        context.saveWorldInfo.mockImplementation(async (name) => {
+            if (!names.includes(name)) {
+                names.push(name);
+            }
+            return true;
+        });
 
         await expect(migrateWorldInfoToBakeOutlet()).resolves.toEqual({ books: 1, entries: 2 });
-        expect(book.entries[1]).toMatchObject({
+
+        // Source books are never mutated.
+        expect(book).toEqual(bookFixture);
+        expect(books.existing).toEqual({
+            entries: { 1: { uid: 1, constant: false, position: 0 } },
+        });
+        expect(existingClone).toEqual(existingCloneFixture);
+
+        // Only the newly derived clone is saved under the SC - <original> name.
+        expect(context.saveWorldInfo).toHaveBeenCalledWith('SC - book', expect.any(Object));
+        expect(context.saveWorldInfo).toHaveBeenCalledTimes(1);
+        expect(context.saveWorldInfo).not.toHaveBeenCalledWith('SC - missing', expect.any(Object));
+        // The source book is loaded to build the clone; the pre-existing clone is never loaded.
+        expect(context.loadWorldInfo).toHaveBeenCalledWith('book');
+        expect(context.loadWorldInfo).not.toHaveBeenCalledWith('SC - existing');
+        // The existing source is skipped because its clone already exists, so it is never loaded.
+        expect(context.loadWorldInfo).not.toHaveBeenCalledWith('existing');
+
+        // Inspect the saved clone data for the source book.
+        const savedBookCall = context.saveWorldInfo.mock.calls.find(
+            (call) => call[0] === 'SC - book',
+        );
+        const savedBook = /** @type {{ entries: Record<string, object> }} */ (savedBookCall[1]);
+        expect(savedBook.entries[1]).toMatchObject({
             position: 7,
             outletName: 'sc_bake',
             extensions: { summaryceptionBake: { position: 0 } },
         });
-        expect(book.entries[2].extensions.summaryceptionBake).toEqual({
+        expect(savedBook.entries[2].extensions.summaryceptionBake).toEqual({
             position: 4,
             outletName: 'other',
         });
-        expect(book.entries[3].position).toBe(0);
-        expect(book.entries[4].outletName).toBe('existing');
+        expect(savedBook.entries[3].position).toBe(0);
+        expect(savedBook.entries[4].outletName).toBe('existing');
 
+        // Rerunning the command performs no additional saves: every source now has a clone.
+        context.saveWorldInfo.mockClear();
+        await expect(migrateWorldInfoToBakeOutlet()).resolves.toEqual({ books: 0, entries: 0 });
+        expect(context.saveWorldInfo).not.toHaveBeenCalled();
+
+        // Restore the migrated clone entries and remove baked messages.
+        context.loadWorldInfo.mockImplementation(async (name) => {
+            if (name === 'SC - book') {
+                return structuredClone(savedBook);
+            }
+            const source = books[name];
+            return source ? structuredClone(source) : null;
+        });
         await expect(unbakeWorldInfo()).resolves.toEqual({ books: 1, entries: 2, messages: 1 });
-        expect(book.entries[1].position).toBe(0);
-        expect(book.entries[1]).not.toHaveProperty('outletName');
-        expect(book.entries[2]).toMatchObject({ position: 4, outletName: 'other' });
-        expect(book.entries[1].extensions).not.toHaveProperty('summaryceptionBake');
+
+        const restoredCall = context.saveWorldInfo.mock.calls.find(
+            (call) => call[0] === 'SC - book',
+        );
+        const restoredBook = /** @type {{ entries: Record<string, object> }} */ (restoredCall[1]);
+        expect(restoredBook.entries[1].position).toBe(0);
+        expect(restoredBook.entries[1]).not.toHaveProperty('outletName');
+        expect(restoredBook.entries[2]).toMatchObject({ position: 4, outletName: 'other' });
+        expect(restoredBook.entries[1].extensions).not.toHaveProperty('summaryceptionBake');
         expect(chat.map((message) => message.mes)).toEqual(['assistant reply', 'latest user']);
+
+        // Originals remain pristine throughout unbake.
+        expect(book).toEqual(bookFixture);
+        expect(existingClone).toEqual(existingCloneFixture);
     });
 });

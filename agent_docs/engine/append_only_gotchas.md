@@ -7,6 +7,8 @@
 - Keep the previous assistant reply, baked lore, and current user message visible.
 - Dynamic lore uses the dedicated bake outlet.
 - Constant lore stays in its normal prompt position.
+- Migration clones each lorebook as SC - <original>. Source books are never mutated.
+- Existing clones are never overwritten. A second migration returns no changes.
 - Apply host lore processing before storing an entry.
 - Store each baked entry as a complete lore block.
 - Track entries by lorebook and entry identity.

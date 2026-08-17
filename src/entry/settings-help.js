@@ -53,7 +53,7 @@ const MEMORY_MODE_HELP = Object.freeze({
         title: 'Append Only',
         short: 'For strict caches that need every request to extend the last one: A -> AB -> ABC.',
         controlsText:
-            'Run /sc-migrate-wi once, then close and reopen the lorebook editor to see dynamic entries under Outlet.',
+            'Run /sc-migrate-wi once to clone each lorebook as SC - <original>; originals stay unchanged. Select the clone, close and reopen the lorebook editor to see its dynamic entries under Outlet.',
         when: 'Use it when your provider requires an exact growing prefix and gives a deep cached-input discount.',
         risk: 'Group chats and depth-positioned lore are not supported. /sc-unbake-wi restores migrated entries.',
     },
