@@ -199,7 +199,6 @@ function bindToggleHandlers() {
                     getEffectiveSettings().memoryMode === MEMORY_MODES.APPEND_ONLY,
                 ),
         },
-        { selector: '#sc_replace_kimi_reasoning', key: 'replaceKimiReasoning' },
         { selector: '#sc_state_cat_bonds', key: 'stateCatBonds' },
         { selector: '#sc_state_cat_chekhov', key: 'stateCatChekhov' },
         { selector: '#sc_state_cat_gm_notes', key: 'stateCatGmNotes' },
@@ -450,7 +449,7 @@ function enforceRetentionConstraints(changedKey) {
  * @returns {void}
  */
 function bindTextareaHandlers() {
-    /** @type {Array<{ id: string, key: 'injectionTemplate' | 'appendOnlySystemBlockTemplate' | 'appendOnlyEmptySystemBlockTemplate' | 'kimiReasoningReplacement' }>} */
+    /** @type {Array<{ id: string, key: 'injectionTemplate' | 'appendOnlySystemBlockTemplate' | 'appendOnlyEmptySystemBlockTemplate' }>} */
     const textareas = [
         { id: '#sc_injection_template', key: 'injectionTemplate' },
         { id: '#sc_easy_append_only_system_block_template', key: 'appendOnlySystemBlockTemplate' },
@@ -463,7 +462,6 @@ function bindTextareaHandlers() {
             id: '#sc_append_only_empty_system_block_template',
             key: 'appendOnlyEmptySystemBlockTemplate',
         },
-        { id: '#sc_kimi_reasoning_replacement', key: 'kimiReasoningReplacement' },
     ];
 
     for (const ta of textareas) {
@@ -814,8 +812,6 @@ function onResetDefaults() {
     s.injectCurrentState = defaultSettings.injectCurrentState;
     s.maskUserRoleAsAssistant = defaultSettings.maskUserRoleAsAssistant;
     s.maskUserRoleMode = defaultSettings.maskUserRoleMode;
-    s.replaceKimiReasoning = defaultSettings.replaceKimiReasoning;
-    s.kimiReasoningReplacement = defaultSettings.kimiReasoningReplacement;
 
     saveSettings();
     updateInjection();

@@ -98,8 +98,6 @@ interface ExtensionSettings {
     stripChineseIdeographs: boolean;
     maskUserRoleAsAssistant: boolean;
     maskUserRoleMode: 'marker_first' | 'rewrite_all' | 'marker_last' | 'keep_last_user';
-    replaceKimiReasoning: boolean;
-    kimiReasoningReplacement: string;
     stripPatterns: string[];
     debugMode: boolean;
     traceMode: boolean;

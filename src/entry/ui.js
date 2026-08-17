@@ -26,11 +26,7 @@ import {
     regenerateSnippetAt,
     updateSnippetTextAt,
 } from '../features/snippet-manager.js';
-import {
-    syncAllSettingsToDOM,
-    syncKimiReasoningReplacementControl,
-    syncRoleMaskModeControl,
-} from './ui-bind.js';
+import { syncAllSettingsToDOM, syncRoleMaskModeControl } from './ui-bind.js';
 
 const CONTEXT_COLOR_CLASSES = 'sc-ctx-safe sc-ctx-warn sc-ctx-caution sc-ctx-danger';
 
@@ -49,9 +45,6 @@ export async function updateUI() {
 
         syncRoleMaskModeControl(
             s.maskUserRoleAsAssistant,
-            effectiveSettings.memoryMode === MEMORY_MODES.APPEND_ONLY,
-        );
-        syncKimiReasoningReplacementControl(
             effectiveSettings.memoryMode === MEMORY_MODES.APPEND_ONLY,
         );
         // alwaysOn category: the input is disabled in markup, so reflect it as

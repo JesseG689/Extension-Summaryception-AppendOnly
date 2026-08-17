@@ -29,7 +29,6 @@ import {
     onChatChanged,
     onAppReady,
     onChatCompletionPromptReady,
-    onChatCompletionSettingsReady,
     onGenerateAfterData,
     onGenerationEnded,
     onGenerationStarted,
@@ -81,9 +80,6 @@ import { registerSlashCommands } from './src/entry/commands.js';
     if (eventTypes.CHAT_COMPLETION_PROMPT_READY) {
         eventSource.on(eventTypes.CHAT_COMPLETION_PROMPT_READY, injectPendingWorldInfoBake);
         eventSource.on(eventTypes.CHAT_COMPLETION_PROMPT_READY, onChatCompletionPromptReady);
-    }
-    if (eventTypes.CHAT_COMPLETION_SETTINGS_READY) {
-        eventSource.on(eventTypes.CHAT_COMPLETION_SETTINGS_READY, onChatCompletionSettingsReady);
     }
 
     registerSlashCommands();

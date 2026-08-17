@@ -699,25 +699,6 @@
                                 </select>
                             </div>
                         </div>
-                        <div id="sc_kimi_reasoning_replacement_row" style="display: none;">
-                            <label class="checkbox_label sc-toggle-row" for="sc_replace_kimi_reasoning">
-                                <span class="sc-toggle-icon fa-solid fa-brain"></span>
-                                <span class="sc-toggle-copy">
-                                    <span class="sc-toggle-title">Replace Kimi Reasoning</span>
-                                    <small class="sc-hint">Seed every assistant history message in outgoing Kimi requests with one stable reasoning line. Old thinking traces are discarded, the model keeps reasoning every reply, and the Append Only cache shape is preserved.</small>
-                                </span>
-                                <input type="checkbox" id="sc_replace_kimi_reasoning" data-sc-setting="replaceKimiReasoning" />
-                            </label>
-                            <div class="sc-sub-panel">
-                                <div class="sc-setting-row">
-                                    <label for="sc_kimi_reasoning_replacement">
-                                        <span>Replacement reasoning</span>
-                                        <small class="sc-hint">Sent as reasoning_content for every assistant history message. The default carries the --- delimiter contract. Leave blank to skip replacement.</small>
-                                    </label>
-                                    <textarea id="sc_kimi_reasoning_replacement" class="text_pole sc-textarea" rows="3" data-sc-setting="kimiReasoningReplacement"></textarea>
-                                </div>
-                            </div>
-                        </div>
                     </div>
                 </section>
                 <section class="sc-section">

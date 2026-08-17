@@ -327,11 +327,6 @@ export function syncRoleMaskModeControl(enabled, appendOnly = false) {
     ).prop('disabled', appendOnly);
 }
 
-/** Show Kimi reasoning replacement only in Append Only mode. */
-export function syncKimiReasoningReplacementControl(appendOnly) {
-    $('#sc_kimi_reasoning_replacement_row').toggle(Boolean(appendOnly));
-}
-
 /**
  * @param {SettingBinding} binding
  * @param {object} $source jQuery-wrapped source element
