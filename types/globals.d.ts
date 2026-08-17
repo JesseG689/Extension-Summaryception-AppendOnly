@@ -64,6 +64,7 @@ interface ExtensionSettings {
     bakedWorldInfoTokenBudget: number;
     appendOnlySystemBlockTemplate: string;
     appendOnlyEmptySystemBlockTemplate: string;
+    appendOnlyInjectEmptySystemBlock: boolean;
     stateCatDateTime: boolean;
     stateCatBonds: boolean;
     stateCatChekhov: boolean;

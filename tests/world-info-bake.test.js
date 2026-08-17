@@ -19,6 +19,7 @@ function installBakeContext({
     maxEntries = 10,
     appendOnlySystemBlockTemplate,
     appendOnlyEmptySystemBlockTemplate,
+    appendOnlyInjectEmptySystemBlock = false,
 } = {}) {
     const runtime = installSummaryContext({
         chat: chat || [
@@ -36,6 +37,7 @@ function installBakeContext({
             ...(appendOnlyEmptySystemBlockTemplate === undefined
                 ? {}
                 : { appendOnlyEmptySystemBlockTemplate }),
+            appendOnlyInjectEmptySystemBlock,
         },
         extensionPrompts: {
             customWIOutlet_sc_bake: { value: outlet },
@@ -176,9 +178,24 @@ describe('world info bake', () => {
         },
     );
 
-    it('uses the empty template when all lore is already baked', async () => {
+    it('does not inject a system message when no memories are available by default', async () => {
+        const runtime = installBakeContext();
+        const prompt = [
+            { role: 'assistant', content: 'assistant reply' },
+            { role: 'user', content: 'latest user' },
+        ];
+        context.expandSillyTavernMacros.mockClear();
+
+        expect(await injectPendingWorldInfoBake({ chat: prompt })).toBe(false);
+        expect(prompt).toHaveLength(2);
+        expect(runtime.chat).toHaveLength(3);
+        expect(context.expandSillyTavernMacros).not.toHaveBeenCalled();
+    });
+
+    it('uses the empty template when enabled and all lore is already baked', async () => {
         const runtime = installBakeContext({
             appendOnlyEmptySystemBlockTemplate: 'EMPTY {{roll::1d20}}',
+            appendOnlyInjectEmptySystemBlock: true,
         });
         const prompt = [
             { role: 'assistant', content: 'assistant reply' },
@@ -395,7 +412,7 @@ describe('world info bake', () => {
         });
     });
 
-    it('does not rebake lore marked in hidden history', async () => {
+    it('does not add an empty block for lore marked in hidden history', async () => {
         const runtime = installBakeContext();
         runtime.chat.unshift({
             ...makeMessage({ mes: '<wi>\nlore one\n</wi>' }),
@@ -405,17 +422,14 @@ describe('world info bake', () => {
         activateBakeEntries([
             { uid: 1, world: 'book', order: 30, outletName: 'sc_bake', content: 'lore one' },
         ]);
-        expect(
-            await injectPendingWorldInfoBake({
-                chat: [
-                    { role: 'assistant', content: 'assistant reply' },
-                    { role: 'user', content: 'latest user' },
-                ],
-            }),
-        ).toBe(true);
-        expect(runtime.chat.at(-2)?.mes).toBe(
-            'Rolls — User: {{roll::1d20}} | Assistant: {{roll::1d20}} | Chekhov: {{roll::1d20}}, {{roll::1d20}}, {{roll::1d20}}, {{roll::1d20}}, {{roll::1d20}}',
-        );
+        const prompt = [
+            { role: 'assistant', content: 'assistant reply' },
+            { role: 'user', content: 'latest user' },
+        ];
+
+        expect(await injectPendingWorldInfoBake({ chat: prompt })).toBe(false);
+        expect(prompt).toHaveLength(2);
+        expect(runtime.chat.filter((message) => message.extra?.sc_wi)).toHaveLength(1);
     });
 
     it('deletes marked and legacy SC-WI blocks from the full chat without DOM deletion', async () => {

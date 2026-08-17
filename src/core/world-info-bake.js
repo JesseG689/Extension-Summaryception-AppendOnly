@@ -346,7 +346,9 @@ async function buildPendingBakeContent(entries, settings, prompt, userPromptInde
               expandedTemplate,
               selected.map((entry) => entry.block),
           )
-        : await expandSillyTavernMacros(String(settings.appendOnlyEmptySystemBlockTemplate));
+        : settings.appendOnlyInjectEmptySystemBlock
+          ? await expandSillyTavernMacros(String(settings.appendOnlyEmptySystemBlockTemplate))
+          : '';
     if ((await countTextTokens(content)).count > settings.bakedWorldInfoTokenBudget) {
         debug('WI bake skipped: system block template exceeds the available token budget');
         return { content: '', selected: [] };

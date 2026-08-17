@@ -21,6 +21,7 @@
 - Skip baking when final payload measurement is unavailable.
 - Keep summary memory stable between append-only flushes.
 - Update summary memory only after a flush completes.
+- Inject the no-memory system block only when the user enables it.
 - Keep time and date macros stable in append-only mode.
 - Rewrite reasoning only in final request history.
 - Do not mutate reasoning stored in chat.

@@ -191,6 +191,11 @@ function bindToggleHandlers() {
             },
         },
         {
+            selector:
+                '#sc_easy_append_only_inject_empty_system_block, #sc_append_only_inject_empty_system_block',
+            key: 'appendOnlyInjectEmptySystemBlock',
+        },
+        {
             selector: '#sc_mask_user_role_as_assistant',
             key: 'maskUserRoleAsAssistant',
             afterSave: (_settings, value) =>

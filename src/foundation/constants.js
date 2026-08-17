@@ -124,6 +124,7 @@ export const defaultSettings = Object.freeze({
     bakedWorldInfoTokenBudget: 5000,
     appendOnlySystemBlockTemplate: DEFAULT_APPEND_ONLY_SYSTEM_BLOCK_TEMPLATE,
     appendOnlyEmptySystemBlockTemplate: DEFAULT_APPEND_ONLY_EMPTY_SYSTEM_BLOCK_TEMPLATE,
+    appendOnlyInjectEmptySystemBlock: false,
     // ─── Modular STATE categories (stateCat*) ─────────────────────────
     // Most categories ship enabled: the extension's [CURRENT STATE] injection
     // is meant to be the sole carrier, so users should disable the equivalent
