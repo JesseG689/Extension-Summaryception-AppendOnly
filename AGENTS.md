@@ -18,11 +18,6 @@
 - Any summary layer or snippet mutation must bump the store mutation epoch.
 - Implicit any is allowed. Annotate parameters that hold structured objects so the type gate checks property reads.
 
-## Writing
-
-- Never use em dashes in docs, code comments, or UI text. Use hyphens, semicolons, or rephrase.
-- Memory windows are named Recent Chat, Queued Chat, and Baked WI. Never letter labels like A/B/C.
-
 ## Commands
 
 - `npm test` runs the suite.
