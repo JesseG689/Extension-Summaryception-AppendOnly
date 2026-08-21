@@ -19,18 +19,18 @@ const LAYER0_PHASE = /** @type {'layer0'} */ ('layer0');
 
 /**
  * @typedef {object} SummaryRoutePlan
- * @property {string} route
- * @property {boolean} ready
- * @property {string} reason
- * @property {string} commitMode
- * @property {'layer0'} phase
- * @property {import('./chatutils.js').AssistantTurn[]} batchTurns
- * @property {import('./partition-planner.js').SourcePartition[]} partitions
- * @property {number} overflowCount
- * @property {number} totalBatches
- * @property {number} [sourceEndIdx]
- * @property {number} [targetIndex]
- * @property {object} rawPlan
+ * @property {string} route Selected route identifier from `SUMMARY_ROUTES`.
+ * @property {boolean} ready True when the route can run a summarization batch now.
+ * @property {string} reason Underlying chat window plan reason.
+ * @property {string} commitMode Store commit strategy from `SUMMARY_COMMIT_MODES`.
+ * @property {'layer0'} phase Pipeline phase marker for the route.
+ * @property {import('./chatutils.js').AssistantTurn[]} batchTurns Turns selected for the current batch.
+ * @property {import('./partition-planner.js').SourcePartition[]} partitions Source partitions to commit.
+ * @property {number} overflowCount Eligible turns awaiting summarization.
+ * @property {number} totalBatches Batches the route runs, 0 when not ready.
+ * @property {number} [sourceEndIdx] Optional exclusive end of the source window.
+ * @property {number} [targetIndex] Optional store target index for commits.
+ * @property {object} rawPlan Underlying raw plan backing this route.
  */
 
 /**

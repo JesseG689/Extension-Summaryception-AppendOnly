@@ -38,7 +38,7 @@ export const MEMORY_MODE_PRESETS = Object.freeze({
 /**
  * Selectable memory modes that own an initial retention preset.
  * `custom` is intentionally excluded: it carries no preset.
- * @type {readonly string[]}
+ * @type {ReadonlyArray<string>}
  */
 const SELECTABLE_MEMORY_MODES = Object.freeze([
     MEMORY_MODES.BALANCED,
