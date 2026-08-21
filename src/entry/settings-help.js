@@ -130,17 +130,34 @@ const HELP_ENTRIES = [
         'verbatim_token_budget',
         sliderHelp({
             selector: selectorFor('sc_verbatim_token_budget'),
-            title: 'Verbatim Token Budget',
-            short: 'Recent chat kept word-for-word before summaries start.',
+            title: 'A Recent Chat Budget',
+            short: 'Recent raw chat kept live in A.',
             controls: [
                 controlFor('sc_verbatim_token_budget'),
                 controlFor('sc_verbatim_token_budget_val'),
             ],
             meaning:
-                'How much recent chat stays word-for-word before older turns get summarized into Layer 0.',
-            higher: 'keeps more exact recent chat but eats more context.',
-            lower: 'summarizes sooner and frees up room for memory.',
-            defaultText: '22k; Prefix Cache bumps this to 32k for caching providers.',
+                'Sets A, the recent raw-chat range kept word-for-word while older raw chat waits in B.',
+            higher: 'keeps more exact recent chat but uses more context.',
+            lower: 'moves the A boundary forward sooner.',
+            defaultText: '22k in Balanced; mode presets may change it.',
+        }),
+    ],
+    [
+        'queued_token_budget',
+        sliderHelp({
+            selector: selectorFor('sc_queued_token_budget'),
+            title: 'B Queued Chat Budget',
+            short: 'Older raw chat held in B before automatic summarization.',
+            controls: [
+                controlFor('sc_queued_token_budget'),
+                controlFor('sc_queued_token_budget_val'),
+            ],
+            meaning:
+                'Sets B, the queued older raw-chat range. Automatic summarization waits until A+B is full.',
+            higher: 'lets more raw chat accumulate before a flush.',
+            lower: 'flushes queued chat sooner after A is full.',
+            defaultText: '6k in Balanced; mode presets may change it.',
         }),
     ],
     [
@@ -198,33 +215,32 @@ const HELP_ENTRIES = [
         sliderHelp({
             selector: selectorFor('sc_max_l0_source_tokens'),
             title: 'Max Source per Call',
-            short: 'Hard ceiling for raw chat sent in one Layer 0 request.',
+            short: 'Hard cap on raw chat sent in one Layer 0 call.',
             controls: [
                 controlFor('sc_max_l0_source_tokens'),
                 controlFor('sc_max_l0_source_tokens_val'),
             ],
-            meaning:
-                'The maximum raw-chat source size sent in a single Layer 0 summarizer call. Auto-derived from Model context; override it here.',
+            meaning: 'Sets the maximum raw-chat source size sent in one Layer 0 summarizer call.',
             higher: 'allows bigger batches for models with more context.',
             lower: 'keeps each summarizer request smaller and safer.',
-            defaultText: '24k, inside an 8k-64k range; auto-derived from Model context.',
+            defaultText: '24k; auto-derived from Model context.',
         }),
     ],
     [
         'min_summary_budget',
         sliderHelp({
             selector: selectorFor('sc_min_summary_budget'),
-            title: 'Batch Trigger Size',
-            short: 'How much overflow text to collect before short batches run.',
+            title: 'Target Source per Call',
+            short: 'Preferred raw-chat size for each balanced Layer 0 partition.',
             controls: [
                 controlFor('sc_min_summary_budget'),
                 controlFor('sc_min_summary_budget_val'),
             ],
             meaning:
-                'The minimum overflow size before a normal Layer 0 batch is worth summarizing; it cannot exceed Max Source per Call. Auto-derived from Model context; override it here.',
-            higher: 'waits for bigger chunks and makes fewer summarizer calls.',
-            lower: 'summarizes smaller chunks sooner.',
-            defaultText: '16k, with a fixed 4k-32k control range; auto-derived from Model context.',
+                'Sets the preferred size of each balanced Layer 0 partition. A+B fullness controls automatic summarization.',
+            higher: 'makes fewer, larger summarizer calls up to the source cap.',
+            lower: 'creates smaller partitions and more summarizer calls.',
+            defaultText: '16k; auto-derived from Model context.',
         }),
     ],
     [

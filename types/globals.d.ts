@@ -78,6 +78,7 @@ interface ExtensionSettings {
     advancedModelContext: number;
     minSummaryBudget: number;
     verbatimTokenBudget: number;
+    queuedTokenBudget: number;
     memoryTokenBudget: number;
     snippetsPerLayer: number;
     snippetsPerPromotion: number;

@@ -96,21 +96,47 @@ function syncEnabledContent(s) {
 function syncEasyPayloadSchematic(s = getEffectiveSettings()) {
     $('#sc_easy_payload_memory_budget').text(formatBudgetTokenLabel(s.memoryTokenBudget));
     $('#sc_easy_payload_verbatim_budget').text(formatBudgetTokenLabel(s.verbatimTokenBudget));
+    $('#sc_easy_payload_queued_budget').text(formatBudgetTokenLabel(s.queuedTokenBudget));
+    $('#sc_easy_payload_baked_wi_budget')
+        .text(formatBudgetTokenLabel(s.bakedWorldInfoTokenBudget))
+        .closest('.sc-payload-part')
+        .toggle(s.memoryMode === MEMORY_MODES.APPEND_ONLY);
 }
 
 /**
- * Sync read-only LLM call context preview.
+ * Build configured A/B/C context limits for the main request preview.
  * @param {ReturnType<typeof getSettings>} [s]
- * @returns {void}
+ * @returns {{ rawChatMin: number, rawChatMax: number, mainMin: number, mainMax: number, bakedWorldInfoMax: number }}
  */
-export function syncLLMContextPreview(s = getEffectiveSettings()) {
-    const maxL0Source = readTokenSetting(s.maxL0SourceTokens, defaultSettings.maxL0SourceTokens);
-    const minL0Source = readTokenSetting(s.minSummaryBudget, defaultSettings.minSummaryBudget);
+export function buildMainContextPreviewModel(s = getEffectiveSettings()) {
     const memoryBudget = readTokenSetting(s.memoryTokenBudget, defaultSettings.memoryTokenBudget);
     const verbatimBudget = readTokenSetting(
         s.verbatimTokenBudget,
         defaultSettings.verbatimTokenBudget,
     );
+    const queuedBudget = readTokenSetting(s.queuedTokenBudget, defaultSettings.queuedTokenBudget);
+    const bakedBudget = readTokenSetting(
+        s.bakedWorldInfoTokenBudget,
+        defaultSettings.bakedWorldInfoTokenBudget,
+    );
+    const appendOnly = s.memoryMode === MEMORY_MODES.APPEND_ONLY;
+    return {
+        rawChatMin: verbatimBudget,
+        rawChatMax: verbatimBudget + queuedBudget,
+        mainMin: memoryBudget + verbatimBudget,
+        mainMax: memoryBudget + verbatimBudget + queuedBudget + (appendOnly ? bakedBudget : 0),
+        bakedWorldInfoMax: appendOnly ? bakedBudget : 0,
+    };
+}
+
+/**
+ *
+ */
+export function syncLLMContextPreview(s = getEffectiveSettings()) {
+    const model = buildMainContextPreviewModel(s);
+    const maxL0Source = readTokenSetting(s.maxL0SourceTokens, defaultSettings.maxL0SourceTokens);
+    const minL0Source = readTokenSetting(s.minSummaryBudget, defaultSettings.minSummaryBudget);
+    const memoryBudget = readTokenSetting(s.memoryTokenBudget, defaultSettings.memoryTokenBudget);
     const snippetsPerPromotion = readTokenSetting(
         s.snippetsPerPromotion,
         defaultSettings.snippetsPerPromotion,
@@ -119,33 +145,24 @@ export function syncLLMContextPreview(s = getEffectiveSettings()) {
         s.layer0SummaryTokenTarget,
         defaultSettings.layer0SummaryTokenTarget,
     );
-
     const BASE_PROMPT_OVERHEAD = 2000;
     const DEEP_MEMORY_RATIO = 0.5;
-
-    const mainBudget = memoryBudget + verbatimBudget;
     const l0Typical = minL0Source + memoryBudget + BASE_PROMPT_OVERHEAD;
     const l0Max = maxL0Source + memoryBudget + BASE_PROMPT_OVERHEAD;
     const l1Source = snippetsPerPromotion * summaryTarget;
     const l1Total = l1Source + Math.round(memoryBudget * DEEP_MEMORY_RATIO) + 1000;
-
     const $mainValue = $('#sc_llm_context_main');
     const $l0Value = $('#sc_llm_context_l0');
     const $l1Value = $('#sc_llm_context_l1');
-
-    $mainValue.text(`Max ~${formatContextTokenCount(mainBudget)} + ST prompt`);
-    if (minL0Source < maxL0Source) {
-        $l0Value.text(
-            `~${formatContextTokenCount(l0Typical)} (Max ~${formatContextTokenCount(l0Max)})`,
-        );
-        setContextValueColor($l0Value, l0Typical);
-    } else {
-        $l0Value.text(`Max ~${formatContextTokenCount(l0Max)} tokens`);
-        setContextValueColor($l0Value, l0Max);
-    }
+    $mainValue.text(
+        `${formatContextTokenCount(model.mainMin)} → ${formatContextTokenCount(model.mainMax)} + ST prompt`,
+    );
+    $l0Value.text(
+        `~${formatContextTokenCount(l0Typical)} (Max ~${formatContextTokenCount(l0Max)})`,
+    );
     $l1Value.text(`Max ~${formatContextTokenCount(l1Total)} tokens`);
-
-    setContextValueColor($mainValue, mainBudget);
+    setContextValueColor($mainValue, model.mainMax);
+    setContextValueColor($l0Value, l0Typical);
     setContextValueColor($l1Value, l1Total);
 }
 
@@ -241,15 +258,16 @@ async function getVisibleBacklogCount(s, store) {
 
 function syncMemoryModeControls(s) {
     const isPrefixCache = s.memoryMode === MEMORY_MODES.PREFIX_CACHE;
+    const isAppendOnly = s.memoryMode === MEMORY_MODES.APPEND_ONLY;
     const isMacroOnly = s.customMemoryPosition === MEMORY_POSITIONS.MACRO_ONLY;
-
     $('#sc_custom_memory_depth_row').toggle(s.customMemoryPosition === MEMORY_POSITIONS.IN_CHAT);
     $('#sc_custom_memory_role_row').toggle(!isMacroOnly);
     $('#sc_macro_memory_note').toggle(isMacroOnly);
     $('#sc_memory_help_balanced').toggle(s.memoryMode === MEMORY_MODES.BALANCED);
     $('#sc_memory_help_prefix_cache').toggle(isPrefixCache);
-    $('#sc_memory_help_append_only').toggle(s.memoryMode === MEMORY_MODES.APPEND_ONLY);
+    $('#sc_memory_help_append_only').toggle(isAppendOnly);
     $('#sc_manual_cache_warning').toggle(isPrefixCache);
+    $('.sc-append-only-row').toggle(isAppendOnly);
     $('#sc_min_summary_turns, #sc_max_summary_turns').prop('disabled', false);
     $('#sc_min_summary_turns, #sc_max_summary_turns').closest('.sc-row').removeClass('sc-disabled');
     $('#sc_min_summary_budget_hint').text(SETTINGS_HELP.min_summary_budget.short);
@@ -408,31 +426,18 @@ async function renderTriggerGauge(s, store) {
 }
 
 /**
- * Compute the queued-tokens gauge and effective summarization trigger point.
- * The trigger fires when queued turns and queued source tokens both clear their
- * gates; the marker sits at whichever gate is satisfied last. The turn gate is
- * projected into tokens via the average queued tokens per turn, so the label
- * names the binding gate rather than implying an exact token count.
+ * Compute the B queue gauge from the unified planner.
  * @param {import('../core/summarization-routes.js').SummaryRoutePlan} plan
  * @param {ReturnType<typeof getEffectiveSettings>} s
  * @returns {{ queuedTokens: number, queuedEstimated: boolean, triggerTokens: number, label: string }}
  */
 export function buildTriggerGaugeModel(plan, s) {
-    const raw = plan.rawPlan || {};
-    const queuedStats = raw.summaryStats || raw.flushStats || null;
-    const queuedTokens = normalizeBudgetCount(queuedStats?.finalTokens ?? 0);
-    const queuedEstimated = Boolean(queuedStats?.finalTokensEstimated);
-    const minBudget = normalizeBudgetCount(s.minSummaryBudget);
-    const minTurns = Math.max(1, Math.round(Number(s.minSummaryTurns)) || 1);
-    const maxTurns = Math.max(minTurns, Math.round(Number(s.maxSummaryTurns)) || minTurns);
-    const queuedTurns = Math.min(Math.max(0, Math.round(Number(raw.overflowCount) || 0)), maxTurns);
-    const turnEquivalent = queuedTurns > 0 ? Math.ceil((queuedTokens / queuedTurns) * minTurns) : 0;
-    const triggerTokens = Math.max(minBudget, turnEquivalent, 1);
+    const queuedStats = plan.rawPlan?.queuedStats;
     return {
-        queuedTokens,
-        queuedEstimated,
-        triggerTokens,
-        label: turnEquivalent > minBudget ? `Trigger: ${minTurns} turns` : 'Trigger: tokens',
+        queuedTokens: normalizeBudgetCount(queuedStats?.finalTokens ?? 0),
+        queuedEstimated: Boolean(queuedStats?.finalTokensEstimated),
+        triggerTokens: normalizeBudgetCount(s.queuedTokenBudget),
+        label: 'Summarize at A + B',
     };
 }
 
@@ -461,16 +466,13 @@ async function renderMemoryBudget(
 
 async function getVerbatimBudgetPart(s, store) {
     const plan = await buildAutoSummaryRoutePlan(getChat(), store, s);
+    const stats = plan.rawPlan.verbatimStats || { finalTokens: 0, finalTokensEstimated: false };
     return {
-        label: 'Verbatim Window',
+        label: 'A — Recent Chat',
         kind: 'verbatim',
-        count: getRouteBudgetStats(plan).finalTokens,
-        estimated: getRouteBudgetStats(plan).finalTokensEstimated,
+        count: stats.finalTokens,
+        estimated: stats.finalTokensEstimated,
     };
-}
-
-function getRouteBudgetStats(plan) {
-    return plan.rawPlan.budgetStats || plan.rawPlan.liveStats;
 }
 
 function orderMemoryBudgetParts(parts) {

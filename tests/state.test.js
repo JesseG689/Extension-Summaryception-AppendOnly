@@ -1,6 +1,13 @@
 import { describe, expect, it } from 'vitest';
 
-import { MASK_USER_ROLE_MODES, UI_MODES } from '../src/foundation/constants.js';
+import {
+    MASK_USER_ROLE_MODES,
+    MEMORY_MODE_PRESETS,
+    MEMORY_MODES,
+    UI_MODES,
+    applyMemoryModePreset,
+    defaultSettings,
+} from '../src/foundation/constants.js';
 import {
     bumpSummaryStoreMutationEpoch,
     getChatStore,
@@ -89,6 +96,26 @@ describe('getSettings', () => {
         settings.memoryMode = 'append_only';
 
         expect(getSettings().maskUserRoleMode).toBe(MASK_USER_ROLE_MODES.MARKER_FIRST);
+    });
+});
+
+describe('memory mode budgets', () => {
+    it('defaults and clamps independent A and B budgets', () => {
+        installSummaryContext({
+            settings: { verbatimTokenBudget: 999, queuedTokenBudget: 999999 },
+        });
+        expect(getSettings()).toMatchObject({
+            verbatimTokenBudget: 4000,
+            queuedTokenBudget: 64000,
+        });
+    });
+
+    it('applies presets only on real mode transitions', () => {
+        const settings = { ...defaultSettings, memoryMode: MEMORY_MODES.BALANCED };
+        expect(applyMemoryModePreset(settings, MEMORY_MODES.BALANCED)).toBe(false);
+        expect(applyMemoryModePreset(settings, MEMORY_MODES.PREFIX_CACHE)).toBe(true);
+        expect(settings).toMatchObject(MEMORY_MODE_PRESETS[MEMORY_MODES.PREFIX_CACHE]);
+        expect(applyMemoryModePreset(settings, 'invalid')).toBe(false);
     });
 });
 

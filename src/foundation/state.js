@@ -285,6 +285,7 @@ function normalizeVerbatimWindowSettings(settings) {
         BATCH_TRIGGER_LIMITS.STEP,
     );
     settings.verbatimTokenBudget = clampToStep(settings.verbatimTokenBudget, 4000, 64000, 1000);
+    settings.queuedTokenBudget = clampToStep(settings.queuedTokenBudget, 4000, 64000, 1000);
     settings.memoryTokenBudget = clampToStep(settings.memoryTokenBudget, 4000, 32000, 1000);
     settings.maxBakedWorldInfoEntries = clampInteger(settings.maxBakedWorldInfoEntries, 5, 50);
     settings.bakedWorldInfoTokenBudget = clampToStep(

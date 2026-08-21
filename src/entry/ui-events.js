@@ -1,6 +1,8 @@
 import {
+    MEMORY_MODE_PRESETS,
     MEMORY_MODES,
     MASK_USER_ROLE_MODES,
+    applyMemoryModePreset,
     PROMOTION_PROMPT_PRESETS,
     PROMOTION_REPAIR_PROMPT_PRESETS,
     PROMOTION_SYSTEM_PROMPT_PRESETS,
@@ -249,68 +251,20 @@ function bindToggleHandlers() {
  * @returns {void}
  */
 function bindMemoryModeHandlers() {
-    bindEasyMemoryModeHandler();
-    bindAdvancedMemoryModeHandler();
+    $(document).on(
+        'change',
+        'input[name="sc_easy_memory_mode"], input[name="sc_memory_mode"]',
+        function () {
+            const settings = getSettings();
+            if (!applyMemoryModePreset(settings, String($(this).val()))) {
+                return;
+            }
+            saveSettings();
+            updateInjection();
+            updateUI();
+        },
+    );
     bindCustomPlacementHandlers();
-}
-
-function bindEasyMemoryModeHandler() {
-    $(document).on('change', 'input[name="sc_easy_memory_mode"]', function () {
-        const mode = String($(this).val());
-        if (
-            !(
-                /** @type {string[]} */ ([
-                    MEMORY_MODES.BALANCED,
-                    MEMORY_MODES.PREFIX_CACHE,
-                    MEMORY_MODES.APPEND_ONLY,
-                ]).includes(mode)
-            )
-        ) {
-            return;
-        }
-        const s = getSettings();
-        if (mode === MEMORY_MODES.APPEND_ONLY) {
-            s.maskUserRoleMode = MASK_USER_ROLE_MODES.MARKER_FIRST;
-        }
-        if (s.memoryMode === mode) {
-            return;
-        }
-
-        s.memoryMode = mode;
-        saveSettings();
-        updateInjection();
-        updateUI();
-    });
-}
-
-function bindAdvancedMemoryModeHandler() {
-    $(document).on('change', 'input[name="sc_memory_mode"]', function () {
-        const mode = String($(this).val());
-        if (
-            !(
-                /** @type {string[]} */ ([
-                    MEMORY_MODES.BALANCED,
-                    MEMORY_MODES.PREFIX_CACHE,
-                    MEMORY_MODES.APPEND_ONLY,
-                ]).includes(mode)
-            )
-        ) {
-            return;
-        }
-        const s = getSettings();
-        if (mode === MEMORY_MODES.APPEND_ONLY) {
-            s.maskUserRoleMode = MASK_USER_ROLE_MODES.MARKER_FIRST;
-        }
-        if (s.memoryMode === mode) {
-            return;
-        }
-
-        s.memoryMode = mode;
-        s.verbatimTokenBudget = mode === MEMORY_MODES.PREFIX_CACHE ? 32000 : 22000;
-        saveSettings();
-        updateInjection();
-        updateUI();
-    });
 }
 
 function bindCustomPlacementHandlers() {
@@ -537,7 +491,7 @@ function onResumeSummarize() {
 }
 
 /**
- * Force the catch-up pass to summarize turns beyond the dynamic verbatim window.
+ * Force the catch-up pass to summarize eligible turns beyond the current A range.
  * @returns {Promise<void>}
  */
 async function onForceSummarize() {
@@ -558,10 +512,7 @@ async function onForceSummarize() {
         const plan = await buildForceSummaryRoutePlan(getChat(), getChatStore(), s);
 
         if (!plan.ready) {
-            toastr.info(
-                'Nothing to summarize - current chat is within the verbatim window.',
-                'Summaryception',
-            );
+            toastr.info('Nothing eligible to summarize.', 'Summaryception');
             return;
         }
 
@@ -792,10 +743,13 @@ function onResetDefaults() {
     s.maxSummaryTurns = defaultSettings.maxSummaryTurns;
     s.maxL0SourceTokens = defaultSettings.maxL0SourceTokens;
     s.minSummaryBudget = defaultSettings.minSummaryBudget;
-    s.verbatimTokenBudget =
-        preservedMemoryMode === MEMORY_MODES.PREFIX_CACHE
-            ? 32000
-            : defaultSettings.verbatimTokenBudget;
+    const retentionPreset =
+        MEMORY_MODE_PRESETS[preservedMemoryMode] || MEMORY_MODE_PRESETS.balanced;
+    s.verbatimTokenBudget = retentionPreset.verbatimTokenBudget;
+    s.queuedTokenBudget = retentionPreset.queuedTokenBudget;
+    if (preservedMemoryMode === MEMORY_MODES.APPEND_ONLY) {
+        s.bakedWorldInfoTokenBudget = retentionPreset.bakedWorldInfoTokenBudget;
+    }
     s.memoryTokenBudget = defaultSettings.memoryTokenBudget;
     s.layer0SummaryTokenTarget = defaultSettings.layer0SummaryTokenTarget;
     s.snippetsPerLayer = defaultSettings.snippetsPerLayer;

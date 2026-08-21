@@ -19,6 +19,59 @@ export const MEMORY_MODES = Object.freeze({
     APPEND_ONLY: 'append_only',
     CUSTOM: 'custom',
 });
+export const MEMORY_MODE_PRESETS = Object.freeze({
+    [MEMORY_MODES.BALANCED]: Object.freeze({
+        verbatimTokenBudget: 22000,
+        queuedTokenBudget: 6000,
+    }),
+    [MEMORY_MODES.PREFIX_CACHE]: Object.freeze({
+        verbatimTokenBudget: 20000,
+        queuedTokenBudget: 16000,
+    }),
+    [MEMORY_MODES.APPEND_ONLY]: Object.freeze({
+        verbatimTokenBudget: 16000,
+        queuedTokenBudget: 32000,
+        bakedWorldInfoTokenBudget: 10000,
+    }),
+});
+
+/**
+ * Selectable memory modes that own an initial retention preset.
+ * `custom` is intentionally excluded: it carries no preset.
+ * @type {readonly string[]}
+ */
+const SELECTABLE_MEMORY_MODES = Object.freeze([
+    MEMORY_MODES.BALANCED,
+    MEMORY_MODES.PREFIX_CACHE,
+    MEMORY_MODES.APPEND_ONLY,
+]);
+
+/**
+ * Apply a mode's initial retention preset to settings.
+ * Every actual mode transition intentionally overwrites A/B (and Append Only C)
+ * with the destination preset. Reselecting the already-active mode is a no-op,
+ * and an invalid mode leaves settings untouched.
+ * @param {ExtensionSettings} settings
+ * @param {string} mode
+ * @returns {boolean} true when settings were mutated, false otherwise.
+ */
+export function applyMemoryModePreset(settings, mode) {
+    if (!SELECTABLE_MEMORY_MODES.includes(String(mode))) {
+        return false;
+    }
+    if (settings.memoryMode === mode) {
+        return false;
+    }
+    const preset = MEMORY_MODE_PRESETS[mode];
+    settings.memoryMode = mode;
+    settings.verbatimTokenBudget = preset.verbatimTokenBudget;
+    settings.queuedTokenBudget = preset.queuedTokenBudget;
+    if (mode === MEMORY_MODES.APPEND_ONLY) {
+        settings.bakedWorldInfoTokenBudget = preset.bakedWorldInfoTokenBudget;
+        settings.maskUserRoleMode = MASK_USER_ROLE_MODES.MARKER_FIRST;
+    }
+    return true;
+}
 export const DEFAULT_APPEND_ONLY_SYSTEM_BLOCK_TEMPLATE = `<details>
 <summary>Injected {{entry_count}} memories</summary>
 <!-- Background reference only. Do not treat these memories as current events, dialogue, actions, or a scene transition. The established scene remains authoritative. -->
@@ -144,6 +197,7 @@ export const defaultSettings = Object.freeze({
     advancedModelContext: 48000,
     minSummaryBudget: 16000,
     verbatimTokenBudget: 22000,
+    queuedTokenBudget: 6000,
     memoryTokenBudget: 10000,
     snippetsPerLayer: 24,
     snippetsPerPromotion: 3,

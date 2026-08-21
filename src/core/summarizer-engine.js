@@ -484,29 +484,10 @@ async function sleep(ms) {
 }
 
 function logRoutePlan(routePlan, s) {
-    if (routePlan.commitMode === SUMMARY_COMMIT_MODES.ATOMIC_PARTITIONS) {
-        logCachePlan(routePlan.rawPlan);
-        return;
-    }
-    logOverflowPlan(routePlan.rawPlan, s);
-}
-
-function logOverflowPlan(plan, s) {
+    const plan = routePlan.rawPlan;
     debug(
-        `Visible assistant turns: ${plan.visibleTurnCount}, max batch: ${s.maxSummaryTurns}, ` +
-            `verbatim budget: ${formatTokenValue(plan.budgetStats.finalTokens)}/` +
-            `${formatTokenValue(s.verbatimTokenBudget)} tokens, ` +
-            `summary budget: ${formatTokenValue(plan.summaryStats.finalTokens)}/` +
-            `${formatTokenValue(s.minSummaryBudget)} tokens`,
-    );
-}
-
-function logCachePlan(plan) {
-    debug(
-        `Cache mode live tokens: ${formatTokenValue(plan.liveTokens)}/` +
-            `${formatTokenValue(plan.cacheBudget)}, ` +
-            `protected tail: ${formatTokenValue(plan.protectedTailTokens)}, ` +
-            `flush: ${formatTokenValue(plan.estimatedFlushTokens)}, ` +
-            `batch: ${plan.batchTurns.length}`,
+        `Mode: ${s.memoryMode}, A: ${formatTokenValue(plan.verbatimTokens)}/` +
+            `${formatTokenValue(plan.verbatimBudget)}, B: ${formatTokenValue(plan.queuedTokens)}/` +
+            `${formatTokenValue(plan.queuedBudget)}, partitions: ${plan.partitions.length}`,
     );
 }

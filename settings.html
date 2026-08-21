@@ -136,6 +136,14 @@
                                 </div>
                             </div>
                             <div class="sc-row">
+                                <label for="sc_easy_verbatim_token_budget"><span>A — Recent Chat</span><small class="sc-hint">Recent raw chat kept live. The main request grows from A to A+B before B is summarized.</small></label>
+                                <div class="sc-slider-row"><input type="range" id="sc_easy_verbatim_token_budget" min="4000" max="64000" step="1000" data-sc-slider-setting="verbatimTokenBudget" data-sc-partner-input="#sc_easy_verbatim_token_budget_val" /><input id="sc_easy_verbatim_token_budget_val" class="text_pole sc-val sc-val-wide" type="text" inputmode="numeric" data-sc-slider-setting="verbatimTokenBudget" data-sc-partner-input="#sc_easy_verbatim_token_budget" /></div>
+                            </div>
+                            <div class="sc-row">
+                                <label for="sc_easy_queued_token_budget"><span>B — Queued Chat</span><small class="sc-hint">Older raw chat queued for summarization after A+B is full.</small></label>
+                                <div class="sc-slider-row"><input type="range" id="sc_easy_queued_token_budget" min="4000" max="64000" step="1000" data-sc-slider-setting="queuedTokenBudget" data-sc-partner-input="#sc_easy_queued_token_budget_val" /><input id="sc_easy_queued_token_budget_val" class="text_pole sc-val sc-val-wide" type="text" inputmode="numeric" data-sc-slider-setting="queuedTokenBudget" data-sc-partner-input="#sc_easy_queued_token_budget" /></div>
+                            </div>
+                            <div class="sc-row sc-append-only-row">
                                 <label for="sc_easy_max_baked_wi_entries">
                                     <span>Max Baked WI Entries</span>
                                     <small class="sc-hint">The most newly activated World Info entries baked into one turn.</small>
@@ -145,9 +153,9 @@
                                     <input id="sc_easy_max_baked_wi_entries_val" class="text_pole sc-val sc-val-wide" type="text" inputmode="numeric" value="10" data-sc-slider-setting="maxBakedWorldInfoEntries" data-sc-partner-input="#sc_easy_max_baked_wi_entries" />
                                 </div>
                             </div>
-                            <div class="sc-row">
+                            <div class="sc-row sc-append-only-row">
                                 <label for="sc_easy_baked_wi_token_budget">
-                                    <span>Max Baked WI Tokens</span>
+                                    <span>C — Max Baked WI Tokens</span>
                                     <small class="sc-hint">The token cap for complete World Info entries baked into one turn.</small>
                                 </label>
                                 <div class="sc-slider-row">
@@ -172,18 +180,6 @@
                                     <span>Add this system message when no memories are available</span>
                                 </label>
                                 <textarea id="sc_easy_append_only_empty_system_block_template" class="text_pole sc-textarea sc-textarea-tall" rows="4" data-sc-setting="appendOnlyEmptySystemBlockTemplate"></textarea>
-
-[settings.html#7F56]
-PUT 643.=651:
-                                <label for="sc_append_only_empty_system_block_template">
-                                    <span>Without Memories Template</span>
-                                    <small class="sc-hint">Used when no new memories fit this turn. SillyTavern macros run once when the block is baked.</small>
-                                </label>
-                                <label class="checkbox_label sc-toggle-row" for="sc_append_only_inject_empty_system_block">
-                                    <input id="sc_append_only_inject_empty_system_block" type="checkbox" data-sc-setting="appendOnlyInjectEmptySystemBlock" data-sc-type="boolean" />
-                                    <span>Add this system message when no memories are available</span>
-                                </label>
-                                <textarea id="sc_append_only_empty_system_block_template" class="text_pole sc-textarea sc-textarea-tall" rows="4" data-sc-setting="appendOnlyEmptySystemBlockTemplate"></textarea>
 
                             </div>
                         </div>
@@ -242,8 +238,18 @@ PUT 643.=651:
                         <span class="sc-payload-arrow fa-solid fa-arrow-right" aria-hidden="true"></span>
                         <div class="sc-payload-part">
                             <span class="fa-solid fa-message"></span>
-                            <span>Verbatim</span>
+                            <span>A Recent</span>
                             <strong id="sc_easy_payload_verbatim_budget">0</strong>
+                        </div>
+                        <span class="sc-payload-arrow fa-solid fa-arrow-right" aria-hidden="true"></span>
+                        <div class="sc-payload-part">
+                            <span>B Queue</span>
+                            <strong id="sc_easy_payload_queued_budget">0</strong>
+                        </div>
+                        <span class="sc-payload-arrow fa-solid fa-arrow-right" aria-hidden="true"></span>
+                        <div class="sc-payload-part sc-append-only-row">
+                            <span>C Lore</span>
+                            <strong id="sc_easy_payload_baked_wi_budget">0</strong>
                         </div>
                     </div>
                     <div class="sc-section-header sc-budget-subheader">
@@ -635,9 +641,9 @@ PUT 643.=651:
                                     <input id="sc_max_baked_wi_entries_val" class="text_pole sc-val sc-val-wide" type="text" inputmode="numeric" value="10" data-sc-slider-setting="maxBakedWorldInfoEntries" data-sc-partner-input="#sc_max_baked_wi_entries" />
                                 </div>
                             </div>
-                            <div class="sc-row">
+                            <div class="sc-row sc-append-only-row">
                                 <label for="sc_baked_wi_token_budget">
-                                    <span>Max Baked WI Tokens</span>
+                                    <span>C — Max Baked WI Tokens</span>
                                     <small class="sc-hint">The token cap for complete World Info entries baked into one turn.</small>
                                 </label>
                                 <div class="sc-slider-row">
@@ -779,12 +785,22 @@ PUT 643.=651:
                                 </div>
                                 <div class="sc-row">
                                     <label for="sc_verbatim_token_budget">
-                                        <span>Live Chat Window</span>
-                                        <small class="sc-hint">How many recent messages stay raw before the extension compresses them into memory.</small>
+                                        <span>A — Recent Chat</span>
+                                        <small class="sc-hint">Recent raw chat kept live after older chat enters B.</small>
                                     </label>
                                     <div class="sc-slider-row">
                                         <input type="range" id="sc_verbatim_token_budget" min="4000" max="64000" step="1000" data-sc-slider-setting="verbatimTokenBudget" data-sc-partner-input="#sc_verbatim_token_budget_val" />
                                         <input id="sc_verbatim_token_budget_val" class="text_pole sc-val sc-val-wide" type="text" inputmode="numeric" value="22k" data-sc-slider-setting="verbatimTokenBudget" data-sc-partner-input="#sc_verbatim_token_budget" />
+                                    </div>
+                                </div>
+                                <div class="sc-row">
+                                    <label for="sc_queued_token_budget">
+                                        <span>B — Queued Chat</span>
+                                        <small class="sc-hint">Older raw chat queued for summarization. Automatic summarization starts when A+B is full.</small>
+                                    </label>
+                                    <div class="sc-slider-row">
+                                        <input type="range" id="sc_queued_token_budget" min="4000" max="64000" step="1000" data-sc-slider-setting="queuedTokenBudget" data-sc-partner-input="#sc_queued_token_budget_val" />
+                                        <input id="sc_queued_token_budget_val" class="text_pole sc-val sc-val-wide" type="text" inputmode="numeric" value="6k" data-sc-slider-setting="queuedTokenBudget" data-sc-partner-input="#sc_queued_token_budget" />
                                     </div>
                                 </div>
                                 <div class="sc-row">
@@ -825,8 +841,8 @@ PUT 643.=651:
                                     </div>
                                     <div class="sc-row">
                                         <label for="sc_min_summary_budget">
-                                            <span>Batch Trigger Size</span>
-                                            <small id="sc_min_summary_budget_hint" class="sc-hint">How much chat to accumulate before compressing it. Bigger batches mean fewer LLM calls.</small>
+                                            <span>Target Source per Call</span>
+                                            <small id="sc_min_summary_budget_hint" class="sc-hint">Preferred raw-chat size for each balanced Layer 0 partition.</small>
                                         </label>
                                         <div class="sc-slider-row">
                                             <input type="range" id="sc_min_summary_budget" min="4000" max="32000" step="1000" data-sc-slider-setting="minSummaryBudget" data-sc-partner-input="#sc_min_summary_budget_val" />

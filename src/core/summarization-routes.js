@@ -1,7 +1,6 @@
 import { MEMORY_MODES } from '../foundation/constants.js';
-import { getCacheFriendlyPlan } from './cache-planner.js';
+import { buildChatWindowPlan } from './chat-window-planner.js';
 import { getSlopBreakerPlan } from './slop-breaker.js';
-import { getLayer0OverflowPlan } from './verbatim-window.js';
 
 export const SUMMARY_ROUTES = Object.freeze({
     STANDARD_AUTO: 'standard-auto',
@@ -20,18 +19,18 @@ const LAYER0_PHASE = /** @type {'layer0'} */ ('layer0');
 
 /**
  * @typedef {object} SummaryRoutePlan
- * @property {string} route - Selected summarization route identifier.
- * @property {boolean} ready - Whether the route has work ready to execute.
- * @property {string} reason - Planner-specific reason for the route state.
- * @property {string} commitMode - Commit strategy required for the selected route.
- * @property {'layer0'} phase - Summary engine phase targeted by this route.
- * @property {import('./chatutils.js').AssistantTurn[]} batchTurns - Assistant turns selected for the next batch.
- * @property {import('./partition-planner.js').SourcePartition[]} partitions - Token-balanced source partitions selected by the planner.
- * @property {number} overflowCount - Count of eligible turns or memories outside the protected window.
- * @property {number} totalBatches - Estimated number of batches required to drain ready work.
- * @property {number} [sourceEndIdx] - Inclusive chat index where the selected source range ends.
- * @property {number} [targetIndex] - Planner target index for single-message or slop repair routes.
- * @property {object} rawPlan - Original planner output used to build the normalized route.
+ * @property {string} route
+ * @property {boolean} ready
+ * @property {string} reason
+ * @property {string} commitMode
+ * @property {'layer0'} phase
+ * @property {import('./chatutils.js').AssistantTurn[]} batchTurns
+ * @property {import('./partition-planner.js').SourcePartition[]} partitions
+ * @property {number} overflowCount
+ * @property {number} totalBatches
+ * @property {number} [sourceEndIdx]
+ * @property {number} [targetIndex]
+ * @property {object} rawPlan
  */
 
 /**
@@ -42,10 +41,31 @@ const LAYER0_PHASE = /** @type {'layer0'} */ ('layer0');
  * @returns {Promise<SummaryRoutePlan>}
  */
 export async function buildAutoSummaryRoutePlan(chat, store, settings) {
-    if (settings.memoryMode === MEMORY_MODES.PREFIX_CACHE) {
-        return await buildCacheAutoRoutePlan(chat, store, settings);
+    const plan = await buildChatWindowPlan(chat, store, settings);
+    const atomic =
+        settings.memoryMode === MEMORY_MODES.PREFIX_CACHE ||
+        settings.memoryMode === MEMORY_MODES.APPEND_ONLY;
+    if (atomic) {
+        return {
+            route: SUMMARY_ROUTES.CACHE_AUTO,
+            ready: plan.reason === 'ready',
+            reason: plan.reason,
+            commitMode: SUMMARY_COMMIT_MODES.ATOMIC_PARTITIONS,
+            phase: LAYER0_PHASE,
+            batchTurns: plan.batchTurns,
+            partitions: plan.partitions,
+            overflowCount: plan.overflowCount,
+            totalBatches: plan.reason === 'ready' ? plan.partitions.length : 0,
+            rawPlan: plan,
+        };
     }
-    return await buildStandardAutoRoutePlan(chat, store, settings);
+    return buildTurnRoute({
+        route: SUMMARY_ROUTES.STANDARD_AUTO,
+        ready: plan.reason !== 'none',
+        plan,
+        batchTurns: selectLayer0BatchTurns(plan),
+        totalBatches: 1,
+    });
 }
 
 /**
@@ -56,16 +76,13 @@ export async function buildAutoSummaryRoutePlan(chat, store, settings) {
  * @returns {Promise<SummaryRoutePlan>}
  */
 export async function buildForceSummaryRoutePlan(chat, store, settings) {
-    const plan = await getLayer0OverflowPlan(chat, store, settings, { ignoreReadiness: true });
-    const ready = plan.reason !== 'none';
+    const plan = await buildChatWindowPlan(chat, store, settings, { ignoreReadiness: true });
     return buildTurnRoute({
         route: SUMMARY_ROUTES.FORCE,
-        ready,
-        reason: plan.reason,
+        ready: plan.reason !== 'none',
         plan,
         batchTurns: selectLayer0BatchTurns(plan),
-        overflowCount: Math.max(plan.eligibleTurns.length, plan.overflowCount),
-        totalBatches: estimateForceBatches(plan, settings),
+        totalBatches: plan.partitions.length,
     });
 }
 
@@ -95,45 +112,16 @@ export async function buildSlopSummaryRoutePlan(chat, store, settings, opts = {}
     };
 }
 
-async function buildStandardAutoRoutePlan(chat, store, settings) {
-    const plan = await getLayer0OverflowPlan(chat, store, settings);
-    return buildTurnRoute({
-        route: SUMMARY_ROUTES.STANDARD_AUTO,
-        ready: plan.reason !== 'none',
-        reason: plan.reason,
-        plan,
-        batchTurns: selectLayer0BatchTurns(plan),
-        overflowCount: Math.max(plan.batchTurns.length, plan.overflowCount),
-        totalBatches: 1,
-    });
-}
-
-async function buildCacheAutoRoutePlan(chat, store, settings) {
-    const plan = await getCacheFriendlyPlan(chat, store, settings);
-    return {
-        route: SUMMARY_ROUTES.CACHE_AUTO,
-        ready: plan.reason === 'ready',
-        reason: plan.reason,
-        commitMode: SUMMARY_COMMIT_MODES.ATOMIC_PARTITIONS,
-        phase: LAYER0_PHASE,
-        batchTurns: plan.batchTurns,
-        partitions: plan.partitions,
-        overflowCount: Math.max(plan.batchTurns.length, plan.overflowCount),
-        totalBatches: plan.reason === 'ready' ? Math.max(1, plan.partitions.length) : 0,
-        rawPlan: plan,
-    };
-}
-
-function buildTurnRoute({ route, ready, reason, plan, batchTurns, overflowCount, totalBatches }) {
+function buildTurnRoute({ route, ready, plan, batchTurns, totalBatches }) {
     return {
         route,
         ready,
-        reason,
+        reason: plan.reason,
         commitMode: SUMMARY_COMMIT_MODES.TURNS,
         phase: LAYER0_PHASE,
         batchTurns,
         partitions: plan.partitions,
-        overflowCount,
+        overflowCount: plan.overflowCount,
         totalBatches: ready ? Math.max(1, totalBatches) : 0,
         rawPlan: plan,
     };
@@ -141,13 +129,4 @@ function buildTurnRoute({ route, ready, reason, plan, batchTurns, overflowCount,
 
 function selectLayer0BatchTurns(plan) {
     return plan.reason === 'repair' ? plan.visibleTurns : plan.batchTurns;
-}
-
-function estimateForceBatches(plan, settings) {
-    if (plan.reason === 'none') {
-        return 0;
-    }
-    const batchLimit = Math.max(1, settings.maxSummaryTurns);
-    const readyTurns = plan.batchTurns.length + plan.softOverflowCount;
-    return Math.max(1, Math.ceil(readyTurns / batchLimit));
 }

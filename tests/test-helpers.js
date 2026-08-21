@@ -74,6 +74,7 @@ export function makeSummarySettings(overrides = {}) {
         maxSummaryTurns: 5,
         minSummaryBudget: 6000,
         verbatimTokenBudget: 16000,
+        queuedTokenBudget: 6000,
         memoryTokenBudget: 10000,
         snippetsPerLayer: 24,
         snippetsPerPromotion: 3,
