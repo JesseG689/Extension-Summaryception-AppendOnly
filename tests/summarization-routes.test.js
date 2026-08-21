@@ -96,22 +96,21 @@ describe('buildAutoSummaryRoutePlan', () => {
 });
 
 describe('buildForceSummaryRoutePlan', () => {
-    it('ignores Recent + Queued and partitions every eligible assistant turn', async () => {
+    it('summarizes the queued block while preserving Recent Chat', async () => {
         installSummaryContext();
-        const chat = makeSizedChat(2, { userLength: 20, assistantLength: 60 });
+        const chat = makeSizedChat(8, { userLength: 400, assistantLength: 400 });
         const plan = await buildForceSummaryRoutePlan(
             chat,
             makeSummaryStore(),
-            makeSummarySettings({
-                verbatimTokenBudget: 10000,
-                queuedTokenBudget: 10000,
-                minSummaryBudget: 100,
-                maxL0SourceTokens: 200,
-            }),
+            readySettings(MEMORY_MODES.BALANCED),
         );
         expect(plan.reason).toBe('force');
         expect(plan.ready).toBe(true);
-        expect(plan.batchTurns.map((turn) => turn.index)).toEqual([1, 3]);
+        expect(plan.rawPlan.verbatimStartIdx).toBeGreaterThan(0);
+        expect(plan.batchTurns.every((turn) => turn.index < plan.rawPlan.verbatimStartIdx)).toBe(
+            true,
+        );
+        expect(plan.batchTurns.length).toBeLessThan(plan.rawPlan.visibleTurnCount);
     });
 
     it('stays idle on empty chat', async () => {

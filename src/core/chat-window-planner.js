@@ -77,16 +77,12 @@ export async function buildChatWindowPlan(chat, store, settings, { ignoreReadine
     }
 
     if (ignoreReadiness) {
-        const lastTurn = data.visibleTurns.at(-1);
-        if (!lastTurn) {
+        if (data.visibleTurns.length === 0 || eligibleTurns.length === 0) {
             return empty();
         }
         return await buildReadyPlan({
             ...readyBase,
             reason: 'force',
-            queuedEndIdx: lastTurn.index,
-            eligibleTurns: data.visibleTurns,
-            queuedStats: getEntryStats(data.entries, sourceStartIdx, lastTurn.index),
         });
     }
 

@@ -217,7 +217,8 @@ const MANUAL_STRATEGIES = Object.freeze({
     [ELASTIC_STRATEGIES.FORCE]: {
         buildTask: buildForceTask,
         processBatch: processForceBatch,
-        isComplete: () => true,
+        isComplete: (_outcome, task) =>
+            getCurrentSummarizedBoundary(getChat(), getChatStore()) >= task.targetIndex,
     },
     [ELASTIC_STRATEGIES.SLOP]: {
         buildTask: buildSlopTask,
@@ -243,8 +244,7 @@ async function buildForceTask(options, strategy, prepared) {
         totalBatches: initialRoutePlan.totalBatches,
         label: 'Processing',
         title: 'Summaryception Catch-Up',
-        options,
-        targetIndex: initialRoutePlan.rawPlan.tokenBoundaryIndex,
+        targetIndex: initialRoutePlan.rawPlan.queuedEndIdx,
         getBatch: getForceRoutePlan,
         isBatchReady: (batch) => batch?.ready,
         processBatch: strategy.processBatch,

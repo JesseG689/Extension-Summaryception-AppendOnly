@@ -117,7 +117,7 @@ describe('buildChatWindowPlan', () => {
         expect(below.reason).toBe('none');
     });
 
-    it('repairs full user-only overflow and force ignores readiness', async () => {
+    it('repairs full user-only overflow and force requires queued assistant turns', async () => {
         installSummaryContext();
         const users = [
             makeMessage({ isUser: true, mes: 'x'.repeat(100) }),
@@ -136,8 +136,8 @@ describe('buildChatWindowPlan', () => {
             { ignoreReadiness: true },
         );
         expect(repair.reason).toBe('repair');
-        expect(force.reason).toBe('force');
-        expect(force.eligibleTurns).toHaveLength(2);
+        expect(force.reason).toBe('none');
+        expect(force.eligibleTurns).toHaveLength(0);
     });
 
     it('splits all of the queued window into two and three balanced partitions', async () => {
