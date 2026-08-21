@@ -53,6 +53,19 @@ export const ELASTIC_STRATEGIES = Object.freeze({
  */
 
 /**
+ * @typedef {object} ManualTask
+ * @property {string} kind - Manual strategy identifier.
+ * @property {number} totalBatches - Estimated total batches for the run.
+ * @property {string} label - Short progress label for the active operation.
+ * @property {string} title - User-visible progress title.
+ * @property {number} targetIndex - Summarized boundary the run must reach.
+ * @property {() => Promise<*>} getBatch - Builds the next route plan to commit.
+ * @property {(batch: *) => boolean} isBatchReady - Whether a route plan has work.
+ * @property {(batch: *) => Promise<{ success: boolean, committed: boolean, done?: boolean }>} processBatch - Commits one route plan.
+ * @property {(outcome: ManualRunOutcome, task: ManualTask) => boolean} isComplete - Whether the run reached its target.
+ */
+
+/**
  * @typedef {object} ManualRunnerDeps
  * @property {import('./summarizer-queue.js').SummarizerQueue} queue - Shared summarizer queue.
  * @property {() => void} refreshUi - Refreshes visible extension UI state.
@@ -146,12 +159,12 @@ export async function runElasticManual(deps, strategy, options = {}) {
     }
 
     const prepared = await prepareSummaryCycle();
-    const task = await buildManualTask(strategy, options, prepared);
+    const task = await buildManualTask(strategy, prepared);
     if (!task) {
         return createManualRunOutcome();
     }
 
-    const outcome = await executeManualTask(deps, task);
+    const outcome = await executeManualTask(deps, task, options);
     const normalized = await normalizeManualMemory(outcome);
     deps.refreshUi();
     return {
@@ -228,12 +241,23 @@ const MANUAL_STRATEGIES = Object.freeze({
     },
 });
 
-async function buildManualTask(strategy, options, prepared) {
+/**
+ * Build the manual task for one strategy.
+ * @param {'FORCE' | 'SLOP'} strategy
+ * @param {{ chat: ChatMessage[], store: SummaryceptionStore }} prepared
+ * @returns {Promise<ManualTask | null | undefined>}
+ */
+async function buildManualTask(strategy, prepared) {
     const manualStrategy = MANUAL_STRATEGIES[strategy];
-    return await manualStrategy?.buildTask(options, manualStrategy, prepared);
+    return await manualStrategy?.buildTask(manualStrategy, prepared);
 }
 
-async function buildForceTask(options, strategy, prepared) {
+/**
+ * @param {*} strategy
+ * @param {{ chat: ChatMessage[], store: SummaryceptionStore }} prepared
+ * @returns {Promise<ManualTask | null>}
+ */
+async function buildForceTask(strategy, prepared) {
     const initialRoutePlan = await getForceRoutePlan(prepared);
     if (!initialRoutePlan.ready) {
         return null;
@@ -252,23 +276,27 @@ async function buildForceTask(options, strategy, prepared) {
     };
 }
 
-async function buildSlopTask(options, strategy, prepared) {
+/**
+ * @param {*} strategy
+ * @param {{ chat: ChatMessage[], store: SummaryceptionStore }} prepared
+ * @returns {Promise<ManualTask | null>}
+ */
+async function buildSlopTask(strategy, prepared) {
     const initialRoutePlan = await buildSlopSummaryRoutePlan(
         prepared.chat,
         prepared.store,
         getEffectiveSettings(),
     );
-    if (!initialRoutePlan.ready) {
+    const targetIndex = initialRoutePlan.targetIndex;
+    if (!initialRoutePlan.ready || typeof targetIndex !== 'number') {
         return null;
     }
 
-    const targetIndex = initialRoutePlan.targetIndex;
     return {
         kind: ELASTIC_STRATEGIES.SLOP,
         totalBatches: initialRoutePlan.totalBatches,
         label: 'Breaking slop',
         title: 'Summaryception Slop Breaker',
-        options,
         targetIndex,
         getBatch: async () => {
             const cycle = await prepareSummaryCycle();
@@ -287,15 +315,22 @@ async function buildSlopTask(options, strategy, prepared) {
     };
 }
 
-async function executeManualTask(deps, task) {
+/**
+ * Drive one manual task batch loop to completion.
+ * @param {ManualRunnerDeps} deps
+ * @param {ManualTask} task
+ * @param {ManualRunOptions} options
+ * @returns {Promise<ManualRunOutcome>}
+ */
+async function executeManualTask(deps, task, options) {
     const outcome = createManualRunOutcome({ totalBatches: task.totalBatches });
     let consecutiveFailures = 0;
 
-    task.options.onStart?.(createProgress(outcome, task));
+    options.onStart?.(createProgress(outcome, task));
     deps.queue.setSummarizing(true);
 
     try {
-        while (!isCancelled(task.options.signal)) {
+        while (!isCancelled(options.signal)) {
             const batch = await task.getBatch();
             if (!task.isBatchReady(batch)) {
                 break;
@@ -309,7 +344,7 @@ async function executeManualTask(deps, task) {
                 break;
             }
 
-            if (shouldStopManualLoop(outcome, result, task.options.signal, deps.queue)) {
+            if (shouldStopManualLoop(outcome, result, options.signal, deps.queue)) {
                 break;
             }
 
@@ -318,11 +353,11 @@ async function executeManualTask(deps, task) {
                 break;
             }
 
-            task.options.onProgress?.(createProgress(outcome, task));
+            options.onProgress?.(createProgress(outcome, task));
             await sleep(200);
         }
 
-        if (isCancelled(task.options.signal)) {
+        if (isCancelled(options.signal)) {
             outcome.cancelled = true;
         }
         return outcome;

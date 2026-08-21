@@ -16,6 +16,7 @@
 - Read runtime behavior from effective settings.
 - Use raw settings only for persistence and UI forms.
 - Any summary layer or snippet mutation must bump the store mutation epoch.
+- Implicit any is allowed. Annotate parameters that hold structured objects so the type gate checks property reads.
 
 ## Writing
 
@@ -25,6 +26,7 @@
 ## Commands
 
 - `npm test` runs the suite.
+- The pre-commit hook formats the whole repo, then stages every change. Keep the tree free of unrelated edits before a commit.
 
 ## Documentation Map
 
