@@ -53,7 +53,7 @@ export function makeSizedChat(turnCount, { userLength = 100, assistantLength = 1
 
 /**
  * Predict a message's token count under the default String-length test tokenizer.
- *  Mirrors the "Player: "/"Assistant: " line format used by the planner modules —
+ *  Mirrors the "Player: "/"Assistant: " line format used by the planner modules;
  *  this is the single coupling point if speaker names ever change.
  */
 export function messageLineTokens(isUser, mesLength) {

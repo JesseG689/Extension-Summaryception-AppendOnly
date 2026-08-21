@@ -486,8 +486,8 @@ async function sleep(ms) {
 function logRoutePlan(routePlan, s) {
     const plan = routePlan.rawPlan;
     debug(
-        `Mode: ${s.memoryMode}, A: ${formatTokenValue(plan.verbatimTokens)}/` +
-            `${formatTokenValue(plan.verbatimBudget)}, B: ${formatTokenValue(plan.queuedTokens)}/` +
+        `Mode: ${s.memoryMode}, recent: ${formatTokenValue(plan.verbatimTokens)}/` +
+            `${formatTokenValue(plan.verbatimBudget)}, queued: ${formatTokenValue(plan.queuedTokens)}/` +
             `${formatTokenValue(plan.queuedBudget)}, partitions: ${plan.partitions.length}`,
     );
 }

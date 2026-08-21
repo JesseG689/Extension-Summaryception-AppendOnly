@@ -71,13 +71,13 @@ This mode works everywhere and keeps context size fairly steady. If cached input
 
 Use Prefix Cache with the normal prompt caches offered by most providers. It lets live chat grow to 32k so more of each request can stay cached.
 
-Suppose the old prompt is `AB` and the next one is `AC`. A normal prefix cache can still reuse `A`, the longest unchanged part at the start. Your usual lorebooks work normally; no migration or special outlet is needed.
+Suppose the next request keeps the same start but changes the tail. A normal prefix cache can still reuse that unchanged start. Your usual lorebooks work normally; no migration or special outlet is needed.
 
 Pick this mode when cached input is cheaper and your provider supports that kind of partial prefix reuse. The tradeoff is a larger prompt. A summary flush also gives the provider a new prefix to cache.
 
 ### Append Only
 
-Append Only is for stricter providers. They only give a useful cache hit when the old request is the exact start of the new one: `A -> AB -> ABC`. Changing `AB` into `AC` breaks the chain. Hapuppy provider (link below) is why this mode was created ($20 for 10 000 kimi k3 messages)
+Append Only is for stricter providers. They only give a useful cache hit when the old request is the exact start of the new one: each request must only append to the last, never change an earlier part. Hapuppy provider (link below) is why this mode was created ($20 for 10 000 kimi k3 messages)
 
 To keep that chain intact, Summaryception leaves its memory prefix alone between flushes and bakes newly activated lore into the chat tail. It is fussy, but on providers with a deep cached-input discount it is often the cheapest mode.
 

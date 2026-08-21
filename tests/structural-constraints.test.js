@@ -151,7 +151,7 @@ describe('buildLayer0BudgetHint', () => {
         });
         expect(result).toContain('Existing [STATE]: 4 keys.');
         // The [STATE] cap line equals computeStateLineCap(4) (cross-check via
-        // the same exported function the builder uses — never a literal).
+        // the same exported function the builder uses; never a literal).
         expect(result).toContain(`at most ${computeStateLineCap(4)} lines`);
     });
 
@@ -171,7 +171,7 @@ describe('buildLayer0BudgetHint', () => {
             settings,
         });
         // With all six categories enabled the raw sum is 36, clamped to the
-        // STATE_KEY_CEILING (12) — the same contract getActiveLineCap encodes.
+        // STATE_KEY_CEILING (12); the same contract getActiveLineCap encodes.
         expect(getActiveLineCap(settings, STATE_KEY_CEILING)).toBe(12);
         expect(result).toContain('at most 12 lines');
         // Must never leak the unclamped 36 figure.

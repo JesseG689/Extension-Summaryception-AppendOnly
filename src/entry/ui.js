@@ -80,7 +80,7 @@ function syncSettingsInputs(s, effectiveSettings) {
 function syncEnabledContent(s) {
     // Show the off banner when the extension is off, but keep the complexity
     // panel (chosen via configMode) visible below it so configuration stays
-    // editable while off — turning off no longer hides the settings UI.
+    // editable while off; turning off no longer hides the settings UI.
     const off = s.uiMode === UI_MODES.OFF;
     const complexity = off ? s.configMode || UI_MODES.EASY : s.uiMode;
     $('#sc_off_content').toggle(off);
@@ -104,7 +104,7 @@ function syncEasyPayloadSchematic(s = getEffectiveSettings()) {
 }
 
 /**
- * Build configured A/B/C context limits for the main request preview.
+ * Build configured recent/queued/baked context limits for the main request preview.
  * @param {ReturnType<typeof getSettings>} [s]
  * @returns {{ rawChatMin: number, rawChatMax: number, mainMin: number, mainMax: number, bakedWorldInfoMax: number }}
  */
@@ -426,7 +426,7 @@ async function renderTriggerGauge(s, store) {
 }
 
 /**
- * Compute the B queue gauge from the unified planner.
+ * Compute the queued-chat gauge from the unified planner.
  * @param {import('../core/summarization-routes.js').SummaryRoutePlan} plan
  * @param {ReturnType<typeof getEffectiveSettings>} s
  * @returns {{ queuedTokens: number, queuedEstimated: boolean, triggerTokens: number, label: string }}
@@ -437,7 +437,7 @@ export function buildTriggerGaugeModel(plan, s) {
         queuedTokens: normalizeBudgetCount(queuedStats?.finalTokens ?? 0),
         queuedEstimated: Boolean(queuedStats?.finalTokensEstimated),
         triggerTokens: normalizeBudgetCount(s.queuedTokenBudget),
-        label: 'Summarize at A + B',
+        label: 'Summarize at Recent + Queued',
     };
 }
 
@@ -468,7 +468,7 @@ async function getVerbatimBudgetPart(s, store) {
     const plan = await buildAutoSummaryRoutePlan(getChat(), store, s);
     const stats = plan.rawPlan.verbatimStats || { finalTokens: 0, finalTokensEstimated: false };
     return {
-        label: 'A — Recent Chat',
+        label: 'Recent Chat',
         kind: 'verbatim',
         count: stats.finalTokens,
         estimated: stats.finalTokensEstimated,

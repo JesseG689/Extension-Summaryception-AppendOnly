@@ -491,7 +491,7 @@ function onResumeSummarize() {
 }
 
 /**
- * Force the catch-up pass to summarize eligible turns beyond the current A range.
+ * Force the catch-up pass to summarize eligible turns beyond the current recent window.
  * @returns {Promise<void>}
  */
 async function onForceSummarize() {

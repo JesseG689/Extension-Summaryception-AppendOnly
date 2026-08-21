@@ -100,7 +100,7 @@ describe('getSettings', () => {
 });
 
 describe('memory mode budgets', () => {
-    it('defaults and clamps independent A and B budgets', () => {
+    it('defaults and clamps independent recent and queued budgets', () => {
         installSummaryContext({
             settings: { verbatimTokenBudget: 999, queuedTokenBudget: 999999 },
         });
@@ -125,7 +125,7 @@ describe('getEffectiveSettings', () => {
         // so OFF deterministically yields disabled effective settings. We assert
         // the OFF-branch output directly: the plan's "raw stays enabled:true" half
         // is not reflectable through getSettings() because normalizeModeSettings
-        // overwrites enabled to match the mode — drift noted, contract class
+        // overwrites enabled to match the mode; drift noted, contract class
         // (branching) preserved.
         installSummaryContext({ settings: { uiMode: UI_MODES.OFF, enabled: true } });
         const effective = getEffectiveSettings();

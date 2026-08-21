@@ -134,7 +134,7 @@ describe('insertBeforeTrigger', () => {
     it('does not throw on a null prompt and preserves the trimmed insert in the result', () => {
         const insert = '<summaryception_source_budget>\nY\n</summaryception_source_budget>';
         const result = insertBeforeTrigger(null, insert, EXECUTION_TRIGGER_PROMO);
-        // Null body coerces to '' — a non-empty trigger fails the endswith
+        // Null body coerces to ''; a non-empty trigger fails the endswith
         // guard, so the fallback appends the insert after the trim()'d empty
         // body. The contract is null-safety (no throw) + insert preservation.
         expect(result).toContain(insert);

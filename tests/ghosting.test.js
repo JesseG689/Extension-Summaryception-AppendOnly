@@ -16,7 +16,7 @@ describe('hide non-text messages in summarized range', () => {
         return [
             makeMessage({ mes: 'turn zero', scId: 'message-0' }),
             makeMessage({ mes: 'turn one', scId: 'message-1' }),
-            // No text — an image or tool-call message that carries no summary text.
+            // No text: an image or tool-call message that carries no summary text.
             makeMessage({ mes: '', name: 'Image', scId: 'message-2' }),
             makeMessage({ mes: 'turn three', scId: 'message-3' }),
         ];

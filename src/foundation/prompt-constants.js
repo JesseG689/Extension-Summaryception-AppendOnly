@@ -55,7 +55,7 @@ export const PROSE_DATE_FORMAT_RULE =
 export const DEFAULT_INJECTION_TEMPLATE =
     '<summaryception_memory>\n' +
     'Compressed continuity. Newer verbatim chat and the current user message take priority.\n' +
-    "[CURRENT STATE] = active facts. [CHRONOLOGY] = past events, oldest to newest. [X-Y@YYYY-MM-DDTHH] = source messages X-Y; scene time at Y also serves as that passage's reference date — resolve any relative time words (tomorrow, today, in N days, next/bare weekday, this evening) in the adjacent narrative against it.\n" +
+    "[CURRENT STATE] = active facts. [CHRONOLOGY] = past events, oldest to newest. [X-Y@YYYY-MM-DDTHH] = source messages X-Y; scene time at Y also serves as that passage's reference date; resolve any relative time words (tomorrow, today, in N days, next/bare weekday, this evening) in the adjacent narrative against it.\n" +
     '{{summary}}\n' +
     '</summaryception_memory>';
 
@@ -196,7 +196,7 @@ The input memories overlap heavily: each was written with the prior ones as cont
 1. **No Historical Rewriting:** <prior_context> is your established, immutable baseline history. Do NOT re-summarize, duplicate, or re-write any events, dates, or details already recorded in <prior_context>.
 2. **Strict Delta Scoping:** Your output must ONLY summarize the new events occurring within <narratives_to_consolidate>.
 3. **Appended Continuity:** Structure the output so that it chronologically and seamlessly appends directly to the end of <prior_context> without looking back or repeating past timelines.
-4. **Temporal Anchors:** Preserve lower-layer anchors such as [msgs 100-120; current 2024-12-03 09 Wed]. Keep hour-level 24-hour timestamps exactly when provided. Do not reduce inferable absolute timing to vague relative timing; future goals/plans should retain explicit date/hour anchors when available. Each source narrative is prefixed with a scene-time anchor like [msgs X-Y; current YYYY-MM-DD HH ddd]; treat that anchor's date AS the scene's "today" for that passage, compute every relative word in that narrative against it, and emit absolute dates in your output. Bare weekday names (e.g. "Friday") are forbidden — write the full calendar date instead of a relative word.
+4. **Temporal Anchors:** Preserve lower-layer anchors such as [msgs 100-120; current 2024-12-03 09 Wed]. Keep hour-level 24-hour timestamps exactly when provided. Do not reduce inferable absolute timing to vague relative timing; future goals/plans should retain explicit date/hour anchors when available. Each source narrative is prefixed with a scene-time anchor like [msgs X-Y; current YYYY-MM-DD HH ddd]; treat that anchor's date AS the scene's "today" for that passage, compute every relative word in that narrative against it, and emit absolute dates in your output. Bare weekday names (e.g. "Friday") are forbidden; write the full calendar date instead of a relative word.
 ### PROSE-FOLDING RULES:
 The <source_state> block contains dynamic facts extracted from the source memories. Do NOT list every item from <source_state>. Fold in only major plot-arc changes that affect future events; ignore minor inventory items, temporary rules, and transient positions.
 Do not output a [STATE] block, key-value lines, tables, bullets, or structured state syntax.

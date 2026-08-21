@@ -104,7 +104,7 @@ export function buildLayer0BudgetHint({
         : getActiveLineCap(settings, STATE_KEY_CEILING);
     const existingStateLine = hasState
         ? `Existing [STATE]: ${sourceStateKeyCount} keys.`
-        : 'No existing [STATE] yet — build the first snapshot.';
+        : 'No existing [STATE] yet; build the first snapshot.';
 
     return [
         '<summaryception_source_budget>',

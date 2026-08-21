@@ -22,7 +22,7 @@ function settings(overrides = {}) {
 }
 
 describe('buildChatWindowPlan', () => {
-    it('stays idle below A+B and is ready at equality', async () => {
+    it('stays idle below Recent + Queued and is ready at equality', async () => {
         installSummaryContext();
         const chat = makeSizedChat(2, { userLength: 40, assistantLength: 40 });
         const total = 2 * messageLineTokens(true, 40) + 2 * messageLineTokens(false, 40);
@@ -140,7 +140,7 @@ describe('buildChatWindowPlan', () => {
         expect(force.eligibleTurns).toHaveLength(2);
     });
 
-    it('splits all of B into two and three balanced partitions', async () => {
+    it('splits all of the queued window into two and three balanced partitions', async () => {
         installSummaryContext();
         const twoChat = makeSizedChat(8, { userLength: 400, assistantLength: 400 });
         const two = await buildChatWindowPlan(
@@ -169,7 +169,7 @@ describe('buildChatWindowPlan', () => {
         expect(two.partitions.flatMap((part) => part.turns)).toHaveLength(two.eligibleTurns.length);
     });
 
-    it('excludes non-conversation and baked records from A/B accounting', async () => {
+    it('excludes non-conversation and baked records from recent/queued accounting', async () => {
         installSummaryContext();
         const chat = makeSizedChat(2, { userLength: 40, assistantLength: 40 });
         const baked = makeMessage({ mes: 'x'.repeat(1000) });

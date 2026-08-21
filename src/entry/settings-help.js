@@ -44,14 +44,14 @@ const MEMORY_MODE_HELP = Object.freeze({
     },
     prefix_cache: {
         title: 'Prefix Cache',
-        short: 'For normal caches that can reuse the unchanged start of a prompt, such as AB -> AC.',
+        short: 'For normal caches that can reuse the unchanged start of a prompt even when the tail changes.',
         controlsText: 'Lets live chat grow to 32k before flushing older chat in one commit.',
         when: 'Use it when cached input is cheaper and your provider can reuse a partial prompt prefix.',
         risk: 'The prompt is larger, and a summary flush starts a new cache prefix. Normal lorebooks need no changes.',
     },
     append_only: {
         title: 'Append Only',
-        short: 'For strict caches that need every request to extend the last one: A -> AB -> ABC.',
+        short: 'For strict caches that need every request to extend the last one: Recent, then Recent + Queued, then Recent + Queued + Baked.',
         controlsText:
             'Run /sc-migrate-wi once to clone each lorebook as SC - <original>; originals stay unchanged. Select the clone, close and reopen the lorebook editor to see its dynamic entries under Outlet.',
         when: 'Use it when your provider requires an exact growing prefix and gives a deep cached-input discount.',
@@ -123,23 +123,23 @@ const HELP_ENTRIES = [
             controlsText:
                 'This relabels your chat turns as the AI\'s own words before the request leaves, so the model quits handing your character plot armor. Chat-completion models are RLHF-trained to treat whatever sits in the user role as a real person to please and keep safe, which is why your character never truly loses. Flip your turns to the assistant role and the whole log reads like one narrator telling a story, so you become just another character who can get hurt, surprised, or told no. It only touches the outgoing request; your saved chat stays exactly as you wrote it. Works best when you roleplay in third person and edit your preset so it never says "user" or "you". The modes: marker first adds a throwaway user line at the top for APIs that demand one; no marker turns every turn into the AI (request-only, zero user messages); marker last puts that throwaway user line at the end; keep the final user block leaves your last message as user, which is handy when another extension such as Rabbit-Response-Team injects its instruction there.',
             when: 'Reach for it when you want the model to stop shielding your character and just play the scene straight.',
-            risk: 'providers may normalize or reject unusual role layouts or synthetic marker messages, and a no-marker request with zero user messages can be refused outright — that is exactly what the marker modes are for.',
+            risk: 'providers may normalize or reject unusual role layouts or synthetic marker messages, and a no-marker request with zero user messages can be refused outright. That is exactly what the marker modes are for.',
         }),
     ],
     [
         'verbatim_token_budget',
         sliderHelp({
             selector: selectorFor('sc_verbatim_token_budget'),
-            title: 'A Recent Chat Budget',
-            short: 'Recent raw chat kept live in A.',
+            title: 'Recent Chat Budget',
+            short: 'Recent raw chat kept live.',
             controls: [
                 controlFor('sc_verbatim_token_budget'),
                 controlFor('sc_verbatim_token_budget_val'),
             ],
             meaning:
-                'Sets A, the recent raw-chat range kept word-for-word while older raw chat waits in B.',
+                'Sets the recent raw-chat range kept word-for-word while older raw chat waits in the queued window.',
             higher: 'keeps more exact recent chat but uses more context.',
-            lower: 'moves the A boundary forward sooner.',
+            lower: 'moves the recent boundary forward sooner.',
             defaultText: '22k in Balanced; mode presets may change it.',
         }),
     ],
@@ -147,16 +147,16 @@ const HELP_ENTRIES = [
         'queued_token_budget',
         sliderHelp({
             selector: selectorFor('sc_queued_token_budget'),
-            title: 'B Queued Chat Budget',
-            short: 'Older raw chat held in B before automatic summarization.',
+            title: 'Queued Chat Budget',
+            short: 'Older raw chat held for automatic summarization.',
             controls: [
                 controlFor('sc_queued_token_budget'),
                 controlFor('sc_queued_token_budget_val'),
             ],
             meaning:
-                'Sets B, the queued older raw-chat range. Automatic summarization waits until A+B is full.',
+                'Sets the queued older raw-chat range. Automatic summarization waits until Recent + Queued is full.',
             higher: 'lets more raw chat accumulate before a flush.',
-            lower: 'flushes queued chat sooner after A is full.',
+            lower: 'flushes queued chat sooner after the recent window is full.',
             defaultText: '6k in Balanced; mode presets may change it.',
         }),
     ],
@@ -237,7 +237,7 @@ const HELP_ENTRIES = [
                 controlFor('sc_min_summary_budget_val'),
             ],
             meaning:
-                'Sets the preferred size of each balanced Layer 0 partition. A+B fullness controls automatic summarization.',
+                'Sets the preferred size of each balanced Layer 0 partition. Recent + Queued fullness controls automatic summarization.',
             higher: 'makes fewer, larger summarizer calls up to the source cap.',
             lower: 'creates smaller partitions and more summarizer calls.',
             defaultText: '16k; auto-derived from Model context.',
@@ -401,7 +401,7 @@ const HELP_ENTRIES = [
             controlsText:
                 'Toggles the narrative-debt bullet register that ages and fires probabilistically. Keep the FIRE-decision d20 logic in your preset CoT; only the register lives here.',
             when: "Replaces FF5's <internal_chekhovguntracker> storage. Disable that block in your preset when on.",
-            risk: 'Keep the FIRE-decision d20 logic in your preset CoT — only the bullet register lives here.',
+            risk: 'Keep the FIRE-decision d20 logic in your preset CoT; only the bullet register lives here.',
         }),
     ],
     [
@@ -438,9 +438,9 @@ const HELP_ENTRIES = [
             short: 'Current scene location.',
             controls: [controlFor('sc_state_cat_location')],
             controlsText:
-                'Toggles tracking of the current scene location. Optional — only needed when your preset keys off proximity-based modifiers such as Chekhov location-match.',
+                'Toggles tracking of the current scene location. Optional; only needed when your preset keys off proximity-based modifiers such as Chekhov location-match.',
             when: 'Optional. Needed if your preset uses proximity-based modifiers (e.g. Chekhov location-match).',
-            risk: 'Low risk — dispensable if your preset does not key off scene location.',
+            risk: 'Low risk; dispensable if your preset does not key off scene location.',
         }),
     ],
     ...CONNECTION_HELP_ENTRIES,

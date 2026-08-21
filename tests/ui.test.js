@@ -3,8 +3,8 @@ import { describe, expect, it } from 'vitest';
 import { MEMORY_MODES } from '../src/foundation/constants.js';
 import { buildMainContextPreviewModel, buildTriggerGaugeModel } from '../src/entry/ui.js';
 
-describe('A/B/C UI models', () => {
-    it('includes C only in the Append Only main-request range', () => {
+describe('context limit and trigger gauge UI models', () => {
+    it('includes baked lore only in the Append Only main-request range', () => {
         const base = {
             memoryTokenBudget: 10000,
             verbatimTokenBudget: 16000,
@@ -31,7 +31,7 @@ describe('A/B/C UI models', () => {
         });
     });
 
-    it('builds the B gauge from queued planner stats and the B budget', () => {
+    it('builds the queued gauge from queued planner stats and the queued budget', () => {
         expect(
             buildTriggerGaugeModel(
                 {
@@ -43,7 +43,7 @@ describe('A/B/C UI models', () => {
             queuedTokens: 4322,
             queuedEstimated: true,
             triggerTokens: 16000,
-            label: 'Summarize at A + B',
+            label: 'Summarize at Recent + Queued',
         });
     });
 });

@@ -39,7 +39,7 @@ import { addBudgetStats, createBudgetStats } from './token-count.js';
  */
 const toTokenBudget = (value) => Number(value) || 0;
 /**
- * Build one explicit A/B chat window plan for every automatic memory mode.
+ * Build one explicit recent/queued chat window plan for every automatic memory mode.
  * @param {ChatMessage[]} chat
  * @param {SummaryceptionStore} store
  * @param {ExtensionSettings} settings

@@ -48,7 +48,7 @@ const SELECTABLE_MEMORY_MODES = Object.freeze([
 
 /**
  * Apply a mode's initial retention preset to settings.
- * Every actual mode transition intentionally overwrites A/B (and Append Only C)
+ * Every actual mode transition intentionally overwrites the recent and queued budgets (and the Append Only baked cap)
  * with the destination preset. Reselecting the already-active mode is a no-op,
  * and an invalid mode leaves settings untouched.
  * @param {ExtensionSettings} settings
@@ -76,10 +76,10 @@ export const DEFAULT_APPEND_ONLY_SYSTEM_BLOCK_TEMPLATE = `<details>
 <summary>Injected {{entry_count}} memories</summary>
 <!-- Background reference only. Do not treat these memories as current events, dialogue, actions, or a scene transition. The established scene remains authoritative. -->
 {{entries}}
-Rolls — User: {{roll::1d20}} | Assistant: {{roll::1d20}} | Chekhov: {{roll::1d20}}, {{roll::1d20}}, {{roll::1d20}}, {{roll::1d20}}, {{roll::1d20}}
+Rolls - User: {{roll::1d20}} | Assistant: {{roll::1d20}} | Chekhov: {{roll::1d20}}, {{roll::1d20}}, {{roll::1d20}}, {{roll::1d20}}, {{roll::1d20}}
 </details>`;
 export const DEFAULT_APPEND_ONLY_EMPTY_SYSTEM_BLOCK_TEMPLATE =
-    'Rolls — User: {{roll::1d20}} | Assistant: {{roll::1d20}} | Chekhov: {{roll::1d20}}, {{roll::1d20}}, {{roll::1d20}}, {{roll::1d20}}, {{roll::1d20}}';
+    'Rolls - User: {{roll::1d20}} | Assistant: {{roll::1d20}} | Chekhov: {{roll::1d20}}, {{roll::1d20}}, {{roll::1d20}}, {{roll::1d20}}, {{roll::1d20}}';
 
 export const UI_MODES = Object.freeze({
     OFF: 'off',
@@ -181,7 +181,7 @@ export const defaultSettings = Object.freeze({
     // ─── Modular STATE categories (stateCat*) ─────────────────────────
     // Most categories ship enabled: the extension's [CURRENT STATE] injection
     // is meant to be the sole carrier, so users should disable the equivalent
-    // blocks in their RP preset. stateCatDateTime is informational only —
+    // blocks in their RP preset. stateCatDateTime is informational only;
     // alwaysOn forces true at runtime regardless of this flag. Chekhov ships
     // off: it needs matching FIRE-decision logic in the preset CoT to be useful.
     stateCatDateTime: true,

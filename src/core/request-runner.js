@@ -858,7 +858,7 @@ function failSummarization(lastError, { retriesExhausted = true } = {}) {
     const retryText = retriesExhausted ? ` after ${RETRY_CONFIG.maxRetries} retries` : '';
     logError(`Summarization failed${retryText}:`, lastError);
     toastr.error(
-        `Summarization failed${retryText}${status ? ` (${status})` : ''}. Batch skipped — will retry on next trigger.`,
+        `Summarization failed${retryText}${status ? ` (${status})` : ''}. Batch skipped; will retry on next trigger.`,
         'Summaryception',
         { timeOut: 8000 },
     );

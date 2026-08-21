@@ -136,11 +136,11 @@
                                 </div>
                             </div>
                             <div class="sc-row">
-                                <label for="sc_easy_verbatim_token_budget"><span>A — Recent Chat</span><small class="sc-hint">Recent raw chat kept live. The main request grows from A to A+B before B is summarized.</small></label>
+                                <label for="sc_easy_verbatim_token_budget"><span>Recent Chat</span><small class="sc-hint">Recent raw chat kept live. The main request grows from Recent to Recent + Queued before Queued is summarized.</small></label>
                                 <div class="sc-slider-row"><input type="range" id="sc_easy_verbatim_token_budget" min="4000" max="64000" step="1000" data-sc-slider-setting="verbatimTokenBudget" data-sc-partner-input="#sc_easy_verbatim_token_budget_val" /><input id="sc_easy_verbatim_token_budget_val" class="text_pole sc-val sc-val-wide" type="text" inputmode="numeric" data-sc-slider-setting="verbatimTokenBudget" data-sc-partner-input="#sc_easy_verbatim_token_budget" /></div>
                             </div>
                             <div class="sc-row">
-                                <label for="sc_easy_queued_token_budget"><span>B — Queued Chat</span><small class="sc-hint">Older raw chat queued for summarization after A+B is full.</small></label>
+                                <label for="sc_easy_queued_token_budget"><span>Queued Chat</span><small class="sc-hint">Older raw chat queued for summarization after Recent + Queued is full.</small></label>
                                 <div class="sc-slider-row"><input type="range" id="sc_easy_queued_token_budget" min="4000" max="64000" step="1000" data-sc-slider-setting="queuedTokenBudget" data-sc-partner-input="#sc_easy_queued_token_budget_val" /><input id="sc_easy_queued_token_budget_val" class="text_pole sc-val sc-val-wide" type="text" inputmode="numeric" data-sc-slider-setting="queuedTokenBudget" data-sc-partner-input="#sc_easy_queued_token_budget" /></div>
                             </div>
                             <div class="sc-row sc-append-only-row">
@@ -155,7 +155,7 @@
                             </div>
                             <div class="sc-row sc-append-only-row">
                                 <label for="sc_easy_baked_wi_token_budget">
-                                    <span>C — Max Baked WI Tokens</span>
+                                    <span>Max Baked WI Tokens</span>
                                     <small class="sc-hint">The token cap for complete World Info entries baked into one turn.</small>
                                 </label>
                                 <div class="sc-slider-row">
@@ -201,7 +201,7 @@
                                     <span class="sc-toggle-icon fa-solid fa-box-archive"></span>
                                     <span class="sc-toggle-copy">
                                         <span class="sc-toggle-title">Prefix Cache</span>
-                                        <small class="sc-hint">For normal caches that can reuse the unchanged start of a prompt, such as AB -> AC.</small>
+                                        <small class="sc-hint">For normal caches that can reuse the unchanged start of a prompt even when the tail changes.</small>
                                     </span>
                                     <input type="radio" id="sc_easy_memory_mode_prefix_cache" name="sc_easy_memory_mode" value="prefix_cache" data-sc-setting="memoryMode" />
                                 </label>
@@ -209,7 +209,7 @@
                                     <span class="sc-toggle-icon fa-solid fa-arrow-down-long"></span>
                                     <span class="sc-toggle-copy">
                                         <span class="sc-toggle-title">Append Only</span>
-                                        <small class="sc-hint">For strict caches that need every request to extend the last one: A -> AB -> ABC.</small>
+                                        <small class="sc-hint">For strict caches that need every request to extend the last one: Recent, then Recent + Queued, then Recent + Queued + Baked.</small>
                                     </span>
                                     <input type="radio" id="sc_easy_memory_mode_append_only" name="sc_easy_memory_mode" value="append_only" data-sc-setting="memoryMode" />
                                 </label>
@@ -603,7 +603,7 @@
                                 <span class="sc-toggle-icon fa-solid fa-box-archive"></span>
                                 <span class="sc-toggle-copy">
                                     <span class="sc-toggle-title">Prefix Cache</span>
-                                    <small class="sc-hint">For normal caches that can reuse the unchanged start of a prompt, such as AB -> AC.</small>
+                                <small class="sc-hint">For normal caches that can reuse the unchanged start of a prompt even when the tail changes.</small>
                                 </span>
                                 <input type="radio" id="sc_memory_mode_prefix_cache" name="sc_memory_mode" value="prefix_cache" data-sc-setting="memoryMode" />
                             </label>
@@ -611,7 +611,7 @@
                                 <span class="sc-toggle-icon fa-solid fa-arrow-down-long"></span>
                                 <span class="sc-toggle-copy">
                                     <span class="sc-toggle-title">Append Only</span>
-                                    <small class="sc-hint">For strict caches that need every request to extend the last one: A -> AB -> ABC.</small>
+                                <small class="sc-hint">For strict caches that need every request to extend the last one: Recent, then Recent + Queued, then Recent + Queued + Baked.</small>
                                 </span>
                                 <input type="radio" id="sc_memory_mode_append_only" name="sc_memory_mode" value="append_only" data-sc-setting="memoryMode" />
                             </label>
@@ -623,11 +623,11 @@
                     </div>
                     <div id="sc_memory_help_prefix_cache" class="sc-note" style="display: none;">
                         <span class="fa-solid fa-circle-info"></span>
-                        <small>Prefix Cache lets live chat grow to 32k. Most providers can reuse the longest unchanged prefix, so AB -> AC still reuses A. Normal lorebooks work as usual. Context is larger, and a summary flush starts a new cache prefix.</small>
+                        <small>Prefix Cache lets live chat grow to 32k. Most providers can reuse the longest unchanged prefix, so a changed tail still reuses the shared start. Normal lorebooks work as usual. Context is larger, and a summary flush starts a new cache prefix.</small>
                     </div>
                     <div id="sc_memory_help_append_only" class="sc-note" style="display: none;">
                         <span class="fa-solid fa-circle-info"></span>
-                        <small>Append Only is for strict caches where only A -> AB -> ABC gets a hit. Run <code>/sc-migrate-wi</code> once, then close and reopen the lorebook editor to see dynamic entries under <code>Outlet</code>. Group chats and depth-positioned lore are not supported. <code>/sc-unbake-wi</code> restores the old positions.</small>
+                        <small>Append Only is for strict caches where only an exact growing chain gets a hit. Run <code>/sc-migrate-wi</code> once, then close and reopen the lorebook editor to see dynamic entries under <code>Outlet</code>. Group chats and depth-positioned lore are not supported. <code>/sc-unbake-wi</code> restores the old positions.</small>
                     </div>
                     <div class="sc-tuning-grid">
                         <div class="sc-tuning-group">
@@ -643,7 +643,7 @@
                             </div>
                             <div class="sc-row sc-append-only-row">
                                 <label for="sc_baked_wi_token_budget">
-                                    <span>C — Max Baked WI Tokens</span>
+                                    <span>Max Baked WI Tokens</span>
                                     <small class="sc-hint">The token cap for complete World Info entries baked into one turn.</small>
                                 </label>
                                 <div class="sc-slider-row">
@@ -720,7 +720,7 @@
                                 </label>
                                 <select id="sc_mask_user_role_mode" class="text_pole" disabled data-sc-setting="maskUserRoleMode">
                                     <option value="marker_first">Marker first (for APIs that need a user message)</option>
-                                    <option value="rewrite_all">No marker — every turn becomes the AI</option>
+                                    <option value="rewrite_all">No marker: every turn becomes the AI</option>
                                     <option value="marker_last">Marker last (for APIs that need a user message)</option>
                                     <option value="keep_last_user">Keep my final message as user</option>
                                 </select>
@@ -785,8 +785,8 @@
                                 </div>
                                 <div class="sc-row">
                                     <label for="sc_verbatim_token_budget">
-                                        <span>A — Recent Chat</span>
-                                        <small class="sc-hint">Recent raw chat kept live after older chat enters B.</small>
+                                        <span>Recent Chat</span>
+                                        <small class="sc-hint">Recent raw chat kept live after older chat enters the queued window.</small>
                                     </label>
                                     <div class="sc-slider-row">
                                         <input type="range" id="sc_verbatim_token_budget" min="4000" max="64000" step="1000" data-sc-slider-setting="verbatimTokenBudget" data-sc-partner-input="#sc_verbatim_token_budget_val" />
@@ -795,8 +795,8 @@
                                 </div>
                                 <div class="sc-row">
                                     <label for="sc_queued_token_budget">
-                                        <span>B — Queued Chat</span>
-                                        <small class="sc-hint">Older raw chat queued for summarization. Automatic summarization starts when A+B is full.</small>
+                                        <span>Queued Chat</span>
+                                        <small class="sc-hint">Older raw chat queued for summarization. Automatic summarization starts when Recent + Queued is full.</small>
                                     </label>
                                     <div class="sc-slider-row">
                                         <input type="range" id="sc_queued_token_budget" min="4000" max="64000" step="1000" data-sc-slider-setting="queuedTokenBudget" data-sc-partner-input="#sc_queued_token_budget_val" />
@@ -969,7 +969,7 @@
                                 <span class="sc-toggle-icon fa-solid fa-clock"></span>
                                 <span class="sc-toggle-copy">
                                     <span class="sc-toggle-title">Date & Time</span>
-                                    <small class="sc-hint">Time anchor carried across every snapshot. Always carried — cannot be toggled off.</small>
+                                    <small class="sc-hint">Time anchor carried across every snapshot. Always carried; cannot be toggled off.</small>
                                 </span>
                                 <input type="checkbox" id="sc_state_cat_date_time" disabled />
                             </label>

@@ -104,7 +104,7 @@ export async function summarizeOneBatchFromTurns(visibleTurns) {
  * @returns {Promise<void>}
  */
 async function repairGhosting(visibleTurns, boundaryIndex) {
-    info('All visible turns are already summarized — repairing ghosting...');
+    info('All visible turns are already summarized; repairing ghosting...');
     const turnsToGhost = visibleTurns.filter((t) => t.index <= boundaryIndex);
     if (turnsToGhost.length > 0) {
         const first = turnsToGhost[0].index;

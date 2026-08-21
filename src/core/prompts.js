@@ -234,7 +234,7 @@ export async function validateLayer0OutputSize(text, settings, metadata = {}) {
 async function compactStateNearMiss(stateText, stateTokens) {
     // Only skip when the block already fits; otherwise let the deterministic
     // compactor try. Its own post-trim token check rejects anything that still
-    // can't fit, so there is no upper bound to tune here — refusing to try a
+    // can't fit, so there is no upper bound to tune here; refusing to try a
     // trim based on the *oversize* magnitude is exactly what forced the
     // wasteful full LLM retries seen in production (a 384/478-token block
     // trims cleanly under the 300-token hard max once the compactor is allowed

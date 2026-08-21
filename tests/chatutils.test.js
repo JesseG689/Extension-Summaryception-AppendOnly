@@ -137,9 +137,9 @@ describe('getPromptDepthsByChatIndex', () => {
     it('skips system messages and assigns depth by distance from the last non-system message', () => {
         const chat = [
             makeMessage({ mes: 'a' }), // index 0, non-system
-            makeMessage({ isSystem: true, mes: 'sys' }), // index 1, system — absent from map
+            makeMessage({ isSystem: true, mes: 'sys' }), // index 1, system; absent from map
             makeMessage({ mes: 'b' }), // index 2
-            makeMessage({ mes: 'c' }), // index 3 — last non-system, depth 0
+            makeMessage({ mes: 'c' }), // index 3, last non-system, depth 0
         ];
         const depths = getPromptDepthsByChatIndex(chat);
         // System index is not a key.

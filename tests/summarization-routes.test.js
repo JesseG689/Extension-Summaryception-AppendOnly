@@ -37,7 +37,7 @@ describe('buildAutoSummaryRoutePlan', () => {
             SUMMARY_ROUTES.CACHE_AUTO,
             SUMMARY_COMMIT_MODES.ATOMIC_PARTITIONS,
         ],
-    ])('uses one A/B readiness result for %s', async (mode, route, commitMode) => {
+    ])('uses one recent/queued readiness result for %s', async (mode, route, commitMode) => {
         installSummaryContext();
         const chat = makeSizedChat(8, { userLength: 400, assistantLength: 400 });
         const plan = await buildAutoSummaryRoutePlan(chat, makeSummaryStore(), readySettings(mode));
@@ -77,7 +77,7 @@ describe('buildAutoSummaryRoutePlan', () => {
         },
     );
 
-    it('stays idle below A+B despite max turns', async () => {
+    it('stays idle below Recent + Queued despite max turns', async () => {
         installSummaryContext();
         const chat = makeSizedChat(8, { userLength: 20, assistantLength: 60 });
         const plan = await buildAutoSummaryRoutePlan(
@@ -96,7 +96,7 @@ describe('buildAutoSummaryRoutePlan', () => {
 });
 
 describe('buildForceSummaryRoutePlan', () => {
-    it('ignores A+B and partitions every eligible assistant turn', async () => {
+    it('ignores Recent + Queued and partitions every eligible assistant turn', async () => {
         installSummaryContext();
         const chat = makeSizedChat(2, { userLength: 20, assistantLength: 60 });
         const plan = await buildForceSummaryRoutePlan(

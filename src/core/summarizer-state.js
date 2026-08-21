@@ -48,7 +48,7 @@ const SNAPSHOT_STATE_KEYS = Object.freeze([
     'location',
 ]);
 
-// Per-category soft char budgets. Internal-only — never surfaced to the
+// Per-category soft char budgets. Internal-only; never surfaced to the
 // model. Bound each category's serialized length so one runaway category
 // cannot monopolize the global budget. current_date_time is exempt from
 // per-category trim (priorityRank -1 = carried verbatim). Sum ≈ 1780 chars

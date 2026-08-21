@@ -346,7 +346,7 @@ export async function buildPassageFromRange(chat, startIdx, endIdx) {
 
 /**
  * Build a full context string from all layers down to (and including) a target layer.
- * Deepest layers first, target layer last — gives the summarizer full awareness
+ * Deepest layers first, target layer last, giving the summarizer full awareness
  * of what's already been captured so it can avoid redundancy.
  *
  * @param {number} downToLayer - Include this layer and all layers above it
