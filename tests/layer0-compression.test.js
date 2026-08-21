@@ -83,12 +83,12 @@ describe('getLayer0SummaryTokenTarget', () => {
 });
 
 describe('getLayer0SummaryTokenBounds', () => {
-    it('derives min/max from the imported ratios and satisfies min < target < max', () => {
+    it('allows compact narratives down to 50 tokens without changing the hard max', () => {
         const settings = { layer0SummaryTokenTarget: 200 };
         const bounds = getLayer0SummaryTokenBounds(settings);
         const target = getLayer0SummaryTokenTarget(settings);
         expect(bounds.target).toBe(target);
-        expect(bounds.min).toBe(Math.floor(target * LAYER_MIN_RATIO.l0));
+        expect(bounds.min).toBe(50);
         expect(bounds.max).toBe(Math.round(target * LAYER_HARD_MAX_RATIO.l0));
         expect(bounds.min).toBeLessThan(bounds.target);
         expect(bounds.target).toBeLessThan(bounds.max);

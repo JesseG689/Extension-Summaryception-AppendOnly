@@ -23,6 +23,7 @@ import {
 } from './token-budget.js';
 
 const MIN_LAYER0_TARGET_TOKENS = 80;
+const MIN_LAYER0_OUTPUT_TOKENS = 50;
 const MAX_LAYER0_TARGET_TOKENS = 700;
 
 /**
@@ -59,7 +60,7 @@ export function getLayer0SummaryTokenBounds(settings = {}) {
     const target = getLayer0SummaryTokenTarget(settings);
     return {
         target,
-        min: Math.floor(target * LAYER_MIN_RATIO.l0),
+        min: MIN_LAYER0_OUTPUT_TOKENS,
         max: Math.round(target * LAYER_HARD_MAX_RATIO.l0),
     };
 }
