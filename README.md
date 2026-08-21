@@ -171,6 +171,8 @@ Older major versions are still available as branches. Open SillyTavern's extensi
 
 <img src="img/how_to_switch_branch.png" width="700" alt="Branch button beside Summaryception in SillyTavern's extension list" />
 
+- **v22:** Big code refactor
+
 - **v21:** Added Append Only for strict prompt caches, including [Hapuppy's Kimi K3](https://hapuppy.com/register?invite=CKxDPfUL). Cached input is very cheap there, but the model needs a stable preset with no rotating macros or dynamic injection positions. The screenshot below shows roughly 49k-58k cache reads on 56k-59k input prompts. That is the whole point of this slightly fussy mode.
 
 <img src="img/hapuppy_kimi_cache.png" width="900" alt="Kimi K3 usage showing most input tokens served from cache" />
