@@ -92,7 +92,7 @@ describe('manual run progress callbacks', () => {
         const onStart = vi.fn();
         const onProgress = vi.fn();
 
-        const outcome = await runCatchup(makeDeps(), [{ index: 2 }], 1, { onStart, onProgress });
+        const outcome = await runCatchup(makeDeps(), { onStart, onProgress });
 
         expect(onStart).toHaveBeenCalledWith({
             completed: 0,
@@ -144,7 +144,7 @@ describe('manual run progress callbacks', () => {
         const controller = new AbortController();
         controller.abort();
 
-        const outcome = await runCatchup(makeDeps(), [{ index: 2 }], 1, {
+        const outcome = await runCatchup(makeDeps(), {
             signal: controller.signal,
         });
 

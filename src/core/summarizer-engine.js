@@ -119,17 +119,14 @@ export async function yieldWorkerCycle() {
 
 /**
  * Run the force-summarize catch-up loop.
+ * The engine builds its own force route plan; callers only pass run options.
  * @param {ManualRunnerDeps} deps
- * @param {import('./chatutils.js').AssistantTurn[]} visibleTurns
- * @param {number} overflow
  * @param {ManualRunOptions} [options]
  * @returns {Promise<ManualRunOutcome>}
  */
-export async function runCatchup(deps, visibleTurns, overflow, options = {}) {
+export async function runCatchup(deps, options = {}) {
     return await deps.withUsageRun('force summarize catch-up', async () => {
         trace('>>> ENTERING runCatchup');
-        trace('  visibleTurns:', visibleTurns?.length ?? 'UNDEFINED');
-        trace('  overflow:', overflow);
         return await runElasticManual(deps, ELASTIC_STRATEGIES.FORCE, options);
     });
 }

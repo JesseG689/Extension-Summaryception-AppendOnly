@@ -158,17 +158,30 @@ export const REQUEST_TIMEOUT = Object.freeze({
     MERGE_DEFAULT_SECONDS: 90, // L1+ promotions (smaller payloads)
     RETRY_ATTEMPT_RATIO: 0.75,
 });
+
+// ─── Provider Cache TTL ─────────────────────────────────────────────
+// Minutes a provider keeps a cached prompt prefix alive in Prefix Cache and
+// Append Only modes. Stored on settings as cacheTtlMinutes. Older chats make
+// the cache stale; the stale-cache advisor uses this to suggest an early
+// Force Summarize on chat load.
+export const CACHE_TTL = Object.freeze({
+    MIN_MINUTES: 5,
+    MAX_MINUTES: 240,
+    STEP_MINUTES: 5,
+    DEFAULT_MINUTES: 30,
+});
 // ─── Default Settings ────────────────────────────────────────────────
 
 export const defaultSettings = Object.freeze({
     enabled: true,
     // Latched by Stop; blocks only automatic cycles. Manual runs ignore it.
     autoPaused: false,
+    memoryMode: MEMORY_MODES.BALANCED,
+    cacheTtlMinutes: CACHE_TTL.DEFAULT_MINUTES, // provider cache lifetime, Prefix Cache / Append Only only
     // Decoupled from uiMode: which complexity panel (Easy/Advanced) to render,
     // shown even when the extension is off so config stays editable.
     configMode: UI_MODES.EASY,
     uiMode: UI_MODES.EASY,
-    memoryMode: MEMORY_MODES.BALANCED,
     customMemoryPosition: MEMORY_POSITIONS.IN_PROMPT,
     customMemoryRole: MEMORY_ROLES.SYSTEM,
     customMemoryDepth: 0,

@@ -5,6 +5,8 @@ import { getChatStore, getEffectiveSettings } from '../foundation/state.js';
 import { repairMissingGhostingForSummaries } from '../core/ghosting-reconcile.js';
 import { maskUserRoleAsAssistantInGenerateData } from '../core/assistant-role-mask.js';
 import { setWorldInfoBakeGenerationType } from '../core/world-info-bake.js';
+import { evaluateStaleCacheAdvice, isProviderCacheMode } from '../core/cache-staleness.js';
+import { buildChatWindowPlan } from '../core/chat-window-planner.js';
 import {
     beginForegroundGeneration,
     endForegroundGeneration,
@@ -17,6 +19,7 @@ import {
 import { updateInjection } from '../features/injection.js';
 import { repairOrphanedMessages } from '../features/maintenance.js';
 import { persistChatState } from '../core/persist-state.js';
+import { showStaleCacheAdvice } from './ui-dialogs.js';
 import { updateUI } from './ui.js';
 
 let previousPromptSectionHashes = [];
@@ -320,4 +323,35 @@ async function drainReconciliationQueue() {
         await reconcileLoadedChatState();
         updateUI();
     } while (reconcileQueued);
+    await checkStaleCacheAdvice();
+}
+
+let staleCacheAdviceKey = '';
+
+/**
+ * Suggest an early Force Summarize when the loaded chat's provider cache is
+ * stale. Shown once per queue state per page session.
+ * @returns {Promise<void>}
+ */
+async function checkStaleCacheAdvice() {
+    try {
+        const settings = getEffectiveSettings();
+        if (!settings.enabled || !isProviderCacheMode(settings) || hasActiveAbortController()) {
+            return;
+        }
+        const chat = getChat();
+        const plan = await buildChatWindowPlan(chat, getChatStore(), settings);
+        const advice = evaluateStaleCacheAdvice({ chat, plan, settings });
+        if (!advice.advise) {
+            return;
+        }
+        const adviceKey = `${chat.length}:${advice.queuedTurns}:${chat.at(-1)?.sc_id ?? ''}`;
+        if (adviceKey === staleCacheAdviceKey) {
+            return;
+        }
+        staleCacheAdviceKey = adviceKey;
+        showStaleCacheAdvice(advice);
+    } catch (e) {
+        warn('Stale-cache advice check failed:', e);
+    }
 }

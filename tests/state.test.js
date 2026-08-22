@@ -1,6 +1,7 @@
 import { describe, expect, it } from 'vitest';
 
 import {
+    CACHE_TTL,
     MASK_USER_ROLE_MODES,
     MEMORY_MODE_PRESETS,
     MEMORY_MODES,
@@ -116,6 +117,14 @@ describe('memory mode budgets', () => {
         expect(applyMemoryModePreset(settings, MEMORY_MODES.PREFIX_CACHE)).toBe(true);
         expect(settings).toMatchObject(MEMORY_MODE_PRESETS[MEMORY_MODES.PREFIX_CACHE]);
         expect(applyMemoryModePreset(settings, 'invalid')).toBe(false);
+    });
+
+    it('defaults and clamps the provider cache TTL', () => {
+        installSummaryContext({ settings: { cacheTtlMinutes: 9999 } });
+        expect(getSettings().cacheTtlMinutes).toBe(CACHE_TTL.MAX_MINUTES);
+
+        installSummaryContext({ settings: {} });
+        expect(getSettings().cacheTtlMinutes).toBe(CACHE_TTL.DEFAULT_MINUTES);
     });
 });
 

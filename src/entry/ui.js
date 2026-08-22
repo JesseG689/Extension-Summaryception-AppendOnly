@@ -268,6 +268,7 @@ function syncMemoryModeControls(s) {
     $('#sc_memory_help_append_only').toggle(isAppendOnly);
     $('#sc_manual_cache_warning').toggle(isPrefixCache);
     $('.sc-append-only-row').toggle(isAppendOnly);
+    $('.sc-cache-mode-row').toggle(isPrefixCache || isAppendOnly);
     $('#sc_min_summary_turns, #sc_max_summary_turns').prop('disabled', false);
     $('#sc_min_summary_turns, #sc_max_summary_turns').closest('.sc-row').removeClass('sc-disabled');
     $('#sc_min_summary_budget_hint').text(SETTINGS_HELP.min_summary_budget.short);

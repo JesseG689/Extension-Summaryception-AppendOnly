@@ -483,10 +483,19 @@ function onResumeSummarize() {
 }
 
 /**
- * Force the catch-up pass to summarize eligible turns beyond the current recent window.
+ * Force Summarize button click handler.
  * @returns {Promise<void>}
  */
 async function onForceSummarize() {
+    await executeForceSummarize($(this));
+}
+
+/**
+ * Run Force Summarize from a panel button or the stale-cache advice toast.
+ * @param {object | null} $button jQuery-wrapped trigger button, disabled while running.
+ * @returns {Promise<void>}
+ */
+async function executeForceSummarize($button) {
     const s = getEffectiveSettings();
     if (!s.enabled) {
         toastr.warning('Enable Summaryception first.');
@@ -497,9 +506,11 @@ async function onForceSummarize() {
         return;
     }
     showManualCacheWarning(s);
-    $(this)
-        .prop('disabled', true)
-        .html('<i class="fa-solid fa-spinner fa-spin"></i><span>Working...</span>');
+    if ($button) {
+        $button
+            .prop('disabled', true)
+            .html('<i class="fa-solid fa-spinner fa-spin"></i><span>Working...</span>');
+    }
     try {
         const plan = await buildForceSummaryRoutePlan(getChat(), getChatStore(), s);
 
@@ -517,7 +528,7 @@ async function onForceSummarize() {
         let progressToast = null;
         const outcome = await runManualWithProgress(
             () =>
-                runCatchup(plan.rawPlan.visibleTurns, overflow, {
+                runCatchup({
                     signal: controller.signal,
                     onStart: (progress) => {
                         progressToast = createManualProgressToast({
@@ -533,9 +544,11 @@ async function onForceSummarize() {
         updateInjection();
         reloadAfterManualRun(outcome);
     } finally {
-        $(this)
-            .prop('disabled', false)
-            .html('<i class="fa-solid fa-bolt"></i><span>Force Summarize</span>');
+        if ($button) {
+            $button
+                .prop('disabled', false)
+                .html('<i class="fa-solid fa-bolt"></i><span>Force Summarize</span>');
+        }
         updateUI();
     }
 }
@@ -815,6 +828,13 @@ function bindClickHandlers() {
     });
 
     $(document).on('click', '#sc_force_summarize, #sc_easy_force_summarize', onForceSummarize);
+    $(document).on('click', '#sc_stale_cache_force', function () {
+        const $toast = $(this).closest('.toast');
+        if ($toast.length) {
+            toastr.clear($toast);
+        }
+        void executeForceSummarize(null);
+    });
     $(document).on('click', '#sc_slop_breaker, #sc_easy_slop_breaker', onSlopBreaker);
 
     $(document).on('click', '#sc_stop_summarize, #sc_easy_stop_summarize', onStopSummarize);

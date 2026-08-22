@@ -6,4 +6,5 @@
 - Automatic summarization waits until the configured Recent + Queued raw-chat threshold is full.
 - Memory below steady-state use silently truncates injected memory.
 - Recall depends on prompt quality, model behavior, and chat depth.
-- Cache savings estimates assume the provider caches the full frozen prefix.
+- Cache TTL applies to Prefix Cache and Append Only modes only.
+- Stale-cache advice needs a queue at or above Min Turns per Batch and a readable last-message time.

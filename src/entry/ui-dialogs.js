@@ -134,6 +134,30 @@ export function clearManualProgressToast(progressToast) {
 }
 
 /**
+ * Show the stale-cache advice toast with a Force Summarize action button.
+ * Stays for a minute or until closed; the button click is handled by ui-events.
+ * @param {import('../core/cache-staleness.js').StaleCacheAdvice} advice
+ * @returns {unknown}
+ */
+export function showStaleCacheAdvice(advice) {
+    return toastr.info(
+        `The provider cache is stale: the last turn is ${advice.staleMinutes} minutes old and your cache TTL is ${advice.ttlMinutes} minutes. ` +
+            `About ${advice.queuedTurns} turns wait in the summarize queue. ` +
+            'Summarize now and your next message pays full input price once, on a smaller prompt. Send a message first, and you pay full price twice.' +
+            '<br><button id="sc_stale_cache_force" class="menu_button" style="margin-top: 8px;">' +
+            '<i class="fa-solid fa-bolt"></i> Force Summarize now</button>',
+        'Summaryception — Stale Cache',
+        {
+            timeOut: 60000,
+            extendedTimeOut: 60000,
+            closeButton: true,
+            tapToDismiss: false,
+            escapeHtml: false,
+        },
+    );
+}
+
+/**
  * Show the Slop Breaker confirmation modal.
  * @returns {Promise<boolean>}
  */

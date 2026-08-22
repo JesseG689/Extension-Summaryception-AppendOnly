@@ -16,9 +16,10 @@ export function makeMessage(options = {}) {
         isHidden = false,
         mes = 'Hello, world.',
         name = 'Assistant',
+        sendDate,
     } = options;
     const scId = Object.hasOwn(options, 'scId') ? options.scId : `message-${nextMessageId++}`;
-    return {
+    const message = {
         sc_id: scId,
         is_user: isUser,
         is_system: isSystem,
@@ -27,6 +28,10 @@ export function makeMessage(options = {}) {
         name,
         extra: {},
     };
+    if (sendDate !== undefined) {
+        message.send_date = sendDate;
+    }
+    return message;
 }
 
 export function makeMessages(count, options = {}) {

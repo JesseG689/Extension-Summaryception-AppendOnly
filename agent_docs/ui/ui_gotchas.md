@@ -10,6 +10,7 @@
 - Open the Status tab on every startup.
 - A state category toggle needs both write handling and render synchronization.
 - Feature modules return structured outcomes. Entry modules format user notices.
+- Bind toast action buttons with delegated document clicks. Toast content does not exist at bind time.
 - Keep user-facing text out of feature modules.
 - Keep the first view focused on status, activity, and required action.
 - Use compact sections and responsive grids. Collapse near 520 pixels.

@@ -890,6 +890,22 @@
                                 </div>
                                 <div class="sc-tuning-group">
                                     <div class="sc-tuning-title">
+                                        <span class="fa-solid fa-clock-rotate-left"></span>
+                                        <span>Provider Cache</span>
+                                    </div>
+                                    <div class="sc-row sc-cache-mode-row" style="display: none;">
+                                        <label for="sc_cache_ttl">
+                                            <span>Cache TTL</span>
+                                            <small class="sc-hint">Minutes your provider keeps a cached prompt prefix. Prefix Cache and Append Only only: when the last turn is older than this, the cache is treated as expired and chat load suggests an early Force Summarize.</small>
+                                        </label>
+                                        <div class="sc-slider-row">
+                                            <input type="range" id="sc_cache_ttl" min="5" max="240" step="5" data-sc-slider-setting="cacheTtlMinutes" data-sc-partner-input="#sc_cache_ttl_val" />
+                                            <input id="sc_cache_ttl_val" class="text_pole sc-val" type="text" inputmode="numeric" value="30" data-sc-slider-setting="cacheTtlMinutes" data-sc-partner-input="#sc_cache_ttl" />
+                                        </div>
+                                    </div>
+                                </div>
+                                <div class="sc-tuning-group">
+                                    <div class="sc-tuning-title">
                                         <span class="fa-solid fa-code-merge"></span>
                                         <span>Layer Promotion</span>
                                     </div>

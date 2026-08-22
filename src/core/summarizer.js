@@ -159,13 +159,11 @@ export async function summarizeOneBatch(visibleTurns) {
 
 /**
  * Force the catch-up pass to summarize turns beyond the dynamic verbatim window.
- * @param {import('./chatutils.js').AssistantTurn[]} visibleTurns
- * @param {number} overflow
  * @param {ManualRunOptions} [options]
  * @returns {Promise<ManualRunOutcome>}
  */
-export async function runCatchup(visibleTurns, overflow, options = {}) {
-    return await runEngineCatchup(getManualRunnerDeps(), visibleTurns, overflow, options);
+export async function runCatchup(options = {}) {
+    return await runEngineCatchup(getManualRunnerDeps(), options);
 }
 
 /**

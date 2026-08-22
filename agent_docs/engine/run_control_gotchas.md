@@ -6,6 +6,8 @@
 - Stop persists a pause latch and lets the queue settle.
 - Resume clears the latch and starts one cycle.
 - Manual engine runs ignore the pause latch and enabled state.
+- The stale-cache advice toast starts the same manual run as the Force Summarize button.
+- Manual runs build their route plan inside the engine; callers pass run options only.
 - UI handlers still block manual actions when the extension is disabled.
 - Manual run callbacks and the abort signal pass as an explicit argument. Never carry them on the task object.
 - A manual run needs a numeric target boundary. Reject the run when the route plan omits it.

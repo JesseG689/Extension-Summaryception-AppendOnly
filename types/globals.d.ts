@@ -56,6 +56,7 @@ interface ExtensionSettings {
     configMode: string;
     uiMode: string;
     memoryMode: string;
+    cacheTtlMinutes: number;
     customMemoryPosition: string;
     customMemoryRole: string;
     customMemoryDepth: number;

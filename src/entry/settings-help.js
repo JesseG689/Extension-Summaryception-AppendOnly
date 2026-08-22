@@ -271,6 +271,20 @@ const HELP_ENTRIES = [
         }),
     ],
     [
+        'cache_ttl',
+        sliderHelp({
+            selector: selectorFor('sc_cache_ttl'),
+            title: 'Cache TTL',
+            short: 'Minutes your provider keeps a cached prompt prefix alive.',
+            controls: [controlFor('sc_cache_ttl'), controlFor('sc_cache_ttl_val')],
+            meaning:
+                'Used by Prefix Cache and Append Only only. When the last turn is older than the TTL, the cache is treated as expired. Loading such a chat suggests a Force Summarize: the next message pays full input price either way, so summarizing first avoids paying full price twice.',
+            higher: 'waits longer before the early-summarize suggestion appears.',
+            lower: 'suggests early summarizing sooner for short-lived caches.',
+            defaultText: '30 minutes.',
+        }),
+    ],
+    [
         'snippets_per_layer',
         sliderHelp({
             selector: selectorFor('sc_snippets_per_layer'),

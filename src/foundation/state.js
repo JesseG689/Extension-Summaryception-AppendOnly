@@ -1,5 +1,6 @@
 import {
     BATCH_TRIGGER_LIMITS,
+    CACHE_TTL,
     EASY_CONTEXT_LIMITS,
     L0_SOURCE_LIMITS,
     MASK_USER_ROLE_MODES,
@@ -296,6 +297,12 @@ function normalizeVerbatimWindowSettings(settings) {
     );
     settings.snippetsPerLayer = clampInteger(settings.snippetsPerLayer, 20, 40);
     settings.snippetsPerPromotion = clampInteger(settings.snippetsPerPromotion, 3, 4);
+    settings.cacheTtlMinutes = clampToStep(
+        settings.cacheTtlMinutes,
+        CACHE_TTL.MIN_MINUTES,
+        CACHE_TTL.MAX_MINUTES,
+        CACHE_TTL.STEP_MINUTES,
+    );
 }
 
 /**
