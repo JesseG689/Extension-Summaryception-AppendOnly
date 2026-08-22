@@ -17,7 +17,7 @@ import {
     EXECUTION_TRIGGER_L0,
     EXECUTION_TRIGGER_PROMO,
     buildUserPrompt,
-} from '../src/core/prompt-parts.js';
+} from '../src/foundation/prompt-parts.js';
 import {
     LAYER0_REPAIR_RATIO,
     LAYER_HARD_MAX_RATIO,

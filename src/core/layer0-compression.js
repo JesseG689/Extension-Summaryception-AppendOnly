@@ -12,7 +12,7 @@ import {
     insertBeforeTrigger,
     EXECUTION_TRIGGER_L0,
     EXECUTION_TRIGGER_PROMO,
-} from './prompt-parts.js';
+} from '../foundation/prompt-parts.js';
 import {
     buildSizeConstraintsBlock,
     buildSizeTargetLine,
@@ -266,8 +266,8 @@ const SENTENCE_CAP_WORDS = [
 function fillSentenceCapPlaceholders(prompt, sentenceCap) {
     const word = SENTENCE_CAP_WORDS[sentenceCap] || String(sentenceCap);
     return prompt
-        .replace('{{max_sentences_word}}', word)
-        .replace('{{max_sentences}}', String(sentenceCap));
+        .replaceAll('{{max_sentences_word}}', word)
+        .replaceAll('{{max_sentences}}', String(sentenceCap));
 }
 
 /**

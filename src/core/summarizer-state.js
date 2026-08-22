@@ -251,7 +251,7 @@ function normalizeCurrentDateTime(value) {
     if (!match) {
         return text;
     }
-    const [, yStr, mStr, dStr, , weekday] = match;
+    const [, yStr, mStr, dStr] = match;
     const year = Number(yStr);
     const month = Number(mStr);
     const day = Number(dStr);
@@ -269,9 +269,6 @@ function normalizeCurrentDateTime(value) {
     }
     const correctWeekday = WEEKDAY_NAMES[date.getUTCDay()];
     const normalizedHour = match[4] || '00';
-    if (weekday && weekday.toLowerCase() === correctWeekday.toLowerCase()) {
-        return `${yStr}-${mStr}-${dStr} ${normalizedHour} ${correctWeekday}`;
-    }
     return `${yStr}-${mStr}-${dStr} ${normalizedHour} ${correctWeekday}`;
 }
 

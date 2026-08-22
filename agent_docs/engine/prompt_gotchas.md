@@ -12,3 +12,5 @@
 - Report one contiguous-prefix verdict for each real request.
 - A broken-prefix report includes the complete first changed block.
 - Treat only an explicit system flag as a system message.
+- Replace every placeholder occurrence. Custom user templates may repeat a placeholder.
+- Start a substituted schema block on its own line. Never concatenate it to instruction text.

@@ -307,11 +307,11 @@ function getStringSetting(value, fallback) {
 function buildSummarizerPrompt({ template, storyTxt, contextStr, settings, metadata }) {
     const sourceState = metadata.sourceState || '(none)';
     const prompt = template
-        .replace('{{player_name}}', getPlayerName())
-        .replace('{{context_str}}', contextStr || '(none yet)')
-        .replace('{{source_state}}', sourceState)
-        .replace('{{story_txt}}', storyTxt)
-        .replace('{{state_schema}}', buildStateSchemaText(settings));
+        .replaceAll('{{player_name}}', getPlayerName())
+        .replaceAll('{{context_str}}', contextStr || '(none yet)')
+        .replaceAll('{{source_state}}', sourceState)
+        .replaceAll('{{story_txt}}', storyTxt)
+        .replaceAll('{{state_schema}}', buildStateSchemaText(settings));
     return appendLayer0PromptConstraints(prompt, settings, metadata);
 }
 

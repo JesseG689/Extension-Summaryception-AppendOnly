@@ -55,7 +55,6 @@ import {
     bindDocumentSetting,
     bindSliderSettingPairs,
     readChecked,
-    readIntegerOrZero,
     readString,
     syncRoleMaskModeControl,
 } from './ui-bind.js';
@@ -344,17 +343,10 @@ function clampNumberInput(value, min, max) {
 }
 
 /**
- * Bind handlers for strip patterns and response length inputs.
+ * Bind the strip patterns input handler.
  * @returns {void}
  */
 function bindInputHelpers() {
-    bindDocumentSetting({
-        eventName: 'input',
-        selector: '#sc_summarizer_response_length',
-        key: 'summarizerResponseLength',
-        read: readIntegerOrZero,
-    });
-
     bindDocumentSetting({
         eventName: 'change',
         selector: '#sc_strip_patterns',

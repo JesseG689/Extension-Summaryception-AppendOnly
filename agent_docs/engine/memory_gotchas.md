@@ -18,3 +18,4 @@
 - Clear unhides the chat and removes extension-owned chat data.
 - Standard placements use the host extension prompt.
 - Macro-only placement exposes assembled memory for custom prompt layouts.
+- Refresh state-derived snippet metadata after any manual Layer 0 snippet edit.

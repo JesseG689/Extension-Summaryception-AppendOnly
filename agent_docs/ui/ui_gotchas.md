@@ -3,6 +3,7 @@
 - Use jQuery for settings queries, delegated events, and rendering.
 - Data attributes declare setting bindings and slider value pairs.
 - Sliders save on input. Text and numeric controls save on change or blur.
+- Keep slider min, max, and step equal to the settings clamp bounds.
 - Operating mode gates runtime behavior. Complexity mode selects the visible panel.
 - Keep the selected panel editable while the extension is Off.
 - Show the Off banner beside the selected panel.

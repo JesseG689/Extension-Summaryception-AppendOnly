@@ -31,7 +31,7 @@ import {
     recordSuccessfulSummarizerUsage,
 } from './summarizer-pipeline.js';
 import { countTextTokens, formatTokenCount, formatTokenValue } from './token-count.js';
-import { insertBeforeTrigger, EXECUTION_TRIGGER_L0 } from './prompt-parts.js';
+import { insertBeforeTrigger, EXECUTION_TRIGGER_L0 } from '../foundation/prompt-parts.js';
 
 /**
  * Run summarizer provider requests with retry and fallback routing.

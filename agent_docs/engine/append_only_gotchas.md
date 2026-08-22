@@ -34,4 +34,5 @@
 - Append-only mode does not support depth-positioned lore or group chats.
 - Bake only for normal generation.
 - Retry, continue, quick-reply, and dry-run paths do not bake content.
+- A retry payload is rebuilt from stored chat and already contains the baked narrator block.
 - The host lore scan remains the source of activation data.

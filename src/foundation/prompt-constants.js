@@ -3,7 +3,7 @@ import {
     buildUserPrompt,
     EXECUTION_TRIGGER_L0,
     EXECUTION_TRIGGER_PROMO,
-} from '../core/prompt-parts.js';
+} from './prompt-parts.js';
 
 export const ENGLISH_FIRST_LANGUAGE_RULE =
     'Write the output mainly in English. Short non-English names, titles, quoted terms, or source-language phrases are allowed when useful, but do not write Chinese prose or Han ideographs.';
@@ -101,7 +101,8 @@ Always include temporal key:
 Use 24-hour, hour-level precision only, e.g. 2024-07-04 16 Thu. Derive the ddd weekday from the ISO date (2024-07-04 = Thu); never carry it over from the prior snapshot when the date changed. Normalize from raw bracket headers or passage timestamps when present. Drop minutes instead of preserving them.
 If no explicit time appears in the passage, carry forward the prior current_date_time if known.
 
-Use only these keys and omit empty categories:{{state_schema}}`,
+Use only these keys and omit empty categories:
+{{state_schema}}`,
     taskRules: `Compress only the essential narrative progression from <passage_in_question>, then rewrite the complete compact current-state snapshot at the end of that passage using <prior_context> as the baseline.
 If the prose uses 2nd person ('you'), map it directly to <player_name>. Never use second-person pronouns in the output.
 Keep [STATE] compact; follow the sentence and line caps provided at the end of this prompt. Put the most important facts first within each value.
@@ -144,7 +145,8 @@ Always include temporal key:
 Use 24-hour, hour-level precision only, e.g. 2024-07-04 16 Thu. Derive the ddd weekday from the ISO date (2024-07-04 = Thu); never carry it over from the prior snapshot when the date changed. Normalize from raw bracket headers or passage timestamps when present. Drop minutes instead of preserving them.
 If no explicit time appears in the passage, carry forward the prior current_date_time if known.
 
-Use only these keys and omit empty categories:{{state_schema}}`,
+Use only these keys and omit empty categories:
+{{state_schema}}`,
     taskRules: `The previous Layer 0 summary attempt failed output validation. Repair the response by summarizing the same passage again with stricter formatting.
 If the prose uses 2nd person ('you'), map it directly to <player_name>. Never use second-person pronouns in the output.
 Omission removes a fact rather than preserving it. Exclude transient scene detail, completed tasks, resolved hooks, and ordinary items.

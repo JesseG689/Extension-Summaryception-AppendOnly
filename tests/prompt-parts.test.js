@@ -6,7 +6,7 @@ import {
     buildSystemPrompt,
     buildUserPrompt,
     insertBeforeTrigger,
-} from '../src/core/prompt-parts.js';
+} from '../src/foundation/prompt-parts.js';
 
 describe('buildSystemPrompt', () => {
     it('wraps the role sentence in <role> tags and omits invariants when none are given', () => {

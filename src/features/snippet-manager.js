@@ -80,8 +80,10 @@ export async function updateSnippetTextAt(layerIndex, snippetIndex, text) {
     }
 
     snippet.text = newText;
+    if (layerIndex === 0) {
+        Object.assign(snippet, buildSnippetMetadataFromState(parseSnippet(newText).state));
+    }
     bumpSummaryStoreMutationEpoch(store);
-    await saveSnippetStore();
     return { status: 'updated' };
 }
 
