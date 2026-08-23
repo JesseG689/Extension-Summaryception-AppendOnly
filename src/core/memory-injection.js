@@ -45,12 +45,7 @@ export function buildMemoryInjectionParts(
 }
 
 function buildCurrentStateText(layers) {
-    const state = compileGlobalState(layers);
-    if (Object.keys(state).length === 0) {
-        return '';
-    }
-
-    return serializeState(state).replace(/^\[STATE\]/, '[CURRENT STATE]');
+    return getCurrentStateSnapshotText(layers).replace(/^\[STATE\]/, '[CURRENT STATE]');
 }
 
 /**

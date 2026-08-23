@@ -1,4 +1,5 @@
 import { getChat } from '../foundation/context.js';
+import { sleep } from '../foundation/retry.js';
 import {
     getChatStore,
     getCurrentSummarizedBoundary,
@@ -114,7 +115,7 @@ export async function runElasticAutoCycle(queue, { refreshUi } = {}) {
  * @returns {Promise<void>}
  */
 export async function yieldWorkerCycle() {
-    await new Promise((resolve) => setTimeout(resolve, 0));
+    await sleep(0);
 }
 
 /**
@@ -509,10 +510,6 @@ function createProgress(outcome, task) {
 
 function isCancelled(signal) {
     return Boolean(signal?.aborted);
-}
-
-async function sleep(ms) {
-    await new Promise((resolve) => setTimeout(resolve, ms));
 }
 
 function logRoutePlan(routePlan, s) {

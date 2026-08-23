@@ -743,11 +743,15 @@ function renderSnippetBrowser(browser, view) {
     }
 
     browser.children('.sc-muted').remove();
-    removeMissingLayers(browser, new Set(view.layers.map((layer) => layer.key)));
+    removeMissingChildElements(
+        browser,
+        '.sc-browser-layer',
+        new Set(view.layers.map((layer) => layer.key)),
+    );
 
     let cursor = null;
     for (const layer of view.layers) {
-        const layerEl = getOrCreateLayerElement(browser, layer);
+        const layerEl = getOrCreateChildElement(browser, 'sc-browser-layer', layer.key);
         updateLayerElement(layerEl, layer);
         renderLayerSnippets(layerEl, layer);
         cursor = placeElementAfterCursor(browser, layerEl, cursor);
@@ -765,20 +769,20 @@ function renderEmptySnippetBrowser(browser) {
     $('<div class="sc-muted"></div>').text('No snippets to display.').appendTo(browser);
 }
 
-function removeMissingLayers(browser, layerKeys) {
-    browser.children('.sc-browser-layer').each(function () {
-        const layerEl = $(this);
-        if (!layerKeys.has(layerEl.attr('data-key')) && !hasFocusedSnippetEdit(layerEl)) {
-            layerEl.remove();
+function removeMissingChildElements(parent, selector, keys) {
+    parent.children(selector).each(function () {
+        const child = $(this);
+        if (!keys.has(child.attr('data-key')) && !hasFocusedSnippetEdit(child)) {
+            child.remove();
         }
     });
 }
 
-function getOrCreateLayerElement(browser, layer) {
-    const existing = browser
-        .children('.sc-browser-layer')
+function getOrCreateChildElement(parent, className, key) {
+    const existing = parent
+        .children(`.${className}`)
         .filter(function () {
-            return $(this).attr('data-key') === layer.key;
+            return $(this).attr('data-key') === key;
         })
         .first();
 
@@ -786,7 +790,7 @@ function getOrCreateLayerElement(browser, layer) {
         return existing;
     }
 
-    return $('<div class="sc-browser-layer"></div>');
+    return $(`<div class="${className}"></div>`);
 }
 
 function updateLayerElement(layerEl, layer) {
@@ -801,11 +805,11 @@ function updateLayerElement(layerEl, layer) {
 
 function renderLayerSnippets(layerEl, layer) {
     const rowKeys = new Set(layer.snippets.map((snippet) => snippet.key));
-    removeMissingSnippetRows(layerEl, rowKeys);
+    removeMissingChildElements(layerEl, '.sc-snippet', rowKeys);
 
     let cursor = layerEl.children('.sc-browser-layer-title').first();
     for (const snippet of layer.snippets) {
-        const row = getOrCreateSnippetRow(layerEl, snippet);
+        const row = getOrCreateChildElement(layerEl, 'sc-snippet', snippet.key);
         updateSnippetRow(row, snippet);
         cursor = placeElementAfterCursor(layerEl, row, cursor);
     }
@@ -823,30 +827,6 @@ function placeElementAfterCursor(parent, element, cursor) {
         parent.prepend(element);
     }
     return element;
-}
-
-function removeMissingSnippetRows(layerEl, rowKeys) {
-    layerEl.children('.sc-snippet').each(function () {
-        const row = $(this);
-        if (!rowKeys.has(row.attr('data-key')) && !hasFocusedSnippetEdit(row)) {
-            row.remove();
-        }
-    });
-}
-
-function getOrCreateSnippetRow(layerEl, snippet) {
-    const existing = layerEl
-        .children('.sc-snippet')
-        .filter(function () {
-            return $(this).attr('data-key') === snippet.key;
-        })
-        .first();
-
-    if (existing.length) {
-        return existing;
-    }
-
-    return $('<div class="sc-snippet"></div>');
 }
 
 function updateSnippetRow(row, snippet) {
@@ -896,33 +876,33 @@ function ensureSnippetMeta(row, snippet) {
     return meta;
 }
 
+function ensureSnippetButton(row, className, label) {
+    let button = row.children(`.${className}`).first();
+    if (!button.length) {
+        button = $(`<button class="${className} menu_button"></button>`);
+    }
+    button.attr({
+        type: 'button',
+        title: label,
+        'aria-label': label,
+    });
+    return button;
+}
+
 function ensureSnippetRedo(row, snippet) {
     let redo = row.children('.sc-snippet-redo').first();
     if (!snippet.canRedo) {
         redo.remove();
         return null;
     }
-    if (!redo.length) {
-        redo = $('<button class="sc-snippet-redo menu_button fa-solid fa-rotate-right"></button>');
-    }
-    redo.attr({
-        type: 'button',
-        title: 'Regenerate this snippet',
-        'aria-label': 'Regenerate this snippet',
-    });
+    redo = ensureSnippetButton(row, 'sc-snippet-redo', 'Regenerate this snippet');
+    redo.addClass('fa-solid fa-rotate-right');
     return redo;
 }
 
 function ensureSnippetDelete(row) {
-    let remove = row.children('.sc-snippet-delete').first();
-    if (!remove.length) {
-        remove = $('<button class="sc-snippet-delete menu_button fa-solid fa-xmark"></button>');
-    }
-    remove.attr({
-        type: 'button',
-        title: 'Delete this snippet',
-        'aria-label': 'Delete this snippet',
-    });
+    const remove = ensureSnippetButton(row, 'sc-snippet-delete', 'Delete this snippet');
+    remove.addClass('fa-solid fa-xmark');
     return remove;
 }
 
