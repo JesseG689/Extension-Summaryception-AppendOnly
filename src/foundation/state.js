@@ -482,7 +482,7 @@ function normalizeSnippet(snippet) {
  * @param {unknown} value
  * @returns {value is Record<string, unknown>}
  */
-function isPlainObject(value) {
+export function isPlainObject(value) {
     if (!value || typeof value !== 'object' || Array.isArray(value)) {
         return false;
     }

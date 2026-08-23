@@ -1,4 +1,9 @@
-import { CONNECTION_HELP_ENTRIES } from './settings-help-data.js';
+import {
+    CONNECTION_HELP_ENTRIES,
+    selectorFor,
+    controlFor,
+    basicHelp,
+} from './settings-help-data.js';
 
 const HELP_EVENT_NS = '.summaryceptionSettingsHelp';
 const HELP_TOOLTIP_ID = 'sc_help_tooltip';
@@ -13,9 +18,6 @@ const HELP_FOCUS_SELECTOR = [
 ].join(', ');
 const HELP_TOOLTIP_DELAY_MS = 500;
 
-const selectorFor = (id) => `label[for="${id}"]`;
-const controlFor = (id) => `#${id}`;
-
 let helpTooltipTimer = null;
 
 const sliderHelp = ({ selector, title, short, meaning, higher, lower, defaultText, controls }) => ({
@@ -23,14 +25,6 @@ const sliderHelp = ({ selector, title, short, meaning, higher, lower, defaultTex
     title,
     short,
     detail: `${meaning} Higher ${higher} Lower ${lower} Default ${defaultText}`,
-    controls,
-});
-
-const basicHelp = ({ selector, title, short, controls, controlsText, when, risk }) => ({
-    selector,
-    title,
-    short,
-    detail: `${controlsText} ${when} ${risk}`,
     controls,
 });
 

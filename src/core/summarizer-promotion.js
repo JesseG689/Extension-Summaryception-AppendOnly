@@ -17,7 +17,7 @@ import {
 } from './snippet-metadata.js';
 import { compileGlobalState, parseSnippet, serializeState } from './summarizer-state.js';
 import { callSummarizer } from './summarizer-request.js';
-import { validateSummarizerOutputIntegrity } from './prompts.js';
+import { isSummarizerOutputSafe } from './prompts.js';
 import {
     getLayer0SummaryTokenTarget,
     getPromotionSummaryTokenHardMax,
@@ -32,7 +32,7 @@ import {
 import {
     getChatIdentity,
     getSummaryStoreSnapshotEpoch,
-    isSameChatSnapshot,
+    isSnapshotStoreCurrent,
 } from './summarizer-snapshot.js';
 import { countTextTokens, formatTokenValue } from './token-count.js';
 
@@ -518,17 +518,15 @@ async function validatePromotionCandidate({
 }
 
 function isPromotionSummarySafe({ layerIndex, promotedSnippet, sourceTokens }) {
-    const integrityResult = validateSummarizerOutputIntegrity(promotedSnippet.text, {
-        kind: 'promotion',
-        memoryTokensBefore: sourceTokens.count,
-        memoryTokensBeforeEstimated: sourceTokens.estimated,
-    });
-    if (integrityResult.valid) {
-        return true;
-    }
-
-    warn(`Promotion L${layerIndex} rejected: ${integrityResult.error.message}.`);
-    return false;
+    return isSummarizerOutputSafe(
+        promotedSnippet.text,
+        {
+            kind: 'promotion',
+            memoryTokensBefore: sourceTokens.count,
+            memoryTokensBeforeEstimated: sourceTokens.estimated,
+        },
+        `Promotion L${layerIndex} rejected: `,
+    );
 }
 
 function rejectPromotionOverHardMax({
@@ -731,13 +729,7 @@ async function applyMergePromotion({ snapshot, layerIndex, promotedSnippet }) {
  * @returns {boolean}
  */
 function isPromotionSnapshotValid(snapshot) {
-    const ctx = getContext();
-    const store = getChatStore();
-
-    if (!isSameChatSnapshot(snapshot, ctx)) {
-        return false;
-    }
-    return getSummaryStoreSnapshotEpoch(store) === snapshot.summaryStoreEpoch;
+    return isSnapshotStoreCurrent(snapshot, getContext(), getChatStore());
 }
 
 /**

@@ -76,3 +76,16 @@ export function isSameChatSnapshot(snapshot, ctx) {
     const context = /** @type {{ chat?: unknown }} */ (ctx);
     return snap.chatId === getChatIdentity(ctx) && snap.chatRef === context.chat;
 }
+/**
+ * Revalidate that the active chat and summary store still match a captured snapshot.
+ * @param {object} snapshot
+ * @param {object} ctx
+ * @param {SummaryceptionStore} store
+ * @returns {boolean}
+ */
+export function isSnapshotStoreCurrent(snapshot, ctx, store) {
+    if (!isSameChatSnapshot(snapshot, ctx)) {
+        return false;
+    }
+    return getSummaryStoreSnapshotEpoch(store) === snapshot.summaryStoreEpoch;
+}

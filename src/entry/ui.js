@@ -27,6 +27,10 @@ import {
     updateSnippetTextAt,
 } from '../features/snippet-manager.js';
 import { syncAllSettingsToDOM, syncRoleMaskModeControl } from './ui-bind.js';
+import {
+    updateEasyConnectionSubPanels,
+    updateEasyMergeConnectionSubPanels,
+} from './ui-connection.js';
 
 const CONTEXT_COLOR_CLASSES = 'sc-ctx-safe sc-ctx-warn sc-ctx-caution sc-ctx-danger';
 
@@ -51,8 +55,8 @@ export async function updateUI() {
         // permanently ticked rather than reading the (ignored) persisted flag.
         $('#sc_state_cat_date_time').prop('checked', true);
 
-        await renderOverview(effectiveSettings, store);
-        await renderEasyOverview(effectiveSettings, store);
+        await renderStatusOverview('sc_status', 'enabled', effectiveSettings, store);
+        await renderStatusOverview('sc_easy_status', 'mode', effectiveSettings, store);
         await renderBudgetStatus(effectiveSettings, store);
         await renderEasyBudgetStatus(effectiveSettings, store);
         renderLayerStats(effectiveSettings, store);
@@ -202,27 +206,18 @@ function getContextColorClass(tokens) {
 }
 
 function syncEasyConnectionPanels(s) {
-    $('#sc_easy_profile_settings').toggle(s.connectionSource === 'profile');
-    $('#sc_easy_merge_profile_settings').toggle(s.mergeConnectionSource === 'profile');
+    updateEasyConnectionSubPanels(s.connectionSource);
+    updateEasyMergeConnectionSubPanels(s.mergeConnectionSource);
 }
 
-async function renderOverview(s, store) {
+async function renderStatusOverview(prefix, modeField, s, store) {
     const metrics = getLayerMetrics(store);
     const ghostedCount = getGhostedCount();
 
-    $('#sc_status_enabled').text(getModeLabel(s));
-    $('#sc_status_worker').text(await getWorkerLabel(s, store));
-    $('#sc_status_snippets').text(String(metrics.totalSnippets));
-    $('#sc_status_ghosted').text(String(ghostedCount));
-}
-async function renderEasyOverview(s, store) {
-    const metrics = getLayerMetrics(store);
-    const ghostedCount = getGhostedCount();
-
-    $('#sc_easy_status_mode').text(getModeLabel(s));
-    $('#sc_easy_status_worker').text(await getWorkerLabel(s, store));
-    $('#sc_easy_status_snippets').text(String(metrics.totalSnippets));
-    $('#sc_easy_status_ghosted').text(String(ghostedCount));
+    $(`#${prefix}_${modeField}`).text(getModeLabel(s));
+    $(`#${prefix}_worker`).text(await getWorkerLabel(s, store));
+    $(`#${prefix}_snippets`).text(String(metrics.totalSnippets));
+    $(`#${prefix}_ghosted`).text(String(ghostedCount));
 }
 
 function getModeLabel(s) {

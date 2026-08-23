@@ -6,7 +6,7 @@ import {
     getCurrentSummarizedBoundary,
     saveChatStore,
 } from '../foundation/state.js';
-import { debug, error, info, isTraceEnabled, trace, warn } from '../foundation/logger.js';
+import { debug, error, info, isTraceEnabled, trace } from '../foundation/logger.js';
 import { ghostMessagesInRange, repairGhostingForRange } from './ghosting.js';
 import {
     buildMemoryInjection,
@@ -18,7 +18,7 @@ import { callSummarizer } from './summarizer-request.js';
 import { buildSnippetMetadataFromState } from './snippet-metadata.js';
 import { commitWhenSafe, updateCommittedInjection } from './summarizer-commit.js';
 import { executeLayer0StoreTransaction } from './layer0-store-transaction.js';
-import { validateSummarizerOutputIntegrity } from './prompts.js';
+import { isSummarizerOutputSafe } from './prompts.js';
 import { parseSnippet } from './summarizer-state.js';
 import { getCurrentStateSnapshotText } from './memory-injection.js';
 import { deleteNonConversationMessages } from './world-info-bake.js';
@@ -27,7 +27,7 @@ import {
     fingerprintSourceRange,
     getChatIdentity,
     getSummaryStoreSnapshotEpoch,
-    isSameChatSnapshot,
+    isSnapshotStoreCurrent,
 } from './summarizer-snapshot.js';
 
 /**
@@ -508,17 +508,11 @@ function buildPendingLayer0Context(layers, pendingSnippets) {
  * @returns {boolean}
  */
 function isLayer0SummarySafe(summary, snapshot) {
-    const integrityResult = validateSummarizerOutputIntegrity(summary, {
+    return isSummarizerOutputSafe(summary, {
         kind: 'layer0',
         sourceRange: snapshot.sourceRange,
         regexStats: snapshot.passageStats,
     });
-    if (integrityResult.valid) {
-        return true;
-    }
-
-    warn(integrityResult.error.message);
-    return false;
 }
 
 /**
@@ -531,13 +525,10 @@ function isLayer0SnapshotValid(snapshot) {
     const store = getChatStore();
     const [startIdx, endIdx] = snapshot.sourceRange;
 
-    if (!isSameChatSnapshot(snapshot, ctx)) {
+    if (!isSnapshotStoreCurrent(snapshot, ctx, store)) {
         return false;
     }
-    if (fingerprintSourceRange(ctx.chat, startIdx, endIdx) !== snapshot.sourceFingerprint) {
-        return false;
-    }
-    return getSummaryStoreSnapshotEpoch(store) === snapshot.summaryStoreEpoch;
+    return fingerprintSourceRange(ctx.chat, startIdx, endIdx) === snapshot.sourceFingerprint;
 }
 
 /**

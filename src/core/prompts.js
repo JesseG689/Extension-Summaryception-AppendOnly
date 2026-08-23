@@ -1,4 +1,4 @@
-import { debug } from '../foundation/logger.js';
+import { debug, warn } from '../foundation/logger.js';
 import { getEffectiveSettings } from '../foundation/state.js';
 import {
     STATE_SNAPSHOT_MAX_TOKENS,
@@ -133,6 +133,21 @@ export function validateSummarizerOutputIntegrity(text, metadata = {}) {
     }
 
     return { valid: true, error: null };
+}
+/**
+ * Guard summarizer output before committing; warn once when invalid.
+ * @param {string} text - Cleaned summarizer output
+ * @param {import('./summarizer-usage.js').SummarizerCallMetadata} [metadata]
+ * @param {string} [warnPrefix] - Optional prefix for the warning message
+ * @returns {boolean}
+ */
+export function isSummarizerOutputSafe(text, metadata = {}, warnPrefix = '') {
+    const integrityResult = validateSummarizerOutputIntegrity(text, metadata);
+    if (integrityResult.valid) {
+        return true;
+    }
+    warn(`${warnPrefix}${integrityResult.error.message}`);
+    return false;
 }
 
 /**
