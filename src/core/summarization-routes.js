@@ -42,9 +42,7 @@ const LAYER0_PHASE = /** @type {'layer0'} */ ('layer0');
  */
 export async function buildAutoSummaryRoutePlan(chat, store, settings) {
     const plan = await buildChatWindowPlan(chat, store, settings);
-    const atomic =
-        settings.memoryMode === MEMORY_MODES.PREFIX_CACHE ||
-        settings.memoryMode === MEMORY_MODES.APPEND_ONLY;
+    const atomic = settings.memoryMode === MEMORY_MODES.PREFIX_CACHE;
     if (atomic) {
         return {
             route: SUMMARY_ROUTES.CACHE_AUTO,

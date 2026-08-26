@@ -75,26 +75,6 @@ Suppose the next request keeps the same start but changes the tail. A normal pre
 
 Pick this mode when cached input is cheaper and your provider supports that kind of partial prefix reuse. The tradeoff is a larger prompt. A summary flush also gives the provider a new prefix to cache.
 
-### Append Only
-
-Append Only is for stricter providers. They only give a useful cache hit when the old request is the exact start of the new one: each request must only append to the last, never change an earlier part. Hapuppy provider (link below) is why this mode was created ($20 for 10 000 kimi k3 messages)
-
-To keep that chain intact, Summaryception leaves its memory prefix alone between flushes and bakes newly activated lore into the chat tail. It is fussy, but on providers with a deep cached-input discount it is often the cheapest mode.
-
-Dynamic lorebooks need a one-time clone:
-
-1. Select Append Only.
-2. Run `/sc-migrate-wi` in chat. Summaryception creates an `SC - <original>` copy of each lorebook and moves only the copy's dynamic entries to the `sc_bake` outlet. Originals stay unchanged, and existing `SC - ` clones are never overwritten.
-3. Close the lorebook editor and open it again. SillyTavern does not refresh the list in place. The new clone shows up alongside the original.
-4. Select the clone wherever you want Summaryception baking. You can switch back to the original at any time to roll it off.
-5. Continue the chat. Only lore activated during new, normal generations is baked; old chat cannot be retrofitted with a tiny time machine.
-
-<img src="img/lorebook_migration.png" width="900" alt="Dynamic lorebook entries moved to the Outlet position after running sc-migrate-wi" />
-
-Run `/sc-unbake-wi` to put migrated entries back in their original positions and remove Summaryception's baked lore messages from the current chat.
-
-Append Only does not support group chats or depth-positioned lore. Anything else that rewrites the earlier prompt, such as rotating macros or dynamic injections outside the bake outlet, can still spoil the cache. Use a stable preset.
-
 The defaults are intentionally conservative: 22k recent verbatim tokens, 10k injected memory, 280-token Layer 0 targets, and promotion after old memories stack up.
 
 ## Controls you will actually use
@@ -143,9 +123,6 @@ OpenAI-compatible local endpoints may need SillyTavern's CORS proxy. Streaming r
 `/sc-preview` prints the memory block that would be injected.
 
 `/sc-clear` clears Summaryception memory for the current chat and unghosts Summaryception-owned messages.
-`/sc-migrate-wi` clones each lorebook as `SC - <original>`, moves the clone's dynamic entries to the Append Only bake outlet, and leaves the original unchanged. Close and reopen the lorebook editor afterward to see the new clone.
-
-`/sc-unbake-wi` restores those entries to their original positions and removes baked lore messages from the current chat.
 
 ## Safety notes
 
@@ -157,14 +134,6 @@ If something looks off, use Clear or `/sc-clear`. That removes Summaryception's 
 
 For default and prefix cache any preset works. I like this one https://rentry.org/freaky-frankenstein-presets 
 
-Append only presets:
-
-[modified FF5.0 preset](https://gist.githubusercontent.com/vadash/e1e801688c68fb468e41d760881f3e87/raw/2bef10797e76ee35e88ce26528184d1d5ef949bf/FF_APPEND_ONLY_5.1.5.json)
-
-[modified FF5.2 preset](https://gist.githubusercontent.com/vadash/0e9c53bc3c971b8570a131d18a102d85/raw/2ea7035d4a6139e49dc8cdcf472ed8e90e5efdae/FF_APPEND_5.2.24.json)
-
-If u keep debug enabled, F12 log shows if your preset breaks append only cache and where it happens.
-
 ## Version history
 
 Older major versions are still available as branches. Open SillyTavern's extension list and use the branch button beside Summaryception.
@@ -172,10 +141,6 @@ Older major versions are still available as branches. Open SillyTavern's extensi
 <img src="img/how_to_switch_branch.png" width="700" alt="Branch button beside Summaryception in SillyTavern's extension list" />
 
 - **v22:** Big code refactor
-
-- **v21:** Added Append Only for strict prompt caches, including [Hapuppy's Kimi K3](https://hapuppy.com/register?invite=CKxDPfUL). Cached input is very cheap there, but the model needs a stable preset with no rotating macros or dynamic injection positions. The screenshot below shows roughly 49k-58k cache reads on 56k-59k input prompts. That is the whole point of this slightly fussy mode.
-
-<img src="img/hapuppy_kimi_cache.png" width="900" alt="Kimi K3 usage showing most input tokens served from cache" />
 
 - **v20:** Stop now pauses. Modular [STATE] experiment
 - **v19:** Changed prompts so less repair needed (second LLM pass).
@@ -220,10 +185,6 @@ Remove and install it again
 v20 -> v21 -> v22 was rough. Some settings could be reset to default or some other bugs. One of examples is instead of indexes, we now assign each message unique ID.
 
 It would be best if you "clear" memories (ui->tools). best way to update extention is when you start new RP. If you want stable work stick with named "vXX" branches.
-
-### Append only mode debug
-
-Press F12 and watch log. It has useful messages like showing when preset breaks. Good to hunt those pesky macros/dynamic injects that break append only mode.
 
 ## License
 

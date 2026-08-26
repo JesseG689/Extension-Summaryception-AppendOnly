@@ -1,5 +1,6 @@
 # Memory Gotchas
 
+- Balanced and Prefix Cache are the only memory modes. Stored legacy Append Only normalizes to Prefix Cache on load.
 - Layer 0 converts turns outside the verbatim window into narrative and a rolling state snapshot.
 - State is a bounded snapshot. Only the newest state reaches the prompt.
 - Deeper layers merge older snippets after a layer exceeds its limit.

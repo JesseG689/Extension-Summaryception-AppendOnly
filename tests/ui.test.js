@@ -4,22 +4,12 @@ import { MEMORY_MODES } from '../src/foundation/constants.js';
 import { buildMainContextPreviewModel, buildTriggerGaugeModel } from '../src/entry/ui.js';
 
 describe('context limit and trigger gauge UI models', () => {
-    it('includes baked lore only in the Append Only main-request range', () => {
+    it('builds the main-request range from memory, verbatim, and queued budgets for both modes', () => {
         const base = {
             memoryTokenBudget: 10000,
             verbatimTokenBudget: 16000,
             queuedTokenBudget: 32000,
-            bakedWorldInfoTokenBudget: 10000,
         };
-        expect(
-            buildMainContextPreviewModel({ ...base, memoryMode: MEMORY_MODES.APPEND_ONLY }),
-        ).toEqual({
-            rawChatMin: 16000,
-            rawChatMax: 48000,
-            mainMin: 26000,
-            mainMax: 68000,
-            bakedWorldInfoMax: 10000,
-        });
         expect(
             buildMainContextPreviewModel({ ...base, memoryMode: MEMORY_MODES.BALANCED }),
         ).toEqual({
@@ -27,7 +17,14 @@ describe('context limit and trigger gauge UI models', () => {
             rawChatMax: 48000,
             mainMin: 26000,
             mainMax: 58000,
-            bakedWorldInfoMax: 0,
+        });
+        expect(
+            buildMainContextPreviewModel({ ...base, memoryMode: MEMORY_MODES.PREFIX_CACHE }),
+        ).toEqual({
+            rawChatMin: 16000,
+            rawChatMax: 48000,
+            mainMin: 26000,
+            mainMax: 58000,
         });
     });
 

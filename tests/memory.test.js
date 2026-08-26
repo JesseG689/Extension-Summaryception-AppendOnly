@@ -13,10 +13,7 @@ describe('clearSummaryceptionMemory', () => {
                 ...makeMessage({ isUser: true, isSystem: true, mes: 'user', scId: 'user-id' }),
                 extra: { sc_ghosted: true, sc_token_count: { rawTokens: 1 }, reasoning: 'keep' },
             },
-            {
-                ...makeMessage({ isSystem: true, mes: 'temporary', scId: 'temporary-id' }),
-                extra: { sc_wi: { version: 2 } },
-            },
+            makeMessage({ isSystem: true, mes: 'temporary', scId: 'temporary-id' }),
             {
                 ...makeMessage({ mes: 'assistant', scId: 'assistant-id' }),
                 extra: { sc_ghosted: true, api: 'keep' },
@@ -41,18 +38,19 @@ describe('clearSummaryceptionMemory', () => {
         await clearSummaryceptionMemory();
 
         expect(calls).toEqual(['/unhide 0-2']);
-        expect(runtime.chat).toHaveLength(2);
+        expect(runtime.chat).toHaveLength(3);
         expect(runtime.chatMetadata).toEqual({ unrelated: { keep: true } });
         expect(runtime.chat).toEqual([
             expect.objectContaining({
                 extra: { reasoning: 'keep' },
             }),
+            expect.objectContaining({ mes: 'temporary' }),
             expect.objectContaining({
                 extra: { api: 'keep' },
             }),
         ]);
         expect(runtime.chat.every((message) => !Object.hasOwn(message, 'sc_id'))).toBe(true);
         expect(saveMetadata).toHaveBeenCalledOnce();
-        expect(saveChat).toHaveBeenCalledTimes(2);
+        expect(saveChat).toHaveBeenCalledTimes(1);
     });
 });

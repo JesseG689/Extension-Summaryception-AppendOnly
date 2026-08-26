@@ -16,10 +16,7 @@ import { MEMORY_MODES } from '../foundation/constants.js';
  * @returns {boolean}
  */
 export function isProviderCacheMode(settings) {
-    return (
-        settings?.memoryMode === MEMORY_MODES.PREFIX_CACHE ||
-        settings?.memoryMode === MEMORY_MODES.APPEND_ONLY
-    );
+    return settings?.memoryMode === MEMORY_MODES.PREFIX_CACHE;
 }
 
 /**

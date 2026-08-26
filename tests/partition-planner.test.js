@@ -146,23 +146,12 @@ describe('countSourceRangeTokens', () => {
             makeMessage({ mes: 'x'.repeat(100) }),
             makeMessage({ mes: 'x'.repeat(100), isHidden: true }),
             makeMessage({ mes: 'x'.repeat(100), isSystem: true }),
-            makeMessage({ name: 'SC-WI', mes: 'x'.repeat(100) }),
             { ...makeMessage({ mes: 'x'.repeat(100) }), extra: { type: 'tool' } },
         ];
         installSummaryContext({ chat });
 
-        const stats = await countSourceRangeTokens(chat, 0, 4, makeSummarySettings());
+        const stats = await countSourceRangeTokens(chat, 0, 3, makeSummarySettings());
 
         expect(stats.finalTokens).toBe(messageLineTokens(false, 100));
-    });
-
-    it('skips baked WI narrator messages', async () => {
-        installSummaryContext();
-        const baked = makeMessage({ mes: 'x'.repeat(100) });
-        baked.extra.sc_wi = { uids: [1], version: 1 };
-
-        const stats = await countSourceRangeTokens([baked], 0, 0, makeSummarySettings());
-
-        expect(stats.finalTokens).toBe(0);
     });
 });

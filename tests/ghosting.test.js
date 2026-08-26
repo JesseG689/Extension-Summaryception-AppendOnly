@@ -1,7 +1,6 @@
 import { describe, expect, it } from 'vitest';
 
 import { repairMissingGhostingForSummaries } from '../src/core/ghosting-reconcile.js';
-import { ghostMessagesInRange } from '../src/core/ghosting.js';
 import { resetCommitStateForTests } from '../src/core/summarizer-commit.js';
 import { makeMessage, makeSummaryStore, installSummaryContext } from './test-helpers.js';
 
@@ -80,59 +79,6 @@ describe('hide non-text messages in summarized range', () => {
         expect(isHidden(calls, 0)).toBe(true);
         expect(isHidden(calls, 1)).toBe(true);
         expect(isHidden(calls, 3)).toBe(true);
-    });
-
-    it('never claims temporary World Info narrators for ghosting', async () => {
-        resetCommitStateForTests();
-        const calls = [];
-        const narrator = makeMessage({ mes: 'baked lore', name: 'SC-WI' });
-        narrator.extra.sc_wi = { version: 2 };
-        const runtime = installSummaryContext({
-            chat: [
-                makeMessage({ isUser: true, mes: 'old user' }),
-                narrator,
-                makeMessage({ mes: 'old assistant' }),
-            ],
-            settings: { hideNonTextMessages: true },
-            executeSlashCommandsWithOptions: async (command) => calls.push(String(command)),
-        });
-
-        await ghostMessagesInRange(0, 2);
-
-        expect(runtime.chatMetadata.summaryception.ghostedMessageIds).toEqual([
-            runtime.chat[0].sc_id,
-            runtime.chat[2].sc_id,
-        ]);
-    });
-
-    it('ends a flush before the following baked narrator and user pair', async () => {
-        resetCommitStateForTests();
-        const calls = [];
-        const narrator = makeMessage({ mes: 'baked lore', name: 'SC-WI' });
-        narrator.extra.sc_wi = { version: 1 };
-        installSummaryContext({
-            chat: [
-                makeMessage({ isUser: true, mes: 'old user', scId: 'message-0' }),
-                makeMessage({ mes: 'old assistant', scId: 'message-1' }),
-                narrator,
-                makeMessage({ isUser: true, mes: 'current user', scId: 'message-3' }),
-            ],
-            metadata: {
-                summaryception: makeSummaryStore({
-                    layers: [
-                        [{ text: 'summary snippet', sourceMessageIds: ['message-0', 'message-1'] }],
-                    ],
-                }),
-            },
-            settings: { hideNonTextMessages: true },
-            executeSlashCommandsWithOptions: async (command) => calls.push(String(command)),
-        });
-
-        await repairMissingGhostingForSummaries();
-
-        expect(calls).toContain('/hide 0-1');
-        expect(isHidden(calls, 2)).toBe(false);
-        expect(isHidden(calls, 3)).toBe(false);
     });
 
     it('repairs only contiguous surviving UUID ranges and ignores a missing ID', async () => {

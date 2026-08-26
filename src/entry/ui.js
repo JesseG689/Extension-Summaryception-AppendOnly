@@ -47,10 +47,7 @@ export async function updateUI() {
         syncSettingsInputs(s, effectiveSettings);
         syncEnabledContent(s);
 
-        syncRoleMaskModeControl(
-            s.maskUserRoleAsAssistant,
-            effectiveSettings.memoryMode === MEMORY_MODES.APPEND_ONLY,
-        );
+        syncRoleMaskModeControl(s.maskUserRoleAsAssistant);
         // alwaysOn category: the input is disabled in markup, so reflect it as
         // permanently ticked rather than reading the (ignored) persisted flag.
         $('#sc_state_cat_date_time').prop('checked', true);
@@ -101,16 +98,12 @@ function syncEasyPayloadSchematic(s = getEffectiveSettings()) {
     $('#sc_easy_payload_memory_budget').text(formatBudgetTokenLabel(s.memoryTokenBudget));
     $('#sc_easy_payload_verbatim_budget').text(formatBudgetTokenLabel(s.verbatimTokenBudget));
     $('#sc_easy_payload_queued_budget').text(formatBudgetTokenLabel(s.queuedTokenBudget));
-    $('#sc_easy_payload_baked_wi_budget')
-        .text(formatBudgetTokenLabel(s.bakedWorldInfoTokenBudget))
-        .closest('.sc-payload-part')
-        .toggle(s.memoryMode === MEMORY_MODES.APPEND_ONLY);
 }
 
 /**
- * Build configured recent/queued/baked context limits for the main request preview.
+ * Build configured recent/queued context limits for the main request preview.
  * @param {ReturnType<typeof getSettings>} [s]
- * @returns {{ rawChatMin: number, rawChatMax: number, mainMin: number, mainMax: number, bakedWorldInfoMax: number }}
+ * @returns {{ rawChatMin: number, rawChatMax: number, mainMin: number, mainMax: number }}
  */
 export function buildMainContextPreviewModel(s = getEffectiveSettings()) {
     const memoryBudget = readTokenSetting(s.memoryTokenBudget, defaultSettings.memoryTokenBudget);
@@ -119,17 +112,11 @@ export function buildMainContextPreviewModel(s = getEffectiveSettings()) {
         defaultSettings.verbatimTokenBudget,
     );
     const queuedBudget = readTokenSetting(s.queuedTokenBudget, defaultSettings.queuedTokenBudget);
-    const bakedBudget = readTokenSetting(
-        s.bakedWorldInfoTokenBudget,
-        defaultSettings.bakedWorldInfoTokenBudget,
-    );
-    const appendOnly = s.memoryMode === MEMORY_MODES.APPEND_ONLY;
     return {
         rawChatMin: verbatimBudget,
         rawChatMax: verbatimBudget + queuedBudget,
         mainMin: memoryBudget + verbatimBudget,
-        mainMax: memoryBudget + verbatimBudget + queuedBudget + (appendOnly ? bakedBudget : 0),
-        bakedWorldInfoMax: appendOnly ? bakedBudget : 0,
+        mainMax: memoryBudget + verbatimBudget + queuedBudget,
     };
 }
 
@@ -253,17 +240,14 @@ async function getVisibleBacklogCount(s, store) {
 
 function syncMemoryModeControls(s) {
     const isPrefixCache = s.memoryMode === MEMORY_MODES.PREFIX_CACHE;
-    const isAppendOnly = s.memoryMode === MEMORY_MODES.APPEND_ONLY;
     const isMacroOnly = s.customMemoryPosition === MEMORY_POSITIONS.MACRO_ONLY;
     $('#sc_custom_memory_depth_row').toggle(s.customMemoryPosition === MEMORY_POSITIONS.IN_CHAT);
     $('#sc_custom_memory_role_row').toggle(!isMacroOnly);
     $('#sc_macro_memory_note').toggle(isMacroOnly);
     $('#sc_memory_help_balanced').toggle(s.memoryMode === MEMORY_MODES.BALANCED);
     $('#sc_memory_help_prefix_cache').toggle(isPrefixCache);
-    $('#sc_memory_help_append_only').toggle(isAppendOnly);
     $('#sc_manual_cache_warning').toggle(isPrefixCache);
-    $('.sc-append-only-row').toggle(isAppendOnly);
-    $('.sc-cache-mode-row').toggle(isPrefixCache || isAppendOnly);
+    $('.sc-cache-mode-row').toggle(isPrefixCache);
     $('#sc_min_summary_turns, #sc_max_summary_turns').prop('disabled', false);
     $('#sc_min_summary_turns, #sc_max_summary_turns').closest('.sc-row').removeClass('sc-disabled');
     $('#sc_min_summary_budget_hint').text(SETTINGS_HELP.min_summary_budget.short);

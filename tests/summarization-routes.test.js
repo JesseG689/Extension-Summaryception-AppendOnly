@@ -32,11 +32,6 @@ describe('buildAutoSummaryRoutePlan', () => {
             SUMMARY_ROUTES.CACHE_AUTO,
             SUMMARY_COMMIT_MODES.ATOMIC_PARTITIONS,
         ],
-        [
-            MEMORY_MODES.APPEND_ONLY,
-            SUMMARY_ROUTES.CACHE_AUTO,
-            SUMMARY_COMMIT_MODES.ATOMIC_PARTITIONS,
-        ],
     ])('uses one recent/queued readiness result for %s', async (mode, route, commitMode) => {
         installSummaryContext();
         const chat = makeSizedChat(8, { userLength: 400, assistantLength: 400 });
@@ -61,21 +56,14 @@ describe('buildAutoSummaryRoutePlan', () => {
         expect(plan.totalBatches).toBe(1);
     });
 
-    it.each([MEMORY_MODES.PREFIX_CACHE, MEMORY_MODES.APPEND_ONLY])(
-        '%s routes every B partition atomically',
-        async (mode) => {
-            installSummaryContext();
-            const chat = makeSizedChat(8, { userLength: 400, assistantLength: 400 });
-            const plan = await buildAutoSummaryRoutePlan(
-                chat,
-                makeSummaryStore(),
-                readySettings(mode),
-            );
-            expect(plan.partitions).toHaveLength(2);
-            expect(plan.totalBatches).toBe(plan.partitions.length);
-            expect(plan.partitions.flatMap((part) => part.turns)).toHaveLength(plan.overflowCount);
-        },
-    );
+    it.each([MEMORY_MODES.PREFIX_CACHE])('%s routes every B partition atomically', async (mode) => {
+        installSummaryContext();
+        const chat = makeSizedChat(8, { userLength: 400, assistantLength: 400 });
+        const plan = await buildAutoSummaryRoutePlan(chat, makeSummaryStore(), readySettings(mode));
+        expect(plan.partitions).toHaveLength(2);
+        expect(plan.totalBatches).toBe(plan.partitions.length);
+        expect(plan.partitions.flatMap((part) => part.turns)).toHaveLength(plan.overflowCount);
+    });
 
     it('stays idle below Recent + Queued despite max turns', async () => {
         installSummaryContext();

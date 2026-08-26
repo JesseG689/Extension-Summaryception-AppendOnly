@@ -99,13 +99,7 @@ export function isSummarizerConversationMessage(message) {
     if (!message?.mes || !String(message.mes).trim()) {
         return false;
     }
-    if (
-        message.is_system ||
-        message.is_hidden ||
-        message.extra?.sc_wi ||
-        message.name === 'SC-WI' ||
-        message.extra?.type
-    ) {
+    if (message.is_system || message.is_hidden || message.extra?.type) {
         return false;
     }
     return true;
@@ -159,7 +153,7 @@ export function getPromptDepthsByChatIndex(chat) {
     const depths = new Map();
 
     for (let i = 0; i < chat.length; i++) {
-        if (!chat[i]?.is_system && !chat[i]?.extra?.sc_wi) {
+        if (!chat[i]?.is_system) {
             promptIndexes.push(i);
         }
     }

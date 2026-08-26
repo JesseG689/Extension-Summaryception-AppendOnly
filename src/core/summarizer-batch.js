@@ -21,7 +21,6 @@ import { executeLayer0StoreTransaction } from './layer0-store-transaction.js';
 import { isSummarizerOutputSafe } from './prompts.js';
 import { parseSnippet } from './summarizer-state.js';
 import { getCurrentStateSnapshotText } from './memory-injection.js';
-import { deleteNonConversationMessages } from './world-info-bake.js';
 import { countTextTokens, formatTokenCount, formatTokenValue } from './token-count.js';
 import {
     fingerprintSourceRange,
@@ -463,7 +462,6 @@ async function executeLayer0Commit({
             onRollback?.();
         },
         persist: async () => {
-            await deleteNonConversationMessages({ persist: false });
             await saveChatStore();
             await updateCommittedInjection({ logMemoryStatus: true });
             await ghostSourceMessageIds(sourceMessageIds);

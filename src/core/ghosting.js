@@ -230,7 +230,7 @@ function messageNeedsGhosting(msg, store) {
  * @returns {boolean}
  */
 function isGhostableMessage(msg, store) {
-    if (!msg || msg.extra?.sc_wi || msg.name === 'SC-WI') {
+    if (!msg) {
         return false;
     }
     const hideNonText = getEffectiveSettings().hideNonTextMessages !== false;

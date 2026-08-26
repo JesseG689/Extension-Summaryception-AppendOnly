@@ -27,7 +27,7 @@ const planWithQueue = (turns = 5) => ({
 const minutesAgo = (minutes) => new Date(NOW - minutes * 60_000).toISOString();
 
 describe('evaluateStaleCacheAdvice', () => {
-    it.each([MEMORY_MODES.PREFIX_CACHE, MEMORY_MODES.APPEND_ONLY])(
+    it.each([MEMORY_MODES.PREFIX_CACHE])(
         '%s advises summarizing when the cache is stale',
         (memoryMode) => {
             const chat = [makeMessage({ sendDate: minutesAgo(75) })];
@@ -139,12 +139,9 @@ describe('getMessageTimestampMs', () => {
 });
 
 describe('isProviderCacheMode', () => {
-    it.each([MEMORY_MODES.PREFIX_CACHE, MEMORY_MODES.APPEND_ONLY])(
-        '%s relies on the provider cache',
-        (memoryMode) => {
-            expect(isProviderCacheMode(cacheSettings({ memoryMode }))).toBe(true);
-        },
-    );
+    it.each([MEMORY_MODES.PREFIX_CACHE])('%s relies on the provider cache', (memoryMode) => {
+        expect(isProviderCacheMode(cacheSettings({ memoryMode }))).toBe(true);
+    });
 
     it('rejects the default mode', () => {
         expect(isProviderCacheMode(cacheSettings({ memoryMode: MEMORY_MODES.BALANCED }))).toBe(

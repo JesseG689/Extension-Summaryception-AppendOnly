@@ -43,14 +43,6 @@ const MEMORY_MODE_HELP = Object.freeze({
         when: 'Use it when cached input is cheaper and your provider can reuse a partial prompt prefix.',
         risk: 'The prompt is larger, and a summary flush starts a new cache prefix. Normal lorebooks need no changes.',
     },
-    append_only: {
-        title: 'Append Only',
-        short: 'For strict caches that need every request to extend the last one: Recent, then Recent + Queued, then Recent + Queued + Baked.',
-        controlsText:
-            'Run /sc-migrate-wi once to clone each lorebook as SC - <original>; originals stay unchanged. Select the clone, close and reopen the lorebook editor to see its dynamic entries under Outlet.',
-        when: 'Use it when your provider requires an exact growing prefix and gives a deep cached-input discount.',
-        risk: 'Group chats and depth-positioned lore are not supported. /sc-unbake-wi restores migrated entries.',
-    },
 });
 
 const memoryModeHelp = ({ selector, controls, mode }) =>
@@ -328,14 +320,6 @@ const HELP_ENTRIES = [
         }),
     ],
     [
-        'memory_mode_append_only',
-        memoryModeHelp({
-            selector: selectorFor('sc_memory_mode_append_only'),
-            controls: [controlFor('sc_memory_mode_append_only')],
-            mode: 'append_only',
-        }),
-    ],
-    [
         'custom_memory_position',
         basicHelp({
             selector: selectorFor('sc_custom_memory_position'),
@@ -466,14 +450,6 @@ const HELP_ENTRIES = [
             selector: selectorFor('sc_easy_memory_mode_prefix_cache'),
             controls: [controlFor('sc_easy_memory_mode_prefix_cache')],
             mode: 'prefix_cache',
-        }),
-    ],
-    [
-        'easy_memory_mode_append_only',
-        memoryModeHelp({
-            selector: selectorFor('sc_easy_memory_mode_append_only'),
-            controls: [controlFor('sc_easy_memory_mode_append_only')],
-            mode: 'append_only',
         }),
     ],
     [

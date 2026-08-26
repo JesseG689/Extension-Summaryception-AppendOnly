@@ -2,7 +2,6 @@ import { describe, expect, it } from 'vitest';
 
 import {
     CACHE_TTL,
-    MASK_USER_ROLE_MODES,
     MEMORY_MODE_PRESETS,
     MEMORY_MODES,
     UI_MODES,
@@ -49,54 +48,14 @@ describe('getSettings', () => {
         expect(settings.enabled).toBe(true);
     });
 
-    it.each([MASK_USER_ROLE_MODES.MARKER_LAST, MASK_USER_ROLE_MODES.KEEP_LAST_USER])(
-        'repairs prefix-breaking mask mode %s when Append Only is selected',
-        (maskUserRoleMode) => {
-            installSummaryContext({
-                settings: { memoryMode: 'append_only', maskUserRoleMode },
-            });
-
-            expect(getSettings().maskUserRoleMode).toBe(MASK_USER_ROLE_MODES.MARKER_FIRST);
-        },
-    );
-
-    it('keeps Rewrite All with Append Only because its prefix remains stable', () => {
+    it('remaps persisted append-only mode to prefix_cache and resets invalid modes', () => {
         installSummaryContext({
-            settings: {
-                memoryMode: 'append_only',
-                maskUserRoleMode: MASK_USER_ROLE_MODES.REWRITE_ALL,
-            },
+            settings: { memoryMode: 'append_only' },
         });
+        expect(getSettings().memoryMode).toBe(MEMORY_MODES.PREFIX_CACHE);
 
-        expect(getSettings().maskUserRoleMode).toBe(MASK_USER_ROLE_MODES.REWRITE_ALL);
-    });
-
-    it('repairs an Advanced setting after switching from a forbidden mask mode to Append Only', () => {
-        installSummaryContext({
-            settings: {
-                uiMode: UI_MODES.ADVANCED,
-                memoryMode: 'balanced',
-                maskUserRoleMode: MASK_USER_ROLE_MODES.MARKER_LAST,
-            },
-        });
-        const settings = getSettings();
-        settings.memoryMode = 'append_only';
-
-        expect(getSettings().maskUserRoleMode).toBe(MASK_USER_ROLE_MODES.MARKER_FIRST);
-    });
-
-    it('repairs a canonical setting after switching Easy UI to Append Only', () => {
-        installSummaryContext({
-            settings: {
-                uiMode: UI_MODES.EASY,
-                memoryMode: 'balanced',
-                maskUserRoleMode: MASK_USER_ROLE_MODES.KEEP_LAST_USER,
-            },
-        });
-        const settings = getSettings();
-        settings.memoryMode = 'append_only';
-
-        expect(getSettings().maskUserRoleMode).toBe(MASK_USER_ROLE_MODES.MARKER_FIRST);
+        installSummaryContext({ settings: { memoryMode: 'not-a-mode' } });
+        expect(getSettings().memoryMode).toBe(MEMORY_MODES.BALANCED);
     });
 });
 
@@ -146,47 +105,6 @@ describe('getEffectiveSettings', () => {
     it('returns the same settings reference in ADVANCED mode', () => {
         installSummaryContext({ settings: { uiMode: UI_MODES.ADVANCED } });
         expect(getEffectiveSettings()).toBe(getSettings());
-    });
-
-    it('returns the canonical settings object in Easy mode', () => {
-        installSummaryContext({
-            settings: { uiMode: UI_MODES.EASY, memoryMode: 'append_only' },
-        });
-
-        expect(getEffectiveSettings()).toBe(getSettings());
-        expect(getEffectiveSettings().memoryMode).toBe('append_only');
-    });
-
-    it('preserves Append Only bake limits in Easy runtime settings', () => {
-        installSummaryContext({
-            settings: {
-                uiMode: UI_MODES.EASY,
-                memoryMode: 'append_only',
-                maxBakedWorldInfoEntries: 7,
-                bakedWorldInfoTokenBudget: 7000,
-            },
-        });
-
-        expect(getEffectiveSettings()).toMatchObject({
-            maxBakedWorldInfoEntries: 7,
-            bakedWorldInfoTokenBudget: 7000,
-        });
-    });
-
-    it('preserves both Append Only templates in Easy runtime settings', () => {
-        installSummaryContext({
-            settings: {
-                uiMode: UI_MODES.EASY,
-                memoryMode: 'append_only',
-                appendOnlySystemBlockTemplate: 'WITH {{entries}}',
-                appendOnlyEmptySystemBlockTemplate: 'WITHOUT',
-            },
-        });
-
-        expect(getEffectiveSettings()).toMatchObject({
-            appendOnlySystemBlockTemplate: 'WITH {{entries}}',
-            appendOnlyEmptySystemBlockTemplate: 'WITHOUT',
-        });
     });
 });
 

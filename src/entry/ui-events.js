@@ -119,7 +119,6 @@ const PROMPT_FIELDS = [
 export function bindUIEvents() {
     bindModeHandlers();
     bindToggleHandlers();
-    bindMemoryModeHandlers();
     bindSliderHandlers();
     bindTextareaHandlers();
     bindClickHandlers();
@@ -192,18 +191,9 @@ function bindToggleHandlers() {
             },
         },
         {
-            selector:
-                '#sc_easy_append_only_inject_empty_system_block, #sc_append_only_inject_empty_system_block',
-            key: 'appendOnlyInjectEmptySystemBlock',
-        },
-        {
             selector: '#sc_mask_user_role_as_assistant',
             key: 'maskUserRoleAsAssistant',
-            afterSave: (_settings, value) =>
-                syncRoleMaskModeControl(
-                    Boolean(value),
-                    getEffectiveSettings().memoryMode === MEMORY_MODES.APPEND_ONLY,
-                ),
+            afterSave: (_settings, value) => syncRoleMaskModeControl(Boolean(value)),
         },
         { selector: '#sc_state_cat_bonds', key: 'stateCatBonds' },
         { selector: '#sc_state_cat_chekhov', key: 'stateCatChekhov' },
@@ -227,29 +217,14 @@ function bindToggleHandlers() {
         selector: '#sc_mask_user_role_mode',
         key: 'maskUserRoleMode',
         read: readString,
-        beforeSave: (settings, value, $source) => {
-            const mode = String(value);
-            const appendOnly = getEffectiveSettings().memoryMode === MEMORY_MODES.APPEND_ONLY;
-            const prefixBreakingMode = /** @type {string[]} */ ([
-                MASK_USER_ROLE_MODES.MARKER_LAST,
-                MASK_USER_ROLE_MODES.KEEP_LAST_USER,
-            ]).includes(mode);
-            if (
-                !(/** @type {string[]} */ (Object.values(MASK_USER_ROLE_MODES)).includes(mode)) ||
-                (appendOnly && prefixBreakingMode)
-            ) {
+        beforeSave: (settings, _value, $source) => {
+            const mode = String(_value);
+            if (!(/** @type {string[]} */ (Object.values(MASK_USER_ROLE_MODES)).includes(mode))) {
                 settings.maskUserRoleMode = defaultSettings.maskUserRoleMode;
                 $source.val(defaultSettings.maskUserRoleMode);
             }
         },
     });
-}
-
-/**
- * Bind handlers for memory mode and custom injection placement.
- * @returns {void}
- */
-function bindMemoryModeHandlers() {
     $(document).on(
         'change',
         'input[name="sc_easy_memory_mode"], input[name="sc_memory_mode"]',
@@ -400,20 +375,8 @@ function enforceRetentionConstraints(changedKey) {
  * @returns {void}
  */
 function bindTextareaHandlers() {
-    /** @type {Array<{ id: string, key: 'injectionTemplate' | 'appendOnlySystemBlockTemplate' | 'appendOnlyEmptySystemBlockTemplate' }>} */
-    const textareas = [
-        { id: '#sc_injection_template', key: 'injectionTemplate' },
-        { id: '#sc_easy_append_only_system_block_template', key: 'appendOnlySystemBlockTemplate' },
-        {
-            id: '#sc_easy_append_only_empty_system_block_template',
-            key: 'appendOnlyEmptySystemBlockTemplate',
-        },
-        { id: '#sc_append_only_system_block_template', key: 'appendOnlySystemBlockTemplate' },
-        {
-            id: '#sc_append_only_empty_system_block_template',
-            key: 'appendOnlyEmptySystemBlockTemplate',
-        },
-    ];
+    /** @type {Array<{ id: string, key: 'injectionTemplate' }>} */
+    const textareas = [{ id: '#sc_injection_template', key: 'injectionTemplate' }];
 
     for (const ta of textareas) {
         bindDocumentSetting({
@@ -752,9 +715,6 @@ function onResetDefaults() {
         MEMORY_MODE_PRESETS[preservedMemoryMode] || MEMORY_MODE_PRESETS.balanced;
     s.verbatimTokenBudget = retentionPreset.verbatimTokenBudget;
     s.queuedTokenBudget = retentionPreset.queuedTokenBudget;
-    if (preservedMemoryMode === MEMORY_MODES.APPEND_ONLY) {
-        s.bakedWorldInfoTokenBudget = retentionPreset.bakedWorldInfoTokenBudget;
-    }
     s.memoryTokenBudget = defaultSettings.memoryTokenBudget;
     s.layer0SummaryTokenTarget = defaultSettings.layer0SummaryTokenTarget;
     s.snippetsPerLayer = defaultSettings.snippetsPerLayer;

@@ -8,7 +8,6 @@ import {
 } from '../foundation/context.js';
 import { info } from '../foundation/logger.js';
 import { bumpSummaryStoreMutationEpoch, getChatStore } from '../foundation/state.js';
-import { deleteNonConversationMessages } from '../core/world-info-bake.js';
 import { refreshExtensionState } from './persist.js';
 
 // ─── Memory Clear Workflow ───────────────────────────────────────────
@@ -27,9 +26,6 @@ export async function clearSummaryceptionMemory(
             showOutput: false,
         });
     }
-
-    await deleteNonConversationMessages();
-
     const store = getChatStore();
     store.layers.length = 0;
     store.ghostedMessageIds = [];

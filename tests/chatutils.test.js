@@ -40,14 +40,6 @@ describe('getAssistantTurns', () => {
         expect(getAssistantTurns([hidden, system])).toEqual([]);
     });
 
-    it('excludes baked WI narrator messages from assistant turns', () => {
-        const baked = makeMessage({ mes: 'formatted lore' });
-        installSummaryContext({ chat: [baked] });
-        baked.extra.sc_wi = { uids: [1], version: 1 };
-
-        expect(getAssistantTurns([baked])).toEqual([]);
-    });
-
     it('skips empty/whitespace messages and defaults a missing name', () => {
         // Whitespace-only assistant message is dropped.
         installSummaryContext({ chat: [] });
@@ -66,8 +58,6 @@ describe('isSummarizerConversationMessage', () => {
         const records = [
             makeMessage({ isUser: true, mes: 'user' }),
             makeMessage({ mes: 'assistant' }),
-            { ...makeMessage({ name: 'SC-WI', mes: 'legacy lore' }), extra: {} },
-            { ...makeMessage({ mes: 'baked lore' }), extra: { sc_wi: { version: 1 } } },
             { ...makeMessage({ mes: 'tool' }), extra: { type: 'tool' } },
             makeMessage({ isSystem: true, mes: 'system' }),
             makeMessage({ isHidden: true, mes: 'hidden' }),
@@ -149,18 +139,6 @@ describe('getPromptDepthsByChatIndex', () => {
         expect(depths.get(3)).toBe(0);
         expect(depths.get(2)).toBe(1);
         expect(depths.get(0)).toBe(2);
-    });
-
-    it('excludes baked WI narrator messages from prompt depth', () => {
-        const baked = makeMessage({ mes: 'formatted lore' });
-        baked.extra.sc_wi = { uids: [1], version: 1 };
-        const depths = getPromptDepthsByChatIndex([
-            makeMessage({ isUser: true, mes: 'user' }),
-            baked,
-            makeMessage({ mes: 'assistant' }),
-        ]);
-
-        expect([...depths.keys()]).toEqual([0, 2]);
     });
 });
 

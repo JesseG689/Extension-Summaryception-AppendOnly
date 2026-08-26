@@ -169,12 +169,10 @@ describe('buildChatWindowPlan', () => {
         expect(two.partitions.flatMap((part) => part.turns)).toHaveLength(two.eligibleTurns.length);
     });
 
-    it('excludes non-conversation and baked records from recent/queued accounting', async () => {
+    it('excludes non-conversation records from recent/queued accounting', async () => {
         installSummaryContext();
         const chat = makeSizedChat(2, { userLength: 40, assistantLength: 40 });
-        const baked = makeMessage({ mes: 'x'.repeat(1000) });
-        baked.extra.sc_wi = { uids: [1], version: 1 };
-        chat.splice(2, 0, baked, makeMessage({ mes: 'x'.repeat(1000), isSystem: true }));
+        chat.splice(2, 0, makeMessage({ mes: 'x'.repeat(1000), isSystem: true }));
         const plan = await buildChatWindowPlan(
             chat,
             makeSummaryStore(),

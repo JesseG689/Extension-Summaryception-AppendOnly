@@ -176,7 +176,11 @@ function normalizeChatStore(store) {
  */
 function normalizeMemorySettings(settings) {
     let changed = false;
-    const validModes = [MEMORY_MODES.BALANCED, MEMORY_MODES.PREFIX_CACHE, MEMORY_MODES.APPEND_ONLY];
+    if (settings.memoryMode === 'append_only') {
+        settings.memoryMode = MEMORY_MODES.PREFIX_CACHE;
+        changed = true;
+    }
+    const validModes = [MEMORY_MODES.BALANCED, MEMORY_MODES.PREFIX_CACHE];
     if (!isSettingValue(validModes, settings.memoryMode)) {
         settings.memoryMode = defaultSettings.memoryMode;
         changed = true;
@@ -202,21 +206,6 @@ function normalizeMemorySettings(settings) {
         settings.customMemoryDepth = customMemoryDepth;
         changed = true;
     }
-    if (
-        typeof settings.appendOnlySystemBlockTemplate !== 'string' ||
-        !settings.appendOnlySystemBlockTemplate.trim()
-    ) {
-        settings.appendOnlySystemBlockTemplate = defaultSettings.appendOnlySystemBlockTemplate;
-        changed = true;
-    }
-    if (
-        typeof settings.appendOnlyEmptySystemBlockTemplate !== 'string' ||
-        !settings.appendOnlyEmptySystemBlockTemplate.trim()
-    ) {
-        settings.appendOnlyEmptySystemBlockTemplate =
-            defaultSettings.appendOnlyEmptySystemBlockTemplate;
-        changed = true;
-    }
     return changed;
 }
 
@@ -229,12 +218,7 @@ function normalizeMemorySettings(settings) {
 function normalizeRoleMaskSettings(settings, hadMode) {
     const validMode =
         hadMode && isSettingValue(Object.values(MASK_USER_ROLE_MODES), settings.maskUserRoleMode);
-    const appendOnly = settings.memoryMode === MEMORY_MODES.APPEND_ONLY;
-    const prefixBreakingMode = /** @type {string[]} */ ([
-        MASK_USER_ROLE_MODES.MARKER_LAST,
-        MASK_USER_ROLE_MODES.KEEP_LAST_USER,
-    ]).includes(String(settings.maskUserRoleMode));
-    if (validMode && !(appendOnly && prefixBreakingMode)) {
+    if (validMode) {
         return false;
     }
     settings.maskUserRoleMode = defaultSettings.maskUserRoleMode;
@@ -288,13 +272,6 @@ function normalizeVerbatimWindowSettings(settings) {
     settings.verbatimTokenBudget = clampToStep(settings.verbatimTokenBudget, 4000, 64000, 1000);
     settings.queuedTokenBudget = clampToStep(settings.queuedTokenBudget, 4000, 64000, 1000);
     settings.memoryTokenBudget = clampToStep(settings.memoryTokenBudget, 4000, 32000, 1000);
-    settings.maxBakedWorldInfoEntries = clampInteger(settings.maxBakedWorldInfoEntries, 5, 50);
-    settings.bakedWorldInfoTokenBudget = clampToStep(
-        settings.bakedWorldInfoTokenBudget,
-        2000,
-        10000,
-        1000,
-    );
     settings.snippetsPerLayer = clampInteger(settings.snippetsPerLayer, 20, 40);
     settings.snippetsPerPromotion = clampInteger(settings.snippetsPerPromotion, 3, 4);
     settings.cacheTtlMinutes = clampToStep(

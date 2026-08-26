@@ -33,19 +33,11 @@ const foundationMocks = vi.hoisted(() => {
         saveMetadata: vi.fn(),
         saveChat: vi.fn(),
         reloadCurrentChat: vi.fn(),
-        renderInsertedChatMessage: vi.fn(),
-        loadWorldInfo: vi.fn(),
-        saveWorldInfo: vi.fn(),
-        getWorldInfoNames: vi.fn(),
-        getPromptTokenCapacity: vi.fn(),
-        countPromptPayloadTokens: vi.fn(),
-        expandSillyTavernMacros: vi.fn(),
         executeSlashCommandsWithOptions: vi.fn(),
         setExtensionPrompt: vi.fn(),
         registerMacro: vi.fn(),
         generateRaw: vi.fn(),
         callTokenCountAsync: vi.fn(),
-        processWorldInfoText: vi.fn(),
         isDryRunEvent: vi.fn(),
         getRequestHeaders: vi.fn(),
         getPromptManager: vi.fn(),
@@ -100,32 +92,6 @@ const foundationMocks = vi.hoisted(() => {
                 await fn();
             }
         });
-        context.loadWorldInfo.mockImplementation(async (name) => {
-            const fn = getContext().loadWorldInfo;
-            return typeof fn === 'function' ? await fn(name) : null;
-        });
-        context.saveWorldInfo.mockImplementation(async (name, data) => {
-            const fn = getContext().saveWorldInfo;
-            if (typeof fn !== 'function') {
-                return false;
-            }
-            await fn(name, data, true);
-            return true;
-        });
-        context.getWorldInfoNames.mockImplementation(
-            () => getContext().getWorldInfoNames?.() || [],
-        );
-        context.getPromptTokenCapacity.mockImplementation(() => {
-            const ctx = getContext();
-            const total = Number(ctx.chatCompletionSettings?.openai_max_context ?? ctx.maxContext);
-            const response = Number(ctx.chatCompletionSettings?.openai_max_tokens ?? 0);
-            return Number.isFinite(total) && total > 0
-                ? Math.max(0, total - Math.max(0, response))
-                : null;
-        });
-        context.processWorldInfoText.mockImplementation(async (text) => String(text));
-        context.countPromptPayloadTokens.mockImplementation(async () => null);
-        context.expandSillyTavernMacros.mockImplementation(async (text) => String(text));
         context.executeSlashCommandsWithOptions.mockImplementation(
             async (command, options = {}) => {
                 await getContext().executeSlashCommandsWithOptions(command, options);

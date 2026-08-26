@@ -6,5 +6,4 @@
 - Shared setup owns host context and logging mocks.
 - Shared helpers own runtime fixtures.
 - Manual run loop tests must advance the summarized boundary on each commit. A fixed boundary never ends the loop.
-- The host returns cloned lorebook data on load. Tests must copy source fixtures so source-preservation checks stay valid.
 - Update shared setup when host facade exports change.

@@ -7,8 +7,6 @@
  */
 
 const SILLYTAVERN_MACRO_SYSTEM_PATH = '/scripts/macros/macro-system.js';
-const SILLYTAVERN_REGEX_ENGINE_PATH = '/scripts/extensions/regex/engine.js';
-
 /**
  * Get the raw SillyTavern context object.
  * @returns {SillyTavernContext} The current SillyTavern context
@@ -81,79 +79,14 @@ export async function saveChat() {
 }
 
 /**
- * Render a message already inserted into the active chat and keep DOM ids aligned.
- * @param {ChatMessage} message
- * @param {number} index
- * @returns {unknown}
- */
-export function renderInsertedChatMessage(message, index) {
-    for (const element of document.querySelectorAll('#chat .mes')) {
-        const messageId = Number(element.getAttribute('mesid'));
-        if (Number.isInteger(messageId) && messageId >= index) {
-            element.setAttribute('mesid', String(messageId + 1));
-            const label = element.querySelector('.mesIDDisplay');
-            if (label) {
-                label.textContent = `#${messageId + 1}`;
-            }
-        }
-    }
-
-    const addOneMessage = getContext().addOneMessage;
-    return typeof addOneMessage === 'function'
-        ? addOneMessage(message, { forceId: index, insertAfter: index - 1, scroll: false })
-        : null;
-}
-
-/**
- *
+ * Reload the current chat from disk and refresh the rendered UI.
+ * @returns {Promise<void>}
  */
 export async function reloadCurrentChat() {
     const reload = getContext().reloadCurrentChat;
     if (typeof reload === 'function') {
         await reload();
     }
-}
-
-/**
- * Load a SillyTavern World Info book.
- * @param {string} name
- * @returns {Promise<Record<string, unknown> | null>}
- */
-export async function loadWorldInfo(name) {
-    const load = getContext().loadWorldInfo;
-    return typeof load === 'function' ? await load(name) : null;
-}
-
-/**
- * Save a SillyTavern World Info book immediately.
- * @param {string} name
- * @param {Record<string, unknown>} data
- * @returns {Promise<boolean>}
- */
-export async function saveWorldInfo(name, data) {
-    const save = getContext().saveWorldInfo;
-    if (typeof save !== 'function') {
-        return false;
-    }
-    await save(name, data, true);
-    return true;
-}
-
-/** @returns {string[]} */
-export function getWorldInfoNames() {
-    const getNames = getContext().getWorldInfoNames;
-    return typeof getNames === 'function' ? getNames() : [];
-}
-
-/**
- * Return the current provider prompt capacity after reserving response tokens.
- * @returns {number | null}
- */
-export function getPromptTokenCapacity() {
-    const ctx = getContext();
-    const total = Number(ctx.chatCompletionSettings?.openai_max_context ?? ctx.maxContext);
-    const response = Number(ctx.chatCompletionSettings?.openai_max_tokens ?? 0);
-    return Number.isFinite(total) && total > 0 ? Math.max(0, total - Math.max(0, response)) : null;
 }
 
 /**
@@ -232,39 +165,6 @@ export async function callTokenCountAsync(text) {
         throw new Error('getTokenCountAsync is not available in the current context.');
     }
     return await ctx.getTokenCountAsync(text);
-}
-
-/**
- * Expand SillyTavern macros once before persisting generated chat content.
- * @param {string} text
- * @returns {Promise<string>}
- */
-export async function expandSillyTavernMacros(text) {
-    const hostModulePath = '/script.js';
-    const script = await import(/* @vite-ignore */ hostModulePath);
-    if (typeof script?.substituteParams !== 'function') {
-        throw new Error('SillyTavern substituteParams is unavailable.');
-    }
-    return String(script.substituteParams(String(text)));
-}
-
-/**
- * Apply SillyTavern's World Info prompt regex rules to one entry.
- * @param {string} text
- * @param {number | null} [depth]
- * @returns {Promise<string>}
- */
-export async function processWorldInfoText(text, depth = null) {
-    try {
-        const engine = await import(SILLYTAVERN_REGEX_ENGINE_PATH);
-        const placement = engine?.regex_placement?.WORLD_INFO;
-        const process = engine?.getRegexedString;
-        return typeof process === 'function'
-            ? process(String(text), placement, { depth, isMarkdown: false, isPrompt: true })
-            : String(text);
-    } catch (_e) {
-        return String(text);
-    }
 }
 
 /**
@@ -420,115 +320,6 @@ function hasStopButtonMarker(element) {
 
 function getContextEventTypes(ctx) {
     return ctx.eventTypes || ctx.event_types || null;
-}
-
-/**
- * Count a prompt payload with SillyTavern's provider tokenizer.
- * @param {unknown} payload
- * @returns {Promise<number | null>}
- */
-export async function countPromptPayloadTokens(payload) {
-    if (Array.isArray(payload)) {
-        const endpointCount = await countChatPromptTokensViaEndpoint(payload);
-        if (endpointCount !== null) {
-            return endpointCount;
-        }
-    }
-    return await countPromptStringTokens(stringifyPromptPayload(payload));
-}
-
-async function countChatPromptTokensViaEndpoint(messages) {
-    if (typeof fetch !== 'function') {
-        return null;
-    }
-    const model = getTokenizerModelQuery();
-    try {
-        const response = await fetch(`/api/tokenizers/openai/count${model}`, {
-            method: 'POST',
-            headers: getRequestHeaders(),
-            body: JSON.stringify(messages),
-        });
-        if (response && typeof response.ok === 'boolean' && !response.ok) {
-            return null;
-        }
-        const data = await response.json();
-        return normalizeTokenCount(data?.token_count);
-    } catch (_e) {
-        return null;
-    }
-}
-
-async function countPromptStringTokens(text) {
-    const ctx = getContext();
-    if (typeof ctx.getTokenCountAsync !== 'function') {
-        return null;
-    }
-    try {
-        const padding = Number(ctx.powerUserSettings?.token_padding);
-        const count = await ctx.getTokenCountAsync(
-            text,
-            Number.isFinite(padding) ? padding : undefined,
-        );
-        return normalizeTokenCount(count);
-    } catch (_e) {
-        return null;
-    }
-}
-
-function getTokenizerModelQuery() {
-    try {
-        const ctx = getContext();
-        const model = typeof ctx.getTokenizerModel === 'function' ? ctx.getTokenizerModel() : '';
-        return model ? `?model=${encodeURIComponent(String(model))}` : '';
-    } catch (_e) {
-        return '';
-    }
-}
-
-function stringifyPromptPayload(payload) {
-    if (typeof payload === 'string') {
-        return payload;
-    }
-    if (Array.isArray(payload)) {
-        return payload.map(stringifyPromptMessage).join('\n\n');
-    }
-    return safeJsonStringify(payload);
-}
-
-function stringifyPromptMessage(message) {
-    if (!message || typeof message !== 'object') {
-        return String(message ?? '');
-    }
-    const role = message.role ? `[${message.role}]` : '';
-    const name = message.name ? `${message.name}: ` : '';
-    const content = stringifyPromptContent(message.content);
-    return [role, `${name}${content}`].filter(Boolean).join('\n');
-}
-
-function stringifyPromptContent(content) {
-    if (typeof content === 'string') {
-        return content;
-    }
-    if (Array.isArray(content)) {
-        return content.map(stringifyPromptContent).join('\n');
-    }
-    return safeJsonStringify(content);
-}
-
-function safeJsonStringify(value) {
-    try {
-        return JSON.stringify(value ?? '') || '';
-    } catch (_e) {
-        return String(value ?? '');
-    }
-}
-
-function normalizeTokenCount(count) {
-    const number = Number(count);
-    if (!Number.isFinite(number)) {
-        return null;
-    }
-    return Math.max(0, Math.ceil(number));
 }
 
 /**

@@ -16,7 +16,6 @@ export const LOG_PREFIX = '[Summaryception]';
 export const MEMORY_MODES = Object.freeze({
     BALANCED: 'balanced',
     PREFIX_CACHE: 'prefix_cache',
-    APPEND_ONLY: 'append_only',
     CUSTOM: 'custom',
 });
 export const MEMORY_MODE_PRESETS = Object.freeze({
@@ -28,11 +27,6 @@ export const MEMORY_MODE_PRESETS = Object.freeze({
         verbatimTokenBudget: 20000,
         queuedTokenBudget: 16000,
     }),
-    [MEMORY_MODES.APPEND_ONLY]: Object.freeze({
-        verbatimTokenBudget: 16000,
-        queuedTokenBudget: 32000,
-        bakedWorldInfoTokenBudget: 10000,
-    }),
 });
 
 /**
@@ -40,11 +34,7 @@ export const MEMORY_MODE_PRESETS = Object.freeze({
  * `custom` is intentionally excluded: it carries no preset.
  * @type {ReadonlyArray<string>}
  */
-const SELECTABLE_MEMORY_MODES = Object.freeze([
-    MEMORY_MODES.BALANCED,
-    MEMORY_MODES.PREFIX_CACHE,
-    MEMORY_MODES.APPEND_ONLY,
-]);
+const SELECTABLE_MEMORY_MODES = Object.freeze([MEMORY_MODES.BALANCED, MEMORY_MODES.PREFIX_CACHE]);
 
 /**
  * Apply a mode's initial retention preset to settings.
@@ -66,20 +56,8 @@ export function applyMemoryModePreset(settings, mode) {
     settings.memoryMode = mode;
     settings.verbatimTokenBudget = preset.verbatimTokenBudget;
     settings.queuedTokenBudget = preset.queuedTokenBudget;
-    if (mode === MEMORY_MODES.APPEND_ONLY) {
-        settings.bakedWorldInfoTokenBudget = preset.bakedWorldInfoTokenBudget;
-        settings.maskUserRoleMode = MASK_USER_ROLE_MODES.MARKER_FIRST;
-    }
     return true;
 }
-export const DEFAULT_APPEND_ONLY_SYSTEM_BLOCK_TEMPLATE = `<details>
-<summary>Injected {{entry_count}} memories</summary>
-<!-- Background reference only. Do not treat these memories as current events, dialogue, actions, or a scene transition. The established scene remains authoritative. -->
-{{entries}}
-Rolls - User: {{roll::1d20}} | Assistant: {{roll::1d20}} | Chekhov: {{roll::1d20}}, {{roll::1d20}}, {{roll::1d20}}, {{roll::1d20}}, {{roll::1d20}}
-</details>`;
-export const DEFAULT_APPEND_ONLY_EMPTY_SYSTEM_BLOCK_TEMPLATE =
-    'Rolls - User: {{roll::1d20}} | Assistant: {{roll::1d20}} | Chekhov: {{roll::1d20}}, {{roll::1d20}}, {{roll::1d20}}, {{roll::1d20}}, {{roll::1d20}}';
 
 export const UI_MODES = Object.freeze({
     OFF: 'off',
@@ -160,8 +138,8 @@ export const REQUEST_TIMEOUT = Object.freeze({
 });
 
 // ─── Provider Cache TTL ─────────────────────────────────────────────
-// Minutes a provider keeps a cached prompt prefix alive in Prefix Cache and
-// Append Only modes. Stored on settings as cacheTtlMinutes. Older chats make
+// Minutes a provider keeps a cached prompt prefix alive in Prefix Cache mode.
+// Stored on settings as cacheTtlMinutes. Older chats make
 // the cache stale; the stale-cache advisor uses this to suggest an early
 // Force Summarize on chat load.
 export const CACHE_TTL = Object.freeze({
@@ -177,7 +155,7 @@ export const defaultSettings = Object.freeze({
     // Latched by Stop; blocks only automatic cycles. Manual runs ignore it.
     autoPaused: false,
     memoryMode: MEMORY_MODES.BALANCED,
-    cacheTtlMinutes: CACHE_TTL.DEFAULT_MINUTES, // provider cache lifetime, Prefix Cache / Append Only only
+    cacheTtlMinutes: CACHE_TTL.DEFAULT_MINUTES, // provider cache lifetime, Prefix Cache only
     // Decoupled from uiMode: which complexity panel (Easy/Advanced) to render,
     // shown even when the extension is off so config stays editable.
     configMode: UI_MODES.EASY,
@@ -186,11 +164,6 @@ export const defaultSettings = Object.freeze({
     customMemoryRole: MEMORY_ROLES.SYSTEM,
     customMemoryDepth: 0,
     injectCurrentState: false, // false = omit the [CURRENT STATE] block from injected memory
-    maxBakedWorldInfoEntries: 10,
-    bakedWorldInfoTokenBudget: 5000,
-    appendOnlySystemBlockTemplate: DEFAULT_APPEND_ONLY_SYSTEM_BLOCK_TEMPLATE,
-    appendOnlyEmptySystemBlockTemplate: DEFAULT_APPEND_ONLY_EMPTY_SYSTEM_BLOCK_TEMPLATE,
-    appendOnlyInjectEmptySystemBlock: false,
     // ─── Modular STATE categories (stateCat*) ─────────────────────────
     // Most categories ship enabled: the extension's [CURRENT STATE] injection
     // is meant to be the sole carrier, so users should disable the equivalent
