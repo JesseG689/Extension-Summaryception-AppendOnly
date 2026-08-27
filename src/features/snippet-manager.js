@@ -81,7 +81,7 @@ export async function updateSnippetTextAt(layerIndex, snippetIndex, text) {
 
     snippet.text = newText;
     if (layerIndex === 0) {
-        Object.assign(snippet, buildSnippetMetadataFromState(parseSnippet(newText).state));
+        applyLayer0SnippetMetadata(snippet, newText);
     }
     bumpSummaryStoreMutationEpoch(store);
     return { status: 'updated' };
@@ -191,7 +191,7 @@ async function regenerateSnippetWithTarget(target) {
     target.snippet.text = newSummary;
     target.snippet.timestamp = Date.now();
     target.snippet.regenerated = true;
-    Object.assign(target.snippet, buildSnippetMetadataFromState(parseSnippet(newSummary).state));
+    applyLayer0SnippetMetadata(target.snippet, newSummary);
     bumpSummaryStoreMutationEpoch(getChatStore());
 
     await saveSnippetStore();
@@ -231,6 +231,15 @@ function getSnippetAt(store, layerIndex, snippetIndex) {
 async function saveSnippetStore() {
     await saveChatStore();
     updateInjection();
+}
+
+function applyLayer0SnippetMetadata(snippet, text) {
+    const metadata = buildSnippetMetadataFromState(parseSnippet(text).state);
+    if (metadata.currentDateTime === undefined) {
+        delete snippet.currentDateTime;
+    } else {
+        snippet.currentDateTime = metadata.currentDateTime;
+    }
 }
 
 function buildSnippetContext(store, excludeLayerIndex, excludeSnippetIndex) {

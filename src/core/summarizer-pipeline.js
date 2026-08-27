@@ -9,6 +9,7 @@ import {
     validateSummarizerOutputIntegrity,
 } from './prompts.js';
 import { estimateSummarizerUsage, recordSummarizerUsage } from './summarizer-usage.js';
+import { parseSnippet } from './summarizer-state.js';
 import { countTextTokens, formatTokenCount } from './token-count.js';
 import { getLayer0SummaryTokenTarget, isLayer0SizeGuardCall } from './layer0-compression.js';
 import {
@@ -104,7 +105,8 @@ export async function processSummarizerResponse(rawResult, settings, metadata = 
         };
     }
 
-    const integrityResult = validateSummarizerOutputIntegrity(chinesePolicyResult.text, metadata);
+    const normalizedResult = normalizeLayer0CurrentDateTime(chinesePolicyResult.text, metadata);
+    const integrityResult = validateSummarizerOutputIntegrity(normalizedResult, metadata);
     if (!integrityResult.valid) {
         warn(integrityResult.error.message);
         return {
@@ -115,12 +117,12 @@ export async function processSummarizerResponse(rawResult, settings, metadata = 
         };
     }
 
-    const sizeResult = await validateLayer0OutputSize(chinesePolicyResult.text, settings, metadata);
+    const sizeResult = await validateLayer0OutputSize(normalizedResult, settings, metadata);
     if (!sizeResult.valid) {
         warn(sizeResult.error.message);
         return {
             status: 'size-rejected',
-            text: chinesePolicyResult.text,
+            text: normalizedResult,
             error: sizeResult.error,
             repairFeedback: sizeResult.repairFeedback,
         };
@@ -128,10 +130,28 @@ export async function processSummarizerResponse(rawResult, settings, metadata = 
 
     return {
         status: 'success',
-        text: sizeResult.text || chinesePolicyResult.text,
+        text: sizeResult.text || normalizedResult,
         error: null,
         repairFeedback: '',
     };
+}
+
+const VALID_CURRENT_DATE_TIME_RE = /^\d{4}-\d{2}-\d{2}\s+\d{2}\s+(?:Sun|Mon|Tue|Wed|Thu|Fri|Sat)$/;
+const CURRENT_DATE_TIME_LINE_RE = /^(\s*[-*]?\s*current_date_time\s*[:=-]\s*)(.+?)\s*$/im;
+
+function normalizeLayer0CurrentDateTime(text, metadata) {
+    if (metadata.kind !== 'layer0' && metadata.kind !== 'regenerate') {
+        return text;
+    }
+    const normalized = parseSnippet(text).state.current_date_time;
+    const value = VALID_CURRENT_DATE_TIME_RE.test(normalized || '') ? normalized : 'unknown';
+    if (CURRENT_DATE_TIME_LINE_RE.test(text)) {
+        return text.replace(CURRENT_DATE_TIME_LINE_RE, `$1${value}`);
+    }
+    return text.replace(
+        /^\s*\[STATE\]\s*$/im,
+        (header) => `${header}\ncurrent_date_time: ${value}`,
+    );
 }
 
 /**

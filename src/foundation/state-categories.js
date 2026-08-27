@@ -178,7 +178,7 @@ export function getActiveLineCap(settings, ceiling = Number.POSITIVE_INFINITY) {
 // `lineCapDefault` integer at build time. Token caps never appear here.
 const SCHEMA_FRAGMENTS = Object.freeze({
     current_date_time:
-        'current_date_time: <YYYY-MM-DD HH ddd>. Hour-level 24h precision. Normalize from raw bracket headers or passage timestamps; drop minutes. Carry forward prior value if no explicit time in passage. REQUIRED every snapshot.',
+        'current_date_time: <YYYY-MM-DD HH ddd> or unknown. Hour-level 24h precision. Normalize only from an explicit date/time in the passage or a known prior value; drop minutes. Carry forward a known prior value if no explicit time appears. If neither exists, write unknown. Never invent an absolute date. REQUIRED every snapshot.',
     location: 'location: <current place>. One short phrase.',
     bonds: 'bonds: one pair per line, max {cap} lines. Format per pair: "BOND: NPC1↔NPC2=<value -5..+20> | Sparks: <value> | Grudge: <value>". Tiers/Behaviors: -5..-3 hostile; -2..+2 neutral; +3..+7 warmth; +8..+15 trust (+8 nervous crush, +12 confident interest); +16..+20 chosen family (+15 verbal "I love you", irreversible). Physical Gates: +4 friendly hug/shoulder; +8 hand-hold/sustained touch; +14 romantic kiss; +18 full intimacy. BOND shifts: -1 insult/dismissal/ignoring; -2 betrayal/cruelty. NEVER raise BOND directly; only via Sparks conversion. Sparks: +1 per positive interaction (max +2/turn/pair); every 5 turns if Sparks≥7 → BOND+1, reset Sparks; -1 Sparks per 5 turns no contact. Grudge: +1 per slight (max 1/turn/entity); every 3 turns if Grudge≥3 → BOND-1, reset Grudge.',
     chekhov:

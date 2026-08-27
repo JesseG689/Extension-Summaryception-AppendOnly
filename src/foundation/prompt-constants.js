@@ -97,9 +97,8 @@ Rewrite the COMPLETE current snapshot as key: value lines. Omission means the fa
 Do NOT extract static character background/profile facts such as origins, hometowns, backstory, personality traits, age, species, nationality, or static job descriptions. Those belong in character cards or lorebooks.
 Do NOT write descriptive sentences in the state block. Use concise keys and values only.
 Always include temporal key:
-- current_date_time: YYYY-MM-DD HH ddd
-Use 24-hour, hour-level precision only, e.g. 2024-07-04 16 Thu. Derive the ddd weekday from the ISO date (2024-07-04 = Thu); never carry it over from the prior snapshot when the date changed. Normalize from raw bracket headers or passage timestamps when present. Drop minutes instead of preserving them.
-If no explicit time appears in the passage, carry forward the prior current_date_time if known.
+- current_date_time: YYYY-MM-DD HH ddd or unknown
+Use 24-hour, hour-level precision only when an authoritative date/time is available. Normalize from explicit bracket headers or passage timestamps when present and drop minutes. If no explicit time appears, carry forward the prior current_date_time if known. If neither an explicit date/time nor a known prior value exists, write unknown. Never invent an absolute calendar date.
 
 Use only these keys and omit empty categories:
 {{state_schema}}`,
@@ -141,9 +140,8 @@ Rewrite the COMPLETE current snapshot as key: value lines. Omission means the fa
 Do NOT extract static character background/profile facts such as origins, hometowns, backstory, personality traits, age, species, nationality, or static job descriptions. Those belong in character cards or lorebooks.
 Do NOT write descriptive sentences in the state block. Use concise keys and values only.
 Always include temporal key:
-- current_date_time: YYYY-MM-DD HH ddd
-Use 24-hour, hour-level precision only, e.g. 2024-07-04 16 Thu. Derive the ddd weekday from the ISO date (2024-07-04 = Thu); never carry it over from the prior snapshot when the date changed. Normalize from raw bracket headers or passage timestamps when present. Drop minutes instead of preserving them.
-If no explicit time appears in the passage, carry forward the prior current_date_time if known.
+- current_date_time: YYYY-MM-DD HH ddd or unknown
+Use 24-hour, hour-level precision only when an authoritative date/time is available. Normalize from explicit bracket headers or passage timestamps when present and drop minutes. If no explicit time appears, carry forward the prior current_date_time if known. If neither an explicit date/time nor a known prior value exists, write unknown. Never invent an absolute calendar date.
 
 Use only these keys and omit empty categories:
 {{state_schema}}`,
@@ -152,7 +150,7 @@ If the prose uses 2nd person ('you'), map it directly to <player_name>. Never us
 Omission removes a fact rather than preserving it. Exclude transient scene detail, completed tasks, resolved hooks, and ordinary items.
 Keep the state compact; follow the sentence and line caps provided at the end of this prompt.
 ${STATE_DEDUPLICATION_RULES}
-Always include current_date_time using YYYY-MM-DD HH ddd, carrying forward the prior value if no explicit time appears.
+Always include current_date_time. Carry forward a known prior value if no explicit time appears; otherwise write unknown. Never invent an absolute date.
 Do not include prose, bullets, tables, duplicate section headers, markdown, or commentary inside [STATE].`,
     criticalRules: `${ENGLISH_FIRST_LANGUAGE_RULE}
 ${LAYER0_DURABILITY_RULES}

@@ -52,6 +52,8 @@ describe('state-categories catalog', () => {
         expect(getEnabledStateKeys(dateTimeOnly)).toStrictEqual(['current_date_time']);
         const text = buildStateSchemaText(dateTimeOnly);
         expect(text).toContain('current_date_time:');
+        expect(text).toContain('or unknown');
+        expect(text).toContain('Never invent an absolute date');
         expect(text).not.toContain('bonds:');
     });
 
