@@ -1,12 +1,12 @@
 {
-    "display_name": "Summaryception",
+    "display_name": "Summaryception Append Only",
     "loading_order": 50,
     "requires": [],
     "optional": [],
     "js": "index.js",
     "css": "style.css",
-    "author": "Lodactio",
-    "version": "22.19.0",
-    "homePage": "https://github.com/Lodactio/Extension-Summaryception",
+    "author": "Lodactio, vadash, JesseG689",
+    "version": "22.19.1-ao.1",
+    "homePage": "https://github.com/JesseG689/Extension-Summaryception-AppendOnly",
     "auto_update": true
 }

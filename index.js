@@ -10,6 +10,7 @@
 
 import { LOG_PREFIX } from './src/foundation/constants.js';
 import { getContext } from './src/foundation/context.js';
+import { resolveExtensionTemplatePath } from './src/foundation/extension-path.js';
 import { getSettings } from './src/foundation/state.js';
 import { captureWorldInfoBake, injectPendingWorldInfoBake } from './src/core/world-info-bake.js';
 import { setInjectionUpdater, setUiUpdater } from './src/core/summarizer.js';
@@ -48,11 +49,8 @@ import { registerSlashCommands } from './src/entry/commands.js';
     setInjectionUpdater(updateInjection, reassertInjectionSnapshot);
     setUiRefresher(updateUI);
 
-    const html = await renderExtensionTemplateAsync(
-        'third-party/Extension-Summaryception',
-        'settings',
-        {},
-    );
+    const extensionPath = resolveExtensionTemplatePath(import.meta.url);
+    const html = await renderExtensionTemplateAsync(extensionPath, 'settings', {});
     $('#extensions_settings2').append(html);
 
     initSettingsHelp();

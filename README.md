@@ -2,6 +2,9 @@
 
 Layered recursive memory for SillyTavern.
 
+> [!IMPORTANT]
+> This is the unofficial Append Only continuation maintained by JesseG689 from vadash's Summaryception 22.19 code. Upstream 22.20 removed Append Only; this fork deliberately retains its strict cache-prefix behavior, lorebook baking, and migration commands. Upstream fixes will be reviewed and ported selectively when they do not compromise Append Only.
+
 Summaryception is for long roleplay chats that should remember what happened without shoving the whole backstory into every prompt. It runs as a plain browser extension inside [SillyTavern](https://github.com/SillyTavern/SillyTavern). No build step, no server, no database.
 
 The short version: recent chat stays verbatim. Older chat becomes compact memory. The original messages stay in the chat UI, but Summaryception hides them from the model once they are covered by memory.
@@ -48,8 +51,20 @@ In SillyTavern:
 
 1. Open Extensions.
 2. Choose Install Extension.
-3. Paste `https://github.com/vadash/Extension-Summaryception`.
+3. Paste `https://github.com/JesseG689/Extension-Summaryception-AppendOnly`.
 4. Install, then open Summaryception in extension settings.
+
+### Existing Summaryception installations
+
+Do not install this fork beside an existing `Extension-Summaryception` copy. That would load both extensions against the same settings and chat metadata. Back up any local edits, stop SillyTavern, and repoint the existing extension checkout instead:
+
+```bash
+git remote set-url origin https://github.com/JesseG689/Extension-Summaryception-AppendOnly.git
+git fetch origin
+git switch -C append-only --track origin/append-only
+```
+
+The existing folder may keep its old name. Fresh installations use `Extension-Summaryception-AppendOnly`; template loading supports both names.
 
 ## First setup
 
@@ -166,6 +181,8 @@ Append only presets:
 If u keep debug enabled, F12 log shows if your preset breaks append only cache and where it happens.
 
 ## Version history
+
+- **22.19.1-ao.1:** First Append Only fork release. Preserves the live prompt tail across summary flushes, leaves foreign hidden messages untouched, supports hosts without `crypto.randomUUID`, and prevents invented summary timestamps.
 
 Older major versions are still available as branches. Open SillyTavern's extension list and use the branch button beside Summaryception.
 
