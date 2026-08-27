@@ -17,7 +17,6 @@ import {
     resetPromptMutationGuard,
 } from '../core/summarizer.js';
 import { updateInjection } from '../features/injection.js';
-import { repairOrphanedMessages } from '../features/maintenance.js';
 import { persistChatState } from '../core/persist-state.js';
 import { showStaleCacheAdvice } from './ui-dialogs.js';
 import { updateUI } from './ui.js';
@@ -276,7 +275,6 @@ async function reconcileLoadedChatState() {
         await persistChatState();
     }
     getChatStore();
-    await repairOrphanedMessages();
     updateInjection();
     await repairMissingGhostingForSummaries();
 }

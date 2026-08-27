@@ -172,4 +172,27 @@ describe('hide non-text messages in summarized range', () => {
 
         expect(calls).toEqual(['/hide 1-5', '/hide 7-10']);
     });
+
+    it('leaves manually or externally hidden messages outside store ownership untouched', async () => {
+        resetCommitStateForTests();
+        const calls = [];
+        const owned = makeMessage({ mes: 'summarized turn', scId: 'owned-id' });
+        const foreign = makeMessage({ mes: 'foreign hidden turn', scId: 'foreign-id' });
+        foreign.is_system = true;
+        installSummaryContext({
+            chat: [owned, foreign],
+            metadata: {
+                summaryception: makeSummaryStore({
+                    layers: [[{ text: 'summary snippet', sourceMessageIds: ['owned-id'] }]],
+                    ghostedMessageIds: ['owned-id'],
+                }),
+            },
+            executeSlashCommandsWithOptions: async (command) => calls.push(String(command)),
+        });
+
+        await repairMissingGhostingForSummaries();
+
+        expect(calls).toEqual(['/hide 0']);
+        expect(foreign.is_system).toBe(true);
+    });
 });
