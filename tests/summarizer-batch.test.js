@@ -109,9 +109,74 @@ describe('Layer 0 deferred cleanup commit', () => {
 
         expect(chat.map((message) => message.sc_id)).toEqual(['user-id', 'assistant-id']);
         expect(metadata.summaryception.layers[0]).toHaveLength(1);
+        expect(saveChat).toHaveBeenCalledOnce();
+        expect(reloadCurrentChat).toHaveBeenCalledOnce();
+        expect(saveMetadata).toHaveBeenCalled();
+    });
+
+    it('ghosts stable source ids before scoped cleanup shifts live indices', async () => {
+        const chat = [
+            makeMessage({ isUser: true, scId: 'user-id', mes: 'User scene.' }),
+            { ...makeMessage({ scId: 'lore-id', mes: 'Old baked roll.' }), name: 'SC-WI' },
+            makeMessage({ scId: 'assistant-id', mes: 'Assistant scene.' }),
+            {
+                ...makeMessage({ scId: 'current-roll-id', mes: 'Current user roll.' }),
+                name: 'SC-WI',
+            },
+            makeMessage({ isUser: true, scId: 'live-user-id', mes: 'Current user.' }),
+            makeMessage({ scId: 'live-assistant-id', mes: 'Current assistant response.' }),
+        ];
+        const calls = [];
+        const reloadedChatIds = [];
+        installSummaryContext({
+            chat,
+            metadata: { summaryception: makeSummaryStore() },
+            executeSlashCommandsWithOptions: async (command) => calls.push(String(command)),
+            reloadCurrentChat: async () => {
+                calls.push('reload');
+                reloadedChatIds.push(chat.map((message) => message.sc_id));
+            },
+        });
+        callSummarizer.mockResolvedValue(
+            `[NARRATIVE]\nA concise summary.\n[STATE]\nlocation: room`,
+        );
+
+        await expect(summarizeBatchFromTurns([{ index: 2 }])).resolves.toBe(true);
+
+        expect(calls).toEqual(['/hide 0', '/hide 2', 'reload']);
+        expect(chat.map((message) => message.sc_id)).toEqual([
+            'user-id',
+            'assistant-id',
+            'current-roll-id',
+            'live-user-id',
+            'live-assistant-id',
+        ]);
+        expect(reloadedChatIds).toEqual([
+            ['user-id', 'assistant-id', 'current-roll-id', 'live-user-id', 'live-assistant-id'],
+        ]);
+    });
+
+    it('does not flush or reload when the committed source contains no temporary records', async () => {
+        const chat = [
+            makeMessage({ isUser: true, scId: 'user-id', mes: 'User scene.' }),
+            makeMessage({ scId: 'assistant-id', mes: 'Assistant scene.' }),
+        ];
+        const saveChat = vi.fn(async () => {});
+        const reloadCurrentChat = vi.fn(async () => {});
+        installSummaryContext({
+            chat,
+            metadata: { summaryception: makeSummaryStore() },
+            saveChat,
+            reloadCurrentChat,
+        });
+        callSummarizer.mockResolvedValue(
+            `[NARRATIVE]\nA concise summary.\n[STATE]\nlocation: room`,
+        );
+
+        await expect(summarizeBatchFromTurns([{ index: 1 }])).resolves.toBe(true);
+
         expect(saveChat).not.toHaveBeenCalled();
         expect(reloadCurrentChat).not.toHaveBeenCalled();
-        expect(saveMetadata).toHaveBeenCalled();
     });
 
     it('restores chat and Layer 0 when post-mutation persistence fails', async () => {

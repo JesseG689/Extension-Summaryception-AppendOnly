@@ -193,11 +193,34 @@ function migrateEntryToBakeOutlet(entry) {
  * @returns {Promise<number>} Number of deleted messages.
  */
 export async function deleteNonConversationMessages({ persist = true } = {}) {
+    const result = await removeNonConversationMessages({ persist });
+    return result.deleted;
+}
+
+/**
+ * Remove temporary records and report their original indices for deferred DOM synchronization.
+ * @param {{ persist?: boolean, sourceMessageIds?: string[] }} [options]
+ * @returns {Promise<{ deleted: number, removedIndices: number[] }>}
+ */
+export async function removeNonConversationMessages({ persist = true, sourceMessageIds } = {}) {
     const chat = getChat();
-    const conversation = chat.filter(isConversationMessage);
-    const deleted = chat.length - conversation.length;
+    const sourceIds = Array.isArray(sourceMessageIds) ? new Set(sourceMessageIds) : null;
+    const conversation = [];
+    const removedIndices = [];
+    for (let index = 0; index < chat.length; index++) {
+        const message = chat[index];
+        const isInCleanupScope =
+            sourceIds === null ||
+            (typeof message?.sc_id === 'string' && sourceIds.has(message.sc_id));
+        if (isConversationMessage(message) || !isInCleanupScope) {
+            conversation.push(message);
+        } else {
+            removedIndices.push(index);
+        }
+    }
+    const deleted = removedIndices.length;
     if (deleted === 0) {
-        return 0;
+        return { deleted: 0, removedIndices: [] };
     }
 
     chat.splice(0, chat.length, ...conversation);
@@ -205,7 +228,7 @@ export async function deleteNonConversationMessages({ persist = true } = {}) {
         await saveChat();
         await reloadCurrentChat();
     }
-    return deleted;
+    return { deleted, removedIndices };
 }
 
 function isConversationMessage(message) {

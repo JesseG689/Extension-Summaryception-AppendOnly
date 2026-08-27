@@ -100,7 +100,7 @@ export function isSummarizerConversationMessage(message) {
         return false;
     }
     if (
-        message.is_system ||
+        (message.is_system && !isSummaryceptionOwnedMessage(message)) ||
         message.is_hidden ||
         message.extra?.sc_wi ||
         message.name === 'SC-WI' ||

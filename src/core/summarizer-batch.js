@@ -1,4 +1,4 @@
-import { getContext, getChat } from '../foundation/context.js';
+import { getContext, getChat, reloadCurrentChat } from '../foundation/context.js';
 import { ensureChatScIds, resolveScIdsToIndices } from '../foundation/message-identity.js';
 import {
     bumpSummaryStoreMutationEpoch,
@@ -13,7 +13,7 @@ import {
     buildPassageFromRangeWithStats,
     buildFullContext,
 } from './chatutils.js';
-import { persistChatState } from './persist-state.js';
+import { flushPendingChatSave, persistChatState } from './persist-state.js';
 import { callSummarizer } from './summarizer-request.js';
 import { buildSnippetMetadataFromState } from './snippet-metadata.js';
 import { commitWhenSafe, updateCommittedInjection } from './summarizer-commit.js';
@@ -21,7 +21,7 @@ import { executeLayer0StoreTransaction } from './layer0-store-transaction.js';
 import { isSummarizerOutputSafe } from './prompts.js';
 import { parseSnippet } from './summarizer-state.js';
 import { getCurrentStateSnapshotText } from './memory-injection.js';
-import { deleteNonConversationMessages } from './world-info-bake.js';
+import { removeNonConversationMessages } from './world-info-bake.js';
 import { countTextTokens, formatTokenCount, formatTokenValue } from './token-count.js';
 import {
     fingerprintSourceRange,
@@ -454,6 +454,7 @@ async function executeLayer0Commit({
 }) {
     const chat = getChat();
     const chatRollbackPoint = [...chat];
+    let removedMessageIndices = [];
     await executeLayer0StoreTransaction({
         store,
         mutate,
@@ -463,13 +464,21 @@ async function executeLayer0Commit({
             onRollback?.();
         },
         persist: async () => {
-            await deleteNonConversationMessages({ persist: false });
             await saveChatStore();
             await updateCommittedInjection({ logMemoryStatus: true });
             await ghostSourceMessageIds(sourceMessageIds);
+            const cleanup = await removeNonConversationMessages({
+                persist: false,
+                sourceMessageIds,
+            });
+            removedMessageIndices = cleanup.removedIndices;
             await persistChatState({ chatSave: 'deferred' });
         },
     });
+    if (removedMessageIndices.length > 0) {
+        await flushPendingChatSave();
+        await reloadCurrentChat();
+    }
 }
 
 async function ghostSourceMessageIds(sourceMessageIds) {

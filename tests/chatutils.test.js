@@ -76,6 +76,17 @@ describe('isSummarizerConversationMessage', () => {
 
         expect(records.filter(isSummarizerConversationMessage)).toEqual(records.slice(0, 2));
     });
+
+    it('retains system-hidden source messages owned by Summaryception', () => {
+        const owned = makeMessage({ isSystem: true, mes: 'summarized source' });
+        const foreign = makeMessage({ isSystem: true, mes: 'foreign hidden source' });
+        installSummaryContext({
+            chat: [owned, foreign],
+            metadata: { summaryception: makeSummaryStore({ ghostedMessageIds: [owned.sc_id] }) },
+        });
+
+        expect([owned, foreign].filter(isSummarizerConversationMessage)).toEqual([owned]);
+    });
 });
 
 describe('getVisibleAssistantTurns', () => {
