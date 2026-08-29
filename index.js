@@ -12,7 +12,11 @@ import { LOG_PREFIX } from './src/foundation/constants.js';
 import { getContext } from './src/foundation/context.js';
 import { resolveExtensionTemplatePath } from './src/foundation/extension-path.js';
 import { getSettings } from './src/foundation/state.js';
-import { captureWorldInfoBake, injectPendingWorldInfoBake } from './src/core/world-info-bake.js';
+import {
+    captureWorldInfoBake,
+    injectPendingWorldInfoBake,
+    prepareWorldInfoEntriesForAppendOnly,
+} from './src/core/world-info-bake.js';
 import { setInjectionUpdater, setUiUpdater } from './src/core/summarizer.js';
 import { setUiRefresher } from './src/features/persist.js';
 import { updateUI } from './src/entry/ui.js';
@@ -62,6 +66,9 @@ import { registerSlashCommands } from './src/entry/commands.js';
 
     if (eventTypes.WORLD_INFO_ACTIVATED) {
         eventSource.on(eventTypes.WORLD_INFO_ACTIVATED, captureWorldInfoBake);
+    }
+    if (eventTypes.WORLDINFO_ENTRIES_LOADED) {
+        eventSource.on(eventTypes.WORLDINFO_ENTRIES_LOADED, prepareWorldInfoEntriesForAppendOnly);
     }
     eventSource.on(eventTypes.MESSAGE_RECEIVED, onMessageReceived);
     eventSource.on(eventTypes.CHAT_CHANGED, onChatChanged);

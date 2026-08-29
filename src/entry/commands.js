@@ -71,7 +71,7 @@ export function registerSlashCommands() {
                     return `Cloned ${result.books} lorebooks and migrated ${result.entries} dynamic entries to sc_bake.`;
                 },
                 helpString:
-                    'Clone lorebooks and move their dynamic World Info entries to the Summaryception bake outlet',
+                    'Legacy maintenance: clone lorebooks into the old Summaryception bake-outlet format',
             }),
         );
 
@@ -82,7 +82,8 @@ export function registerSlashCommands() {
                     const result = await unbakeWorldInfo();
                     return `Restored ${result.entries} entries in ${result.books} lorebooks and removed ${result.messages} baked chat messages.`;
                 },
-                helpString: 'Restore migrated World Info entries and remove baked chat messages',
+                helpString:
+                    'Restore legacy clone entries and remove baked World Info messages from this chat',
             }),
         );
     } catch (e) {

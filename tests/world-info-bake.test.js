@@ -4,6 +4,7 @@ import {
     captureWorldInfoBake,
     deleteNonConversationMessages,
     injectPendingWorldInfoBake,
+    prepareWorldInfoEntriesForAppendOnly,
     setWorldInfoBakeGenerationType,
     migrateWorldInfoToBakeOutlet,
     unbakeWorldInfo,
@@ -86,7 +87,7 @@ describe('world info bake', () => {
             { role: 'user', content: 'latest user' },
         ]);
         expect(content).toMatch(
-            /^<details>\n<summary>Injected 2 memories<\/summary>[\s\S]*<wi>[\s\S]*<\/wi>[\s\S]*<\/details>$/,
+            /^Rolls - User:[\s\S]*\n<details>\n<summary>Injected 2 memories<\/summary>[\s\S]*<wi>[\s\S]*<\/wi>[\s\S]*<\/details>$/,
         );
         expect(content.match(/<wi>/g)).toHaveLength(2);
         expect(content.match(/<\/wi>/g)).toHaveLength(2);
@@ -107,10 +108,10 @@ describe('world info bake', () => {
                 model: 'sc_wi_bake',
                 sc_wi: {
                     entries: [
-                        { world: 'book', uid: 1 },
-                        { world: 'book', uid: 3 },
+                        { world: 'book', uid: 1, revision: expect.stringMatching(/^r1-/) },
+                        { world: 'book', uid: 3, revision: expect.stringMatching(/^r1-/) },
                     ],
-                    version: 3,
+                    version: 4,
                 },
             },
         });
@@ -177,6 +178,28 @@ describe('world info bake', () => {
             expect(runtime.chat).toHaveLength(3);
         },
     );
+
+    it('does not inject pre-routed lore when Summaryception is turned off', async () => {
+        const runtime = installBakeContext();
+        runtime.extensionSettings.summaryception.uiMode = 'off';
+        const prompt = [
+            { role: 'assistant', content: 'assistant reply' },
+            { role: 'user', content: 'latest user' },
+        ];
+        activateBakeEntries([
+            {
+                uid: 1,
+                world: 'SC - legacy book',
+                outletName: 'sc_bake',
+                content: 'legacy pre-routed lore',
+            },
+        ]);
+
+        expect(await injectPendingWorldInfoBake({ chat: prompt })).toBe(false);
+        expect(prompt).toHaveLength(2);
+        expect(runtime.chat).toHaveLength(3);
+        expect(runtime.chat.some((message) => message.extra?.sc_wi)).toBe(false);
+    });
 
     it('does not inject a system message when no memories are available by default', async () => {
         const runtime = installBakeContext();
@@ -322,7 +345,9 @@ describe('world info bake', () => {
 
         expect(await injectPendingWorldInfoBake({ chat: prompt })).toBe(true);
         expect(prompt.at(-2)?.content).toContain(`<wi>\n${'x'.repeat(100)}\n</wi>`);
-        expect(runtime.chat.at(-2)?.extra?.sc_wi.entries).toEqual([{ world: 'book', uid: 1 }]);
+        expect(runtime.chat.at(-2)?.extra?.sc_wi.entries).toEqual([
+            { world: 'book', uid: 1, revision: expect.stringMatching(/^r1-/) },
+        ]);
     });
 
     it('selects complete entry blocks under remaining provider capacity', async () => {
@@ -405,14 +430,14 @@ describe('world info bake', () => {
         ).toBe(true);
         expect(runtime.chat.at(-2)?.extra?.sc_wi).toEqual({
             entries: [
-                { world: 'book', uid: 1 },
-                { world: 'book', uid: 3 },
+                { world: 'book', uid: 1, revision: expect.stringMatching(/^r1-/) },
+                { world: 'book', uid: 3, revision: expect.stringMatching(/^r1-/) },
             ],
-            version: 3,
+            version: 4,
         });
     });
 
-    it('does not add an empty block for lore marked in hidden history', async () => {
+    it('rebakes legacy revisionless markers once to establish a current baseline', async () => {
         const runtime = installBakeContext();
         runtime.chat.unshift({
             ...makeMessage({ mes: '<wi>\nlore one\n</wi>' }),
@@ -427,9 +452,80 @@ describe('world info bake', () => {
             { role: 'user', content: 'latest user' },
         ];
 
-        expect(await injectPendingWorldInfoBake({ chat: prompt })).toBe(false);
-        expect(prompt).toHaveLength(2);
-        expect(runtime.chat.filter((message) => message.extra?.sc_wi)).toHaveLength(1);
+        expect(await injectPendingWorldInfoBake({ chat: prompt })).toBe(true);
+        expect(prompt.at(-2)?.content).toContain('lore one');
+        expect(runtime.chat.filter((message) => message.extra?.sc_wi)).toHaveLength(2);
+    });
+
+    it('rebakes each changed or reverted entry revision once on activation', async () => {
+        const runtime = installBakeContext();
+        const makePrompt = (assistant, user) => [
+            { role: 'assistant', content: assistant },
+            { role: 'user', content: user },
+        ];
+
+        activateBakeEntries([
+            { uid: 1, world: 'book', outletName: 'sc_bake', content: 'revision A' },
+        ]);
+        expect(
+            await injectPendingWorldInfoBake({
+                chat: makePrompt('assistant reply', 'latest user'),
+            }),
+        ).toBe(true);
+        const firstRevision = runtime.chat.at(-2)?.extra?.sc_wi.entries[0].revision;
+
+        runtime.chat.push(makeMessage({ mes: 'next assistant' }));
+        runtime.chat.push(makeMessage({ isUser: true, mes: 'next user' }));
+        activateBakeEntries([
+            { uid: 1, world: 'book', outletName: 'sc_bake', content: 'revision B' },
+        ]);
+        expect(
+            await injectPendingWorldInfoBake({ chat: makePrompt('next assistant', 'next user') }),
+        ).toBe(true);
+        const secondRevision = runtime.chat.at(-2)?.extra?.sc_wi.entries[0].revision;
+        expect(secondRevision).not.toBe(firstRevision);
+
+        runtime.chat.push(makeMessage({ mes: 'third assistant' }));
+        runtime.chat.push(makeMessage({ isUser: true, mes: 'third user' }));
+        activateBakeEntries([
+            { uid: 1, world: 'book', outletName: 'sc_bake', content: 'revision A' },
+        ]);
+        expect(
+            await injectPendingWorldInfoBake({ chat: makePrompt('third assistant', 'third user') }),
+        ).toBe(true);
+        expect(runtime.chat.at(-2)?.extra?.sc_wi.entries[0].revision).toBe(firstRevision);
+    });
+
+    it.each([
+        ['title', { comment: 'Old title', depth: 2 }, { comment: 'New title', depth: 2 }],
+        ['depth', { comment: 'Title', depth: 2 }, { comment: 'Title', depth: 4 }],
+    ])('rebakes when the entry %s changes', async (_field, initial, updated) => {
+        const runtime = installBakeContext();
+        const prompt = [
+            { role: 'assistant', content: 'assistant reply' },
+            { role: 'user', content: 'latest user' },
+        ];
+        activateBakeEntries([
+            { uid: 1, world: 'book', outletName: 'sc_bake', content: 'same lore', ...initial },
+        ]);
+        expect(await injectPendingWorldInfoBake({ chat: prompt })).toBe(true);
+        const firstRevision = runtime.chat.at(-2)?.extra?.sc_wi.entries[0].revision;
+
+        runtime.chat.push(makeMessage({ mes: 'next assistant' }));
+        runtime.chat.push(makeMessage({ isUser: true, mes: 'next user' }));
+        activateBakeEntries([
+            { uid: 1, world: 'book', outletName: 'sc_bake', content: 'same lore', ...updated },
+        ]);
+
+        expect(
+            await injectPendingWorldInfoBake({
+                chat: [
+                    { role: 'assistant', content: 'next assistant' },
+                    { role: 'user', content: 'next user' },
+                ],
+            }),
+        ).toBe(true);
+        expect(runtime.chat.at(-2)?.extra?.sc_wi.entries[0].revision).not.toBe(firstRevision);
     });
 
     it('deletes marked and legacy SC-WI blocks from the full chat without DOM deletion', async () => {
@@ -479,6 +575,132 @@ describe('world info bake', () => {
             ghostedMessageIds: ['user-old', 'wi-1'],
             mutationEpoch: 2,
         });
+    });
+});
+
+describe('automatic Append Only lore routing', () => {
+    beforeEach(() => {
+        context.loadWorldInfo.mockClear();
+        context.saveWorldInfo.mockClear();
+    });
+
+    it('routes active dynamic entries from every lore source without saving books', async () => {
+        installBakeContext();
+        const alreadyOutlet = {
+            uid: 3,
+            world: 'global',
+            constant: false,
+            position: 7,
+            outletName: 'other',
+        };
+        const payload = {
+            globalLore: [
+                { uid: 1, world: 'global', constant: false, position: 0 },
+                { uid: 2, world: 'global', constant: true, position: 0 },
+                alreadyOutlet,
+            ],
+            characterLore: [{ uid: 1, world: 'character', position: 4 }],
+            chatLore: [{ uid: 1, world: 'chat', position: 1 }],
+            personaLore: [{ uid: 1, world: 'persona', position: 6 }],
+        };
+
+        await prepareWorldInfoEntriesForAppendOnly(payload);
+
+        expect(payload.globalLore[0]).toMatchObject({ position: 7, outletName: 'sc_bake' });
+        expect(payload.globalLore[1]).toMatchObject({ constant: true, position: 0 });
+        expect(payload.globalLore[1]).not.toHaveProperty('outletName');
+        expect(payload.globalLore[2]).toBe(alreadyOutlet);
+        expect(payload.characterLore[0]).toMatchObject({ position: 7, outletName: 'sc_bake' });
+        expect(payload.chatLore[0]).toMatchObject({ position: 7, outletName: 'sc_bake' });
+        expect(payload.personaLore[0]).toMatchObject({ position: 7, outletName: 'sc_bake' });
+        expect(context.saveWorldInfo).not.toHaveBeenCalled();
+    });
+
+    it('leaves loaded entries untouched outside supported Append Only chats', async () => {
+        const cases = [
+            { settings: { memoryMode: 'balanced' } },
+            { settings: { memoryMode: 'prefix_cache' } },
+            { settings: { uiMode: 'off', memoryMode: 'append_only' } },
+            { settings: { memoryMode: 'append_only' }, groupId: 'group-1' },
+        ];
+
+        for (const testCase of cases) {
+            const runtime = installSummaryContext({
+                settings: testCase.settings,
+                groupId: testCase.groupId,
+            });
+            context.getContext.mockImplementation(() => runtime);
+            const entry = { uid: 1, world: 'book', position: 0 };
+
+            await prepareWorldInfoEntriesForAppendOnly({
+                globalLore: [entry],
+                characterLore: [],
+                chatLore: [],
+                personaLore: [],
+            });
+
+            expect(entry).toEqual({ uid: 1, world: 'book', position: 0 });
+        }
+    });
+
+    it('uses originals for selected legacy clones and falls back when no original exists', async () => {
+        installBakeContext();
+        context.getWorldInfoNames.mockReturnValue(['book', 'SC - book', 'SC - orphan']);
+        context.loadWorldInfo.mockImplementation(async (name) =>
+            name === 'book'
+                ? {
+                      entries: {
+                          1: { uid: 1, constant: false, position: 0, content: 'current source' },
+                          2: { uid: 2, constant: true, position: 1, content: 'constant source' },
+                      },
+                  }
+                : null,
+        );
+        const payload = {
+            globalLore: [
+                { uid: 1, world: 'SC - book', position: 7, content: 'stale clone' },
+                { uid: 1, world: 'SC - orphan', position: 7, content: 'orphan clone' },
+            ],
+            characterLore: [],
+            chatLore: [],
+            personaLore: [],
+        };
+
+        await prepareWorldInfoEntriesForAppendOnly(payload);
+
+        expect(payload.globalLore).toEqual([
+            {
+                uid: 1,
+                world: 'book',
+                constant: false,
+                position: 7,
+                outletName: 'sc_bake',
+                content: 'current source',
+            },
+            { uid: 2, world: 'book', constant: true, position: 1, content: 'constant source' },
+            { uid: 1, world: 'SC - orphan', position: 7, content: 'orphan clone' },
+        ]);
+        expect(context.loadWorldInfo).toHaveBeenCalledOnce();
+        expect(context.loadWorldInfo).toHaveBeenCalledWith('book');
+    });
+
+    it('drops a legacy clone when its original is already active', async () => {
+        installBakeContext();
+        context.getWorldInfoNames.mockReturnValue(['book', 'SC - book']);
+        const payload = {
+            globalLore: [{ uid: 1, world: 'SC - book', position: 7, content: 'clone' }],
+            characterLore: [{ uid: 1, world: 'book', position: 0, content: 'source' }],
+            chatLore: [],
+            personaLore: [],
+        };
+
+        await prepareWorldInfoEntriesForAppendOnly(payload);
+
+        expect(payload.globalLore).toEqual([]);
+        expect(payload.characterLore).toEqual([
+            { uid: 1, world: 'book', position: 7, outletName: 'sc_bake', content: 'source' },
+        ]);
+        expect(context.loadWorldInfo).not.toHaveBeenCalled();
     });
 });
 

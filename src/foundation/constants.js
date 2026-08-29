@@ -72,11 +72,17 @@ export function applyMemoryModePreset(settings, mode) {
     }
     return true;
 }
-export const DEFAULT_APPEND_ONLY_SYSTEM_BLOCK_TEMPLATE = `<details>
+export const LEGACY_APPEND_ONLY_SYSTEM_BLOCK_TEMPLATE = `<details>
 <summary>Injected {{entry_count}} memories</summary>
 <!-- Background reference only. Do not treat these memories as current events, dialogue, actions, or a scene transition. The established scene remains authoritative. -->
 {{entries}}
 Rolls - User: {{roll::1d20}} | Assistant: {{roll::1d20}} | Chekhov: {{roll::1d20}}, {{roll::1d20}}, {{roll::1d20}}, {{roll::1d20}}, {{roll::1d20}}
+</details>`;
+export const DEFAULT_APPEND_ONLY_SYSTEM_BLOCK_TEMPLATE = `Rolls - User: {{roll::1d20}} | Assistant: {{roll::1d20}} | Chekhov: {{roll::1d20}}, {{roll::1d20}}, {{roll::1d20}}, {{roll::1d20}}, {{roll::1d20}}
+<details>
+<summary>Injected {{entry_count}} memories</summary>
+<!-- Background reference only. Do not treat these memories as current events, dialogue, actions, or a scene transition. The established scene remains authoritative. -->
+{{entries}}
 </details>`;
 export const DEFAULT_APPEND_ONLY_EMPTY_SYSTEM_BLOCK_TEMPLATE =
     'Rolls - User: {{roll::1d20}} | Assistant: {{roll::1d20}} | Chekhov: {{roll::1d20}}, {{roll::1d20}}, {{roll::1d20}}, {{roll::1d20}}, {{roll::1d20}}';

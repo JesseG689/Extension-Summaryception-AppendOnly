@@ -4,6 +4,7 @@ import {
     countPromptPayloadTokens,
     expandSillyTavernMacros,
     getChat,
+    getContext,
     getPromptTokenCapacity,
     getWorldInfoNames,
     isDryRunEvent,
@@ -30,6 +31,39 @@ const MIGRATION_MARKER = 'summaryceptionBake';
 const SC_CLONE_PREFIX = 'SC - ';
 let pendingEntries = [];
 let generationType = 'normal';
+
+const WORLD_INFO_GROUP_KEYS = Object.freeze([
+    'globalLore',
+    'characterLore',
+    'chatLore',
+    'personaLore',
+]);
+
+/**
+ * Route active dynamic lore through the Append Only bake outlet without
+ * mutating or saving the source lorebooks.
+ * @param {unknown} eventData
+ * @returns {Promise<void>}
+ */
+export async function prepareWorldInfoEntriesForAppendOnly(eventData) {
+    const settings = getEffectiveSettings();
+    if (
+        !settings.enabled ||
+        settings.memoryMode !== MEMORY_MODES.APPEND_ONLY ||
+        getContext().groupId ||
+        !isRecord(eventData)
+    ) {
+        return;
+    }
+
+    const groups = getWorldInfoGroups(eventData);
+    await resolveLegacyCloneAliases(groups);
+    for (const entries of groups) {
+        for (const entry of entries) {
+            routeEntryToBakeOutlet(entry);
+        }
+    }
+}
 
 /**
  * Record the SillyTavern generation type that owns the next World Info activation.
@@ -68,6 +102,10 @@ export async function injectPendingWorldInfoBake(eventData, dryRun = false) {
             return false;
         }
         const settings = getEffectiveSettings();
+        if (!settings.enabled) {
+            debug('WI bake skipped: Summaryception is disabled');
+            return false;
+        }
         if (generationType !== 'normal') {
             debug(`WI bake skipped: generation type is ${generationType}`);
             return false;
@@ -112,8 +150,12 @@ export async function injectPendingWorldInfoBake(eventData, dryRun = false) {
         }
 
         const marker = {
-            entries: selected.map((entry) => ({ world: entry.world, uid: entry.uid })),
-            version: 3,
+            entries: selected.map((entry) => ({
+                world: entry.world,
+                uid: entry.uid,
+                revision: entry.revision,
+            })),
+            version: 4,
         };
         prompt.splice(userPromptIndex, 0, { role: 'system', content });
         const narrator = createNarratorMessage(content, marker);
@@ -322,6 +364,88 @@ function getEntryOrder(entry) {
     const order = Number(entry?.order);
     return Number.isFinite(order) ? order : 0;
 }
+
+function getWorldInfoGroups(eventData) {
+    return WORLD_INFO_GROUP_KEYS.map((key) => eventData[key]).filter(Array.isArray);
+}
+
+async function resolveLegacyCloneAliases(groups) {
+    const activeOriginals = new Set(
+        groups
+            .flat()
+            .map((entry) => getEntryWorld(entry))
+            .filter((world) => world && !world.startsWith(SC_CLONE_PREFIX)),
+    );
+    const available = new Set(getWorldInfoNames());
+    const sourceCache = new Map();
+
+    for (const entries of groups) {
+        const resolved = [];
+        const substituted = new Set();
+        for (const entry of entries) {
+            const world = getEntryWorld(entry);
+            if (!world.startsWith(SC_CLONE_PREFIX)) {
+                resolved.push(entry);
+                continue;
+            }
+
+            const originalName = world.slice(SC_CLONE_PREFIX.length);
+            if (
+                !originalName ||
+                !available.has(originalName) ||
+                activeOriginals.has(originalName)
+            ) {
+                if (!activeOriginals.has(originalName)) {
+                    resolved.push(entry);
+                }
+                continue;
+            }
+            if (substituted.has(originalName)) {
+                continue;
+            }
+
+            const sourceEntries = await loadOriginalWorldEntries(originalName, sourceCache);
+            if (!sourceEntries) {
+                resolved.push(entry);
+                continue;
+            }
+            resolved.push(...sourceEntries);
+            substituted.add(originalName);
+            activeOriginals.add(originalName);
+        }
+        entries.splice(0, entries.length, ...resolved);
+    }
+}
+
+async function loadOriginalWorldEntries(name, cache) {
+    if (!cache.has(name)) {
+        const data = await loadWorldInfo(name);
+        cache.set(
+            name,
+            data && isRecord(data.entries) ? entriesFromWorld(name, data.entries) : null,
+        );
+    }
+    return cache.get(name);
+}
+
+function entriesFromWorld(world, entries) {
+    return Object.values(entries)
+        .filter(isRecord)
+        .map((entry) => ({ ...entry, world }));
+}
+
+function getEntryWorld(entry) {
+    return typeof entry?.world === 'string' ? entry.world : '';
+}
+
+function routeEntryToBakeOutlet(entry) {
+    if (!isRecord(entry) || entry.constant || entry.position === WORLD_INFO_OUTLET_POSITION) {
+        return;
+    }
+    entry.position = WORLD_INFO_OUTLET_POSITION;
+    entry.outletName = BAKE_OUTLET_NAME;
+}
+
 function getEntryUid(entry) {
     const uid = entry?.uid;
     return typeof uid === 'string' || typeof uid === 'number' ? uid : null;
@@ -338,7 +462,22 @@ function toPendingEntry(entry) {
         content: entry.content,
         title: typeof entry.comment === 'string' ? entry.comment.trim() : '',
         depth: Number.isFinite(Number(entry.depth)) ? Number(entry.depth) : null,
+        revision: fingerprintEntryRevision(entry),
     };
+}
+
+function fingerprintEntryRevision(entry) {
+    const source = JSON.stringify([
+        String(entry?.content || ''),
+        typeof entry?.comment === 'string' ? entry.comment.trim() : '',
+        Number.isFinite(Number(entry?.depth)) ? Number(entry.depth) : null,
+    ]);
+    let hash = 0x811c9dc5;
+    for (let index = 0; index < source.length; index++) {
+        hash ^= source.charCodeAt(index);
+        hash = Math.imul(hash, 0x01000193);
+    }
+    return `r1-${(hash >>> 0).toString(16).padStart(8, '0')}`;
 }
 
 function getPromptChat(eventData) {
@@ -414,15 +553,20 @@ function findLastUserPromptIndex(prompt) {
 }
 
 function wasEntryBaked(entry, chat) {
-    return chat.some((message) => {
+    for (let messageIndex = chat.length - 1; messageIndex >= 0; messageIndex--) {
+        const message = chat[messageIndex];
         const marker = message?.extra?.sc_wi;
         if (!Array.isArray(marker?.entries)) {
-            return false;
+            continue;
         }
-        return marker.entries.some(
-            (baked) => baked?.uid === entry.uid && baked?.world === entry.world,
+        const baked = marker.entries.findLast(
+            (candidate) => candidate?.uid === entry.uid && candidate?.world === entry.world,
         );
-    });
+        if (baked) {
+            return baked.revision === entry.revision;
+        }
+    }
+    return false;
 }
 
 async function selectBakeEntries({

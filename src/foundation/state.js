@@ -2,6 +2,7 @@ import {
     BATCH_TRIGGER_LIMITS,
     CACHE_TTL,
     EASY_CONTEXT_LIMITS,
+    LEGACY_APPEND_ONLY_SYSTEM_BLOCK_TEMPLATE,
     L0_SOURCE_LIMITS,
     MASK_USER_ROLE_MODES,
     MEMORY_MODES,
@@ -208,6 +209,14 @@ function normalizeMemorySettings(settings) {
     ) {
         settings.appendOnlySystemBlockTemplate = defaultSettings.appendOnlySystemBlockTemplate;
         changed = true;
+    } else {
+        const migratedTemplate = migrateBundledAppendOnlySystemBlockTemplate(
+            settings.appendOnlySystemBlockTemplate,
+        );
+        if (migratedTemplate !== settings.appendOnlySystemBlockTemplate) {
+            settings.appendOnlySystemBlockTemplate = migratedTemplate;
+            changed = true;
+        }
     }
     if (
         typeof settings.appendOnlyEmptySystemBlockTemplate !== 'string' ||
@@ -218,6 +227,23 @@ function normalizeMemorySettings(settings) {
         changed = true;
     }
     return changed;
+}
+
+function migrateBundledAppendOnlySystemBlockTemplate(template) {
+    if (template === LEGACY_APPEND_ONLY_SYSTEM_BLOCK_TEMPLATE) {
+        return defaultSettings.appendOnlySystemBlockTemplate;
+    }
+    const legacyEmDashTemplate = LEGACY_APPEND_ONLY_SYSTEM_BLOCK_TEMPLATE.replace(
+        'Rolls - User:',
+        'Rolls — User:',
+    );
+    if (template === legacyEmDashTemplate) {
+        return defaultSettings.appendOnlySystemBlockTemplate.replace(
+            'Rolls - User:',
+            'Rolls — User:',
+        );
+    }
+    return template;
 }
 
 /**

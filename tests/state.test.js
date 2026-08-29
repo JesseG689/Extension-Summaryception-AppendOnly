@@ -2,6 +2,8 @@ import { describe, expect, it } from 'vitest';
 
 import {
     CACHE_TTL,
+    DEFAULT_APPEND_ONLY_SYSTEM_BLOCK_TEMPLATE,
+    LEGACY_APPEND_ONLY_SYSTEM_BLOCK_TEMPLATE,
     MASK_USER_ROLE_MODES,
     MEMORY_MODE_PRESETS,
     MEMORY_MODES,
@@ -47,6 +49,40 @@ describe('getSettings', () => {
         expect(Object.hasOwn(settings, 'memoryTokenBudget')).toBe(true);
         // …while the originally-provided key survived unchanged.
         expect(settings.enabled).toBe(true);
+    });
+
+    it('keeps rolls visible above the collapsed memory details in the default template', () => {
+        const rollsIndex = DEFAULT_APPEND_ONLY_SYSTEM_BLOCK_TEMPLATE.indexOf('Rolls - User:');
+        const detailsIndex = DEFAULT_APPEND_ONLY_SYSTEM_BLOCK_TEMPLATE.indexOf('<details>');
+
+        expect(rollsIndex).toBe(0);
+        expect(detailsIndex).toBeGreaterThan(rollsIndex);
+        expect(DEFAULT_APPEND_ONLY_SYSTEM_BLOCK_TEMPLATE).toContain('{{entries}}');
+    });
+
+    it.each([
+        ['hyphen', LEGACY_APPEND_ONLY_SYSTEM_BLOCK_TEMPLATE, 'Rolls - User:'],
+        [
+            'em dash',
+            LEGACY_APPEND_ONLY_SYSTEM_BLOCK_TEMPLATE.replace('Rolls - User:', 'Rolls — User:'),
+            'Rolls — User:',
+        ],
+    ])('migrates the bundled %s Append Only template', (_name, legacy, rolls) => {
+        installSillyTavernStub({
+            settings: { appendOnlySystemBlockTemplate: legacy },
+        });
+
+        expect(getSettings().appendOnlySystemBlockTemplate.startsWith(rolls)).toBe(true);
+        expect(getSettings().appendOnlySystemBlockTemplate.indexOf('<details>')).toBeGreaterThan(0);
+    });
+
+    it('preserves a customized Append Only system block template', () => {
+        const customTemplate = 'CUSTOM {{entry_count}}\n{{entries}}';
+        installSillyTavernStub({
+            settings: { appendOnlySystemBlockTemplate: customTemplate },
+        });
+
+        expect(getSettings().appendOnlySystemBlockTemplate).toBe(customTemplate);
     });
 
     it.each([MASK_USER_ROLE_MODES.MARKER_LAST, MASK_USER_ROLE_MODES.KEEP_LAST_USER])(

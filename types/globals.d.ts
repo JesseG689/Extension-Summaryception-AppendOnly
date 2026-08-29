@@ -196,6 +196,7 @@ interface SillyTavernStreamingProcessor {
 
 interface SillyTavernContext {
     chat: ChatMessage[];
+    groupId?: string | number | null;
     extensionSettings: Record<string, ExtensionSettings>;
     addOneMessage?: (message: ChatMessage, options?: Record<string, unknown>) => unknown;
     updateViewMessageIds?: (startIndex?: number | null) => void;

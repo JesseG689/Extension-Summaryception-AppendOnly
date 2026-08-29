@@ -5,13 +5,14 @@
 - Place baked lore after the previous assistant reply and before the current user message.
 - Do not bake without a preceding assistant reply.
 - Keep the previous assistant reply, baked lore, and current user message visible.
-- Dynamic lore uses the dedicated bake outlet.
+- Active dynamic lore is routed to the dedicated bake outlet on loaded entry copies.
+- Never modify or save source lorebooks for automatic routing.
 - Constant lore stays in its normal prompt position.
-- Migration clones each lorebook as SC - <original>. Source books are never mutated.
-- Existing clones are never overwritten. A second migration returns no changes.
+- Legacy SC - <original> selections resolve to the current original when available.
 - Apply host lore processing before storing an entry.
 - Store each baked entry as a complete lore block.
-- Track entries by lorebook and entry identity.
+- Track entries by lorebook, entry identity, and source revision.
+- Compare only the newest baked revision so reverting an edit can bake again.
 - A visible marker prevents duplicate baking.
 - A hidden marker allows baking after old history leaves the prompt.
 - Resolve macros once before sending or storing baked lore.
