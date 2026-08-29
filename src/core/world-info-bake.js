@@ -13,6 +13,7 @@ import {
     renderInsertedChatMessage,
     saveChat,
     saveWorldInfo,
+    synchronizeRemovedChatMessages,
 } from '../foundation/context.js';
 import { getEffectiveSettings } from '../foundation/state.js';
 import { countTextTokens } from './token-count.js';
@@ -226,7 +227,9 @@ export async function removeNonConversationMessages({ persist = true, sourceMess
     chat.splice(0, chat.length, ...conversation);
     if (persist) {
         await saveChat();
-        await reloadCurrentChat();
+        if (!synchronizeRemovedChatMessages(removedIndices)) {
+            await reloadCurrentChat();
+        }
     }
     return { deleted, removedIndices };
 }

@@ -103,6 +103,7 @@ describe('manual run progress callbacks', () => {
         });
         expect(onProgress).toHaveBeenCalledWith(expect.objectContaining({ completed: 1 }));
         expect(outcome.fullyCommitted).toBe(true);
+        expect(outcome).not.toHaveProperty('shouldReload');
     });
 
     it('reports start and progress for slop breaker', async () => {

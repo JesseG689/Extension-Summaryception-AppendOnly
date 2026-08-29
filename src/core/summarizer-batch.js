@@ -1,4 +1,9 @@
-import { getContext, getChat, reloadCurrentChat } from '../foundation/context.js';
+import {
+    getContext,
+    getChat,
+    reloadCurrentChat,
+    synchronizeRemovedChatMessages,
+} from '../foundation/context.js';
 import { ensureChatScIds, resolveScIdsToIndices } from '../foundation/message-identity.js';
 import {
     bumpSummaryStoreMutationEpoch,
@@ -477,7 +482,9 @@ async function executeLayer0Commit({
     });
     if (removedMessageIndices.length > 0) {
         await flushPendingChatSave();
-        await reloadCurrentChat();
+        if (!synchronizeRemovedChatMessages(removedMessageIndices)) {
+            await reloadCurrentChat();
+        }
     }
 }
 

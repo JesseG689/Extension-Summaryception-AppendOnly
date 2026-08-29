@@ -115,6 +115,61 @@ export async function reloadCurrentChat() {
 }
 
 /**
+ * Synchronize rendered chat messages after records have already been removed
+ * from the active chat array.
+ * @param {number[]} removedIndices - Message indices from before the removal.
+ * @returns {boolean} Whether the rendered chat was synchronized in place.
+ */
+export function synchronizeRemovedChatMessages(removedIndices) {
+    const indices = [...new Set(removedIndices)]
+        .filter((index) => Number.isInteger(index) && index >= 0)
+        .sort((a, b) => a - b);
+    if (indices.length === 0) {
+        return true;
+    }
+
+    try {
+        const chatElement = document.querySelector('#chat');
+        if (!chatElement) {
+            return false;
+        }
+
+        const removed = new Set(indices);
+        const renderedMessages = [...chatElement.querySelectorAll('.mes[mesid]')];
+        for (const element of renderedMessages) {
+            const oldIndex = Number(element.getAttribute('mesid'));
+            if (!Number.isInteger(oldIndex)) {
+                continue;
+            }
+            if (removed.has(oldIndex)) {
+                element.remove();
+                continue;
+            }
+
+            const shift = indices.filter((index) => index < oldIndex).length;
+            if (shift === 0) {
+                continue;
+            }
+            const newIndex = oldIndex - shift;
+            element.setAttribute('mesid', String(newIndex));
+            const label = element.querySelector('.mesIDDisplay');
+            if (label) {
+                label.textContent = `#${newIndex}`;
+            }
+        }
+
+        const remainingMessages = [...chatElement.querySelectorAll('.mes[mesid]')];
+        for (const element of remainingMessages) {
+            element.classList.remove('last_mes');
+        }
+        remainingMessages.at(-1)?.classList.add('last_mes');
+        return true;
+    } catch (_error) {
+        return false;
+    }
+}
+
+/**
  * Load a SillyTavern World Info book.
  * @param {string} name
  * @returns {Promise<Record<string, unknown> | null>}

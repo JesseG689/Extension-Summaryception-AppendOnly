@@ -11,6 +11,8 @@ import {
     makeSummaryStore,
 } from './test-helpers.js';
 
+const { context } = globalThis.summaryceptionFoundationMocks;
+
 describe('Layer 0 deferred cleanup commit', () => {
     afterEach(() => {
         vi.restoreAllMocks();
@@ -110,7 +112,8 @@ describe('Layer 0 deferred cleanup commit', () => {
         expect(chat.map((message) => message.sc_id)).toEqual(['user-id', 'assistant-id']);
         expect(metadata.summaryception.layers[0]).toHaveLength(1);
         expect(saveChat).toHaveBeenCalledOnce();
-        expect(reloadCurrentChat).toHaveBeenCalledOnce();
+        expect(context.synchronizeRemovedChatMessages).toHaveBeenCalledWith([1]);
+        expect(reloadCurrentChat).not.toHaveBeenCalled();
         expect(saveMetadata).toHaveBeenCalled();
     });
 
@@ -128,6 +131,10 @@ describe('Layer 0 deferred cleanup commit', () => {
         ];
         const calls = [];
         const reloadedChatIds = [];
+        context.synchronizeRemovedChatMessages.mockImplementation((indices) => {
+            calls.push(`sync ${indices.join(',')}`);
+            return true;
+        });
         installSummaryContext({
             chat,
             metadata: { summaryception: makeSummaryStore() },
@@ -143,7 +150,7 @@ describe('Layer 0 deferred cleanup commit', () => {
 
         await expect(summarizeBatchFromTurns([{ index: 2 }])).resolves.toBe(true);
 
-        expect(calls).toEqual(['/hide 0', '/hide 2', 'reload']);
+        expect(calls).toEqual(['/hide 0', '/hide 2', 'sync 1']);
         expect(chat.map((message) => message.sc_id)).toEqual([
             'user-id',
             'assistant-id',
@@ -151,9 +158,7 @@ describe('Layer 0 deferred cleanup commit', () => {
             'live-user-id',
             'live-assistant-id',
         ]);
-        expect(reloadedChatIds).toEqual([
-            ['user-id', 'assistant-id', 'current-roll-id', 'live-user-id', 'live-assistant-id'],
-        ]);
+        expect(reloadedChatIds).toEqual([]);
     });
 
     it('does not flush or reload when the committed source contains no temporary records', async () => {
@@ -176,7 +181,27 @@ describe('Layer 0 deferred cleanup commit', () => {
         await expect(summarizeBatchFromTurns([{ index: 1 }])).resolves.toBe(true);
 
         expect(saveChat).not.toHaveBeenCalled();
+        expect(context.synchronizeRemovedChatMessages).not.toHaveBeenCalled();
         expect(reloadCurrentChat).not.toHaveBeenCalled();
+    });
+
+    it('reloads the active chat only when in-place synchronization fails', async () => {
+        const chat = buildChat();
+        const reloadCurrentChat = vi.fn(async () => {});
+        context.synchronizeRemovedChatMessages.mockReturnValue(false);
+        installSummaryContext({
+            chat,
+            metadata: { summaryception: makeSummaryStore() },
+            reloadCurrentChat,
+        });
+        callSummarizer.mockResolvedValue(
+            `[NARRATIVE]\nA concise summary.\n[STATE]\nlocation: room`,
+        );
+
+        await expect(summarizeBatchFromTurns([{ index: 2 }])).resolves.toBe(true);
+
+        expect(context.synchronizeRemovedChatMessages).toHaveBeenCalledWith([1]);
+        expect(reloadCurrentChat).toHaveBeenCalledOnce();
     });
 
     it('restores chat and Layer 0 when post-mutation persistence fails', async () => {

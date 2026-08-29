@@ -4,6 +4,8 @@ import { cleanupSummaryCycle, prepareSummaryCycle } from '../src/core/summary-pr
 import { runElasticAutoCycle } from '../src/core/summarizer-engine.js';
 import { installSummaryContext, makeMessage, makeSummaryStore } from './test-helpers.js';
 
+const { context } = globalThis.summaryceptionFoundationMocks;
+
 describe('summary preflight', () => {
     afterEach(() => {
         vi.restoreAllMocks();
@@ -66,7 +68,8 @@ describe('summary preflight', () => {
         await expect(cleanupSummaryCycle()).resolves.toBe(2);
 
         expect(chat.map((message) => message.sc_id)).toEqual(['user-id', 'assistant-id']);
-        expect(reloadCurrentChat).toHaveBeenCalledOnce();
+        expect(context.synchronizeRemovedChatMessages).toHaveBeenCalledWith([1, 2]);
+        expect(reloadCurrentChat).not.toHaveBeenCalled();
         expect(saveMetadata).toHaveBeenCalledOnce();
         expect(saveChat).toHaveBeenCalledTimes(2);
     });

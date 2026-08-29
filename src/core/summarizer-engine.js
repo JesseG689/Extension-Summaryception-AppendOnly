@@ -33,7 +33,6 @@ export const ELASTIC_STRATEGIES = Object.freeze({
  * @property {number} failed - Number of failed batches.
  * @property {number} totalBatches - Estimated total batches for the run.
  * @property {boolean} fullyCommitted - Whether all requested work was committed and normalized.
- * @property {boolean} shouldReload - Whether the caller should reload chat/UI state.
  * @property {boolean} failureLimitReached - Whether consecutive failures halted the run.
  */
 
@@ -169,7 +168,6 @@ export async function runElasticManual(deps, strategy, options = {}) {
         ...outcome,
         blocked: outcome.blocked || normalized === 'blocked',
         fullyCommitted: isManualRunComplete(outcome, task) && normalized === 'normalized',
-        shouldReload: isManualRunComplete(outcome, task) && normalized === 'normalized',
     };
 }
 
@@ -492,7 +490,6 @@ function createManualRunOutcome(overrides = {}) {
         failed: 0,
         totalBatches: 0,
         fullyCommitted: false,
-        shouldReload: false,
         failureLimitReached: false,
         ...overrides,
     };

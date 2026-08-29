@@ -542,7 +542,6 @@ async function executeForceSummarize($button) {
         );
         showCatchupOutcome(outcome);
         updateInjection();
-        reloadAfterManualRun(outcome);
     } finally {
         if ($button) {
             $button
@@ -600,7 +599,6 @@ async function onSlopBreaker() {
         );
         showSlopBreakerOutcome(outcome);
         updateInjection();
-        reloadAfterManualRun(outcome);
     } finally {
         $(this)
             .prop('disabled', false)
@@ -631,25 +629,6 @@ async function runManualWithProgress(run, cleanup) {
         return await run();
     } finally {
         cleanup();
-    }
-}
-
-/**
- * Reload the page after successful manual context changes.
- * @param {{ shouldReload?: boolean } | undefined} outcome
- * @returns {void}
- */
-function reloadAfterManualRun(outcome) {
-    if (!outcome?.shouldReload) {
-        return;
-    }
-    reloadPage();
-}
-
-function reloadPage() {
-    const reload = globalThis.location?.reload;
-    if (typeof reload === 'function') {
-        reload.call(globalThis.location);
     }
 }
 
@@ -811,12 +790,9 @@ function bindClickHandlers() {
 
         try {
             await clearSummaryceptionMemory({ updateUi: true });
-            toastr.success(
-                'Memory cleared & messages unghosted. Reloading chat context.',
-                'Summaryception',
-                { timeOut: 2000 },
-            );
-            reloadPage();
+            toastr.success('Memory cleared & messages unghosted.', 'Summaryception', {
+                timeOut: 2000,
+            });
         } catch (e) {
             error('Clear memory failed:', e);
             toastr.error(

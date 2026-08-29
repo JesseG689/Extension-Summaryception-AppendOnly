@@ -464,7 +464,8 @@ describe('world info bake', () => {
         await expect(deleteNonConversationMessages()).resolves.toBe(3);
         expect(deleteMessage).not.toHaveBeenCalled();
         expect(saveChat).toHaveBeenCalledOnce();
-        expect(reloadCurrentChat).toHaveBeenCalledOnce();
+        expect(context.synchronizeRemovedChatMessages).toHaveBeenCalledWith([1, 2, 3]);
+        expect(reloadCurrentChat).not.toHaveBeenCalled();
         expect(chat.map((message) => message.sc_id)).toEqual(['user-old', 'user-latest']);
         expect(store).toEqual({
             layers: [

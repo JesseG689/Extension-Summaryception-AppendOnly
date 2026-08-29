@@ -33,6 +33,7 @@ const foundationMocks = vi.hoisted(() => {
         saveMetadata: vi.fn(),
         saveChat: vi.fn(),
         reloadCurrentChat: vi.fn(),
+        synchronizeRemovedChatMessages: vi.fn(),
         renderInsertedChatMessage: vi.fn(),
         loadWorldInfo: vi.fn(),
         saveWorldInfo: vi.fn(),
@@ -100,6 +101,7 @@ const foundationMocks = vi.hoisted(() => {
                 await fn();
             }
         });
+        context.synchronizeRemovedChatMessages.mockReturnValue(true);
         context.loadWorldInfo.mockImplementation(async (name) => {
             const fn = getContext().loadWorldInfo;
             return typeof fn === 'function' ? await fn(name) : null;

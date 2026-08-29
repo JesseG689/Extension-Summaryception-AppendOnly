@@ -182,6 +182,8 @@ If u keep debug enabled, F12 log shows if your preset breaks append only cache a
 
 ## Version history
 
+- **22.19.1-ao.2:** Removes distracting page and chat refreshes after summarization and memory clearing while preserving a guarded chat-reload fallback if in-place synchronization is unavailable.
+
 - **22.19.1-ao.1:** First Append Only fork release. Preserves the live prompt tail across summary flushes, leaves foreign hidden messages untouched, supports hosts without `crypto.randomUUID`, and prevents invented summary timestamps.
 
 Older major versions are still available as branches. Open SillyTavern's extension list and use the branch button beside Summaryception.
