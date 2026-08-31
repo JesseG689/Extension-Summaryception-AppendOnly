@@ -3,6 +3,8 @@ import {
     CACHE_TTL,
     EASY_CONTEXT_LIMITS,
     LEGACY_APPEND_ONLY_SYSTEM_BLOCK_TEMPLATE,
+    LEGACY_LABELED_APPEND_ONLY_EMPTY_SYSTEM_BLOCK_TEMPLATE,
+    LEGACY_LABELED_APPEND_ONLY_SYSTEM_BLOCK_TEMPLATE,
     L0_SOURCE_LIMITS,
     MASK_USER_ROLE_MODES,
     MEMORY_MODES,
@@ -10,8 +12,6 @@ import {
     MEMORY_ROLES,
     MODULE_NAME,
     REQUEST_TIMEOUT,
-    UNWRAPPED_APPEND_ONLY_EMPTY_SYSTEM_BLOCK_TEMPLATE,
-    UNWRAPPED_APPEND_ONLY_SYSTEM_BLOCK_TEMPLATE,
     UI_MODES,
     defaultSettings,
 } from './constants.js';
@@ -228,9 +228,9 @@ function normalizeMemorySettings(settings) {
             defaultSettings.appendOnlyEmptySystemBlockTemplate;
         changed = true;
     } else {
-        const migratedTemplate = migrateBundledAppendOnlyTemplate(
+        const migratedTemplate = migrateBundledTemplate(
             settings.appendOnlyEmptySystemBlockTemplate,
-            [UNWRAPPED_APPEND_ONLY_EMPTY_SYSTEM_BLOCK_TEMPLATE],
+            LEGACY_LABELED_APPEND_ONLY_EMPTY_SYSTEM_BLOCK_TEMPLATE,
             defaultSettings.appendOnlyEmptySystemBlockTemplate,
         );
         if (migratedTemplate !== settings.appendOnlyEmptySystemBlockTemplate) {
@@ -242,22 +242,28 @@ function normalizeMemorySettings(settings) {
 }
 
 function migrateBundledAppendOnlySystemBlockTemplate(template) {
-    return migrateBundledAppendOnlyTemplate(
-        template,
-        [LEGACY_APPEND_ONLY_SYSTEM_BLOCK_TEMPLATE, UNWRAPPED_APPEND_ONLY_SYSTEM_BLOCK_TEMPLATE],
-        defaultSettings.appendOnlySystemBlockTemplate,
-    );
+    for (const bundledTemplate of [
+        LEGACY_APPEND_ONLY_SYSTEM_BLOCK_TEMPLATE,
+        LEGACY_LABELED_APPEND_ONLY_SYSTEM_BLOCK_TEMPLATE,
+    ]) {
+        const migratedTemplate = migrateBundledTemplate(
+            template,
+            bundledTemplate,
+            defaultSettings.appendOnlySystemBlockTemplate,
+        );
+        if (migratedTemplate !== template) {
+            return migratedTemplate;
+        }
+    }
+    return template;
 }
 
-function migrateBundledAppendOnlyTemplate(template, legacyTemplates, defaultTemplate) {
-    for (const legacyTemplate of legacyTemplates) {
-        if (template === legacyTemplate) {
-            return defaultTemplate;
-        }
-        const legacyEmDashTemplate = legacyTemplate.replace('Rolls - User:', 'Rolls — User:');
-        if (template === legacyEmDashTemplate) {
-            return defaultTemplate.replace('Rolls - User:', 'Rolls — User:');
-        }
+function migrateBundledTemplate(template, bundledTemplate, defaultTemplate) {
+    if (template === bundledTemplate) {
+        return defaultTemplate;
+    }
+    if (template === bundledTemplate.replace('Rolls - User:', 'Rolls — User:')) {
+        return defaultTemplate.replace('Rolls - User:', 'Rolls — User:');
     }
     return template;
 }

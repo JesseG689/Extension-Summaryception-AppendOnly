@@ -16,7 +16,6 @@
 - A visible marker prevents duplicate baking.
 - A hidden marker allows baking after old history leaves the prompt.
 - Resolve macros once before sending or storing baked lore.
-- Wrap each turn's rolls in a stable `summaryception_rolls` marker labeled `applies_to="next_user_message"` so persisted history stays self-describing.
 - Exclude baked narrator messages from summarizer accounting.
 - Select entries by priority. Never truncate entries or their tags.
 - Enforce entry count, bake budget, and remaining provider capacity.

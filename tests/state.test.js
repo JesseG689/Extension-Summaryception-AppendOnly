@@ -4,12 +4,12 @@ import {
     CACHE_TTL,
     DEFAULT_APPEND_ONLY_SYSTEM_BLOCK_TEMPLATE,
     LEGACY_APPEND_ONLY_SYSTEM_BLOCK_TEMPLATE,
+    LEGACY_LABELED_APPEND_ONLY_EMPTY_SYSTEM_BLOCK_TEMPLATE,
+    LEGACY_LABELED_APPEND_ONLY_SYSTEM_BLOCK_TEMPLATE,
     MASK_USER_ROLE_MODES,
     MEMORY_MODE_PRESETS,
     MEMORY_MODES,
     UI_MODES,
-    UNWRAPPED_APPEND_ONLY_EMPTY_SYSTEM_BLOCK_TEMPLATE,
-    UNWRAPPED_APPEND_ONLY_SYSTEM_BLOCK_TEMPLATE,
     applyMemoryModePreset,
     defaultSettings,
 } from '../src/foundation/constants.js';
@@ -53,18 +53,12 @@ describe('getSettings', () => {
         expect(settings.enabled).toBe(true);
     });
 
-    it('labels rolls for the next user message above collapsed memory details', () => {
+    it('keeps rolls visible above the collapsed memory details in the default template', () => {
         const rollsIndex = DEFAULT_APPEND_ONLY_SYSTEM_BLOCK_TEMPLATE.indexOf('Rolls - User:');
         const detailsIndex = DEFAULT_APPEND_ONLY_SYSTEM_BLOCK_TEMPLATE.indexOf('<details>');
 
-        expect(DEFAULT_APPEND_ONLY_SYSTEM_BLOCK_TEMPLATE).toMatch(
-            /^<summaryception_rolls applies_to="next_user_message">/,
-        );
-        expect(rollsIndex).toBeGreaterThan(0);
+        expect(rollsIndex).toBe(0);
         expect(detailsIndex).toBeGreaterThan(rollsIndex);
-        expect(DEFAULT_APPEND_ONLY_SYSTEM_BLOCK_TEMPLATE).toContain(
-            '</summaryception_rolls>\n<details>',
-        );
         expect(DEFAULT_APPEND_ONLY_SYSTEM_BLOCK_TEMPLATE).toContain('{{entries}}');
     });
 
@@ -75,10 +69,13 @@ describe('getSettings', () => {
             LEGACY_APPEND_ONLY_SYSTEM_BLOCK_TEMPLATE.replace('Rolls - User:', 'Rolls — User:'),
             'Rolls — User:',
         ],
-        ['visible hyphen', UNWRAPPED_APPEND_ONLY_SYSTEM_BLOCK_TEMPLATE, 'Rolls - User:'],
+        ['labeled hyphen', LEGACY_LABELED_APPEND_ONLY_SYSTEM_BLOCK_TEMPLATE, 'Rolls - User:'],
         [
-            'visible em dash',
-            UNWRAPPED_APPEND_ONLY_SYSTEM_BLOCK_TEMPLATE.replace('Rolls - User:', 'Rolls — User:'),
+            'labeled em dash',
+            LEGACY_LABELED_APPEND_ONLY_SYSTEM_BLOCK_TEMPLATE.replace(
+                'Rolls - User:',
+                'Rolls — User:',
+            ),
             'Rolls — User:',
         ],
     ])('migrates the bundled %s Append Only template', (_name, legacy, rolls) => {
@@ -86,32 +83,30 @@ describe('getSettings', () => {
             settings: { appendOnlySystemBlockTemplate: legacy },
         });
 
-        expect(getSettings().appendOnlySystemBlockTemplate).toMatch(
-            /^<summaryception_rolls applies_to="next_user_message">/,
-        );
-        expect(getSettings().appendOnlySystemBlockTemplate).toContain(rolls);
+        expect(getSettings().appendOnlySystemBlockTemplate.startsWith(rolls)).toBe(true);
+        expect(getSettings().appendOnlySystemBlockTemplate).not.toContain('<summaryception_rolls');
         expect(getSettings().appendOnlySystemBlockTemplate.indexOf('<details>')).toBeGreaterThan(0);
     });
 
     it.each([
-        ['hyphen', UNWRAPPED_APPEND_ONLY_EMPTY_SYSTEM_BLOCK_TEMPLATE, 'Rolls - User:'],
+        ['hyphen', LEGACY_LABELED_APPEND_ONLY_EMPTY_SYSTEM_BLOCK_TEMPLATE, 'Rolls - User:'],
         [
             'em dash',
-            UNWRAPPED_APPEND_ONLY_EMPTY_SYSTEM_BLOCK_TEMPLATE.replace(
+            LEGACY_LABELED_APPEND_ONLY_EMPTY_SYSTEM_BLOCK_TEMPLATE.replace(
                 'Rolls - User:',
                 'Rolls — User:',
             ),
             'Rolls — User:',
         ],
-    ])('migrates the bundled %s empty Append Only template', (_name, legacy, rolls) => {
+    ])('removes the label from the bundled %s empty template', (_name, labeled, rolls) => {
         installSillyTavernStub({
-            settings: { appendOnlyEmptySystemBlockTemplate: legacy },
+            settings: { appendOnlyEmptySystemBlockTemplate: labeled },
         });
 
-        expect(getSettings().appendOnlyEmptySystemBlockTemplate).toMatch(
-            /^<summaryception_rolls applies_to="next_user_message">/,
+        expect(getSettings().appendOnlyEmptySystemBlockTemplate.startsWith(rolls)).toBe(true);
+        expect(getSettings().appendOnlyEmptySystemBlockTemplate).not.toContain(
+            '<summaryception_rolls',
         );
-        expect(getSettings().appendOnlyEmptySystemBlockTemplate).toContain(rolls);
     });
 
     it('preserves a customized Append Only system block template', () => {

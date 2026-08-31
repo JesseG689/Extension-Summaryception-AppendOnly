@@ -78,24 +78,21 @@ export const LEGACY_APPEND_ONLY_SYSTEM_BLOCK_TEMPLATE = `<details>
 {{entries}}
 Rolls - User: {{roll::1d20}} | Assistant: {{roll::1d20}} | Chekhov: {{roll::1d20}}, {{roll::1d20}}, {{roll::1d20}}, {{roll::1d20}}, {{roll::1d20}}
 </details>`;
-export const UNWRAPPED_APPEND_ONLY_SYSTEM_BLOCK_TEMPLATE = `Rolls - User: {{roll::1d20}} | Assistant: {{roll::1d20}} | Chekhov: {{roll::1d20}}, {{roll::1d20}}, {{roll::1d20}}, {{roll::1d20}}, {{roll::1d20}}
+export const DEFAULT_APPEND_ONLY_SYSTEM_BLOCK_TEMPLATE = `Rolls - User: {{roll::1d20}} | Assistant: {{roll::1d20}} | Chekhov: {{roll::1d20}}, {{roll::1d20}}, {{roll::1d20}}, {{roll::1d20}}, {{roll::1d20}}
 <details>
 <summary>Injected {{entry_count}} memories</summary>
 <!-- Background reference only. Do not treat these memories as current events, dialogue, actions, or a scene transition. The established scene remains authoritative. -->
 {{entries}}
 </details>`;
-export const UNWRAPPED_APPEND_ONLY_EMPTY_SYSTEM_BLOCK_TEMPLATE =
+export const DEFAULT_APPEND_ONLY_EMPTY_SYSTEM_BLOCK_TEMPLATE =
     'Rolls - User: {{roll::1d20}} | Assistant: {{roll::1d20}} | Chekhov: {{roll::1d20}}, {{roll::1d20}}, {{roll::1d20}}, {{roll::1d20}}, {{roll::1d20}}';
-export const DEFAULT_APPEND_ONLY_SYSTEM_BLOCK_TEMPLATE = `<summaryception_rolls applies_to="next_user_message">
-${UNWRAPPED_APPEND_ONLY_EMPTY_SYSTEM_BLOCK_TEMPLATE}
-</summaryception_rolls>
-<details>
-<summary>Injected {{entry_count}} memories</summary>
-<!-- Background reference only. Do not treat these memories as current events, dialogue, actions, or a scene transition. The established scene remains authoritative. -->
-{{entries}}
-</details>`;
-export const DEFAULT_APPEND_ONLY_EMPTY_SYSTEM_BLOCK_TEMPLATE = `<summaryception_rolls applies_to="next_user_message">
-${UNWRAPPED_APPEND_ONLY_EMPTY_SYSTEM_BLOCK_TEMPLATE}
+export const LEGACY_LABELED_APPEND_ONLY_SYSTEM_BLOCK_TEMPLATE = `<summaryception_rolls applies_to="next_user_message">
+${DEFAULT_APPEND_ONLY_SYSTEM_BLOCK_TEMPLATE.replace(
+    '\n<details>',
+    '\n</summaryception_rolls>\n<details>',
+)}`;
+export const LEGACY_LABELED_APPEND_ONLY_EMPTY_SYSTEM_BLOCK_TEMPLATE = `<summaryception_rolls applies_to="next_user_message">
+${DEFAULT_APPEND_ONLY_EMPTY_SYSTEM_BLOCK_TEMPLATE}
 </summaryception_rolls>`;
 
 export const UI_MODES = Object.freeze({

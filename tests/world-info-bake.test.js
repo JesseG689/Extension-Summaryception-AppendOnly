@@ -87,7 +87,7 @@ describe('world info bake', () => {
             { role: 'user', content: 'latest user' },
         ]);
         expect(content).toMatch(
-            /^<summaryception_rolls applies_to="next_user_message">\nRolls - User:[\s\S]*<\/summaryception_rolls>\n<details>\n<summary>Injected 2 memories<\/summary>[\s\S]*<wi>[\s\S]*<\/wi>[\s\S]*<\/details>$/,
+            /^Rolls - User:[\s\S]*\n<details>\n<summary>Injected 2 memories<\/summary>[\s\S]*<wi>[\s\S]*<\/wi>[\s\S]*<\/details>$/,
         );
         expect(content.match(/<wi>/g)).toHaveLength(2);
         expect(content.match(/<\/wi>/g)).toHaveLength(2);
