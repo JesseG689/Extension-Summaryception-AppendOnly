@@ -19,6 +19,16 @@ export const MEMORY_MODES = Object.freeze({
     APPEND_ONLY: 'append_only',
     CUSTOM: 'custom',
 });
+export const APPEND_ONLY_USER_ROLL_MODES = Object.freeze({
+    STANDARD: 'standard',
+    HEROIC: 'heroic',
+    SUPERHERO: 'superhero',
+});
+export const APPEND_ONLY_USER_ROLL_FORMULAS = Object.freeze({
+    [APPEND_ONLY_USER_ROLL_MODES.STANDARD]: '1d20',
+    [APPEND_ONLY_USER_ROLL_MODES.HEROIC]: '1d13+7',
+    [APPEND_ONLY_USER_ROLL_MODES.SUPERHERO]: '1d11+9',
+});
 export const MEMORY_MODE_PRESETS = Object.freeze({
     [MEMORY_MODES.BALANCED]: Object.freeze({
         verbatimTokenBudget: 22000,
@@ -205,6 +215,7 @@ export const defaultSettings = Object.freeze({
     appendOnlySystemBlockTemplate: DEFAULT_APPEND_ONLY_SYSTEM_BLOCK_TEMPLATE,
     appendOnlyEmptySystemBlockTemplate: DEFAULT_APPEND_ONLY_EMPTY_SYSTEM_BLOCK_TEMPLATE,
     appendOnlyInjectEmptySystemBlock: false,
+    appendOnlyUserRollMode: APPEND_ONLY_USER_ROLL_MODES.STANDARD,
     // ─── Modular STATE categories (stateCat*) ─────────────────────────
     // Most categories ship enabled: the extension's [CURRENT STATE] injection
     // is meant to be the sole carrier, so users should disable the equivalent

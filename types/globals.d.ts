@@ -66,6 +66,7 @@ interface ExtensionSettings {
     appendOnlySystemBlockTemplate: string;
     appendOnlyEmptySystemBlockTemplate: string;
     appendOnlyInjectEmptySystemBlock: boolean;
+    appendOnlyUserRollMode: 'standard' | 'heroic' | 'superhero';
     stateCatDateTime: boolean;
     stateCatBonds: boolean;
     stateCatChekhov: boolean;

@@ -1,6 +1,7 @@
 import { describe, expect, it } from 'vitest';
 
 import {
+    APPEND_ONLY_USER_ROLL_MODES,
     CACHE_TTL,
     DEFAULT_APPEND_ONLY_SYSTEM_BLOCK_TEMPLATE,
     LEGACY_APPEND_ONLY_SYSTEM_BLOCK_TEMPLATE,
@@ -49,8 +50,17 @@ describe('getSettings', () => {
         expect(ctx.extensionSettings.summaryception).toBe(settings);
         // It gained default keys it did not have before…
         expect(Object.hasOwn(settings, 'memoryTokenBudget')).toBe(true);
+        expect(settings.appendOnlyUserRollMode).toBe(APPEND_ONLY_USER_ROLL_MODES.STANDARD);
         // …while the originally-provided key survived unchanged.
         expect(settings.enabled).toBe(true);
+    });
+
+    it('repairs an invalid Heroic User Rolls mode to Standard', () => {
+        installSillyTavernStub({
+            settings: { appendOnlyUserRollMode: 'always-win' },
+        });
+
+        expect(getSettings().appendOnlyUserRollMode).toBe(APPEND_ONLY_USER_ROLL_MODES.STANDARD);
     });
 
     it('keeps rolls visible above the collapsed memory details in the default template', () => {

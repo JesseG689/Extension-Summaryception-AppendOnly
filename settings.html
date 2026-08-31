@@ -144,6 +144,17 @@
                                 <div class="sc-slider-row"><input type="range" id="sc_easy_queued_token_budget" min="4000" max="64000" step="1000" data-sc-slider-setting="queuedTokenBudget" data-sc-partner-input="#sc_easy_queued_token_budget_val" /><input id="sc_easy_queued_token_budget_val" class="text_pole sc-val sc-val-wide" type="text" inputmode="numeric" data-sc-slider-setting="queuedTokenBudget" data-sc-partner-input="#sc_easy_queued_token_budget" /></div>
                             </div>
                             <div class="sc-row sc-append-only-row">
+                                <label for="sc_easy_append_only_user_roll_mode">
+                                    <span>Heroic User Rolls</span>
+                                    <small class="sc-hint">Raises only the User roll floor. Assistant and Chekhov rolls remain standard d20s.</small>
+                                </label>
+                                <select id="sc_easy_append_only_user_roll_mode" class="text_pole" data-sc-setting="appendOnlyUserRollMode">
+                                    <option value="standard">Standard · 1–20</option>
+                                    <option value="heroic">Heroic · 8–20</option>
+                                    <option value="superhero">Superhero · 10–20</option>
+                                </select>
+                            </div>
+                            <div class="sc-row sc-append-only-row">
                                 <label for="sc_easy_max_baked_wi_entries">
                                     <span>Max Baked WI Entries</span>
                                     <small class="sc-hint">The most newly activated World Info entries baked into one turn.</small>
@@ -631,6 +642,17 @@
                     </div>
                     <div class="sc-tuning-grid">
                         <div class="sc-tuning-group">
+                            <div class="sc-row sc-append-only-row">
+                                <label for="sc_append_only_user_roll_mode">
+                                    <span>Heroic User Rolls</span>
+                                    <small class="sc-hint">Raises only the User roll floor. Assistant and Chekhov rolls remain standard d20s.</small>
+                                </label>
+                                <select id="sc_append_only_user_roll_mode" class="text_pole" data-sc-setting="appendOnlyUserRollMode">
+                                    <option value="standard">Standard · 1–20</option>
+                                    <option value="heroic">Heroic · 8–20</option>
+                                    <option value="superhero">Superhero · 10–20</option>
+                                </select>
+                            </div>
                             <div class="sc-row">
                                 <label for="sc_max_baked_wi_entries">
                                     <span>Max Baked WI Entries</span>

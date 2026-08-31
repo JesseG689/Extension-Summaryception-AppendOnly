@@ -1,4 +1,5 @@
 import {
+    APPEND_ONLY_USER_ROLL_MODES,
     BATCH_TRIGGER_LIMITS,
     CACHE_TTL,
     EASY_CONTEXT_LIMITS,
@@ -182,6 +183,12 @@ function normalizeMemorySettings(settings) {
     const validModes = [MEMORY_MODES.BALANCED, MEMORY_MODES.PREFIX_CACHE, MEMORY_MODES.APPEND_ONLY];
     if (!isSettingValue(validModes, settings.memoryMode)) {
         settings.memoryMode = defaultSettings.memoryMode;
+        changed = true;
+    }
+    if (
+        !isSettingValue(Object.values(APPEND_ONLY_USER_ROLL_MODES), settings.appendOnlyUserRollMode)
+    ) {
+        settings.appendOnlyUserRollMode = defaultSettings.appendOnlyUserRollMode;
         changed = true;
     }
     if (!isSettingValue(['default', 'profile'], settings.connectionSource)) {

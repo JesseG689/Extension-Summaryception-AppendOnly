@@ -1,4 +1,5 @@
 import {
+    APPEND_ONLY_USER_ROLL_MODES,
     MEMORY_MODE_PRESETS,
     MEMORY_MODES,
     MASK_USER_ROLE_MODES,
@@ -120,10 +121,33 @@ export function bindUIEvents() {
     bindModeHandlers();
     bindToggleHandlers();
     bindMemoryModeHandlers();
+    bindUserRollModeHandlers();
     bindSliderHandlers();
     bindTextareaHandlers();
     bindClickHandlers();
     bindPromptProfileHandlers();
+}
+
+function bindUserRollModeHandlers() {
+    bindDocumentSetting({
+        eventName: 'change',
+        selector: '#sc_easy_append_only_user_roll_mode, #sc_append_only_user_roll_mode',
+        key: 'appendOnlyUserRollMode',
+        read: readString,
+        beforeSave: (settings, value, $source) => {
+            if (
+                !(
+                    /** @type {string[]} */ (Object.values(APPEND_ONLY_USER_ROLL_MODES)).includes(
+                        String(value),
+                    )
+                )
+            ) {
+                settings.appendOnlyUserRollMode = defaultSettings.appendOnlyUserRollMode;
+                $source.val(defaultSettings.appendOnlyUserRollMode);
+            }
+        },
+        afterSave: () => updateUI(),
+    });
 }
 
 function bindModeHandlers() {

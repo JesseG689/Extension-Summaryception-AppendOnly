@@ -16,6 +16,8 @@
 - A visible marker prevents duplicate baking.
 - A hidden marker allows baking after old history leaves the prompt.
 - Resolve macros once before sending or storing baked lore.
+- Apply Heroic User Rolls only to the conventional User d20 macro; keep Assistant and Chekhov dice unchanged.
+- Roll-mode changes affect future baked turns only. Never rewrite persisted rolls.
 - Exclude baked narrator messages from summarizer accounting.
 - Select entries by priority. Never truncate entries or their tags.
 - Enforce entry count, bake budget, and remaining provider capacity.

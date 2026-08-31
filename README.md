@@ -100,6 +100,8 @@ Select Append Only and use your lorebooks normally. Summaryception automatically
 
 When a previously baked entry's content, title, or depth changes, its new revision is appended the next time the entry activates during a normal generation. The older revision remains in the cached prefix until the next summary flush because removing it early would break Append Only cache continuity. Deleting or disabling an entry likewise prevents future activation without rewriting existing prompt history.
 
+Heroic User Rolls can favor only the persisted `User` die used by compatible RP presets. Standard remains a uniform 1–20; Heroic is a uniform 8–20; Superhero is a uniform 10–20. The Assistant and five Chekhov dice remain independent 1–20 rolls, and changing the setting affects only future turns.
+
 Older `SC - <original>` selections remain supported: Summaryception treats them as aliases for the current unprefixed original when it still exists. `/sc-migrate-wi` and `/sc-unbake-wi` remain available only for maintaining those legacy clones.
 
 Append Only does not support group chats or depth-positioned lore. Anything else that rewrites the earlier prompt, such as rotating macros or dynamic injections outside the bake outlet, can still spoil the cache. Use a stable preset.
@@ -175,6 +177,8 @@ Append only presets:
 If u keep debug enabled, F12 log shows if your preset breaks append only cache and where it happens.
 
 ## Version history
+
+- **23.1.0-ao.1:** Adds Heroic User Rolls for Append Only. Choose Standard (1–20), Heroic (8–20), or Superhero (10–20) for the persisted User die while Assistant and Chekhov rolls remain standard d20s. Existing turns and regeneration values stay unchanged.
 
 - **23.0.2-ao.1:** Rolls back the `summaryception_rolls` label introduced in 23.0.1. Bundled tagged templates migrate back to the prior visible dice line automatically; customized templates remain untouched.
 

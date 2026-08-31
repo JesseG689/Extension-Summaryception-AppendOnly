@@ -1,4 +1,8 @@
-import { MEMORY_MODES } from '../foundation/constants.js';
+import {
+    APPEND_ONLY_USER_ROLL_FORMULAS,
+    APPEND_ONLY_USER_ROLL_MODES,
+    MEMORY_MODES,
+} from '../foundation/constants.js';
 import { debug } from '../foundation/logger.js';
 import {
     countPromptPayloadTokens,
@@ -25,6 +29,8 @@ const ENTRY_COUNT_SENTINEL = '__SC_ENTRY_COUNT__';
 const ENTRIES_SENTINEL = '__SC_ENTRIES__';
 const TEMPLATE_ENTRY_COUNT = '{{entry_count}}';
 const TEMPLATE_ENTRIES = '{{entries}}';
+const STANDARD_USER_ROLL_MACRO = '{{roll::1d20}}';
+const USER_ROLL_MACRO_PATTERN = /(\bUser\s*:\s*){{roll::1d20}}/i;
 
 const WORLD_INFO_OUTLET_POSITION = 7;
 const MIGRATION_MARKER = 'summaryceptionBake';
@@ -491,7 +497,10 @@ async function buildPendingBakeContent(entries, settings, prompt, userPromptInde
     let expandedTemplate = '';
     let selected = [];
     if (entries.length) {
-        const protectedTemplate = String(settings.appendOnlySystemBlockTemplate)
+        const protectedTemplate = applyUserRollMode(
+            String(settings.appendOnlySystemBlockTemplate),
+            settings.appendOnlyUserRollMode,
+        )
             .replaceAll(TEMPLATE_ENTRY_COUNT, ENTRY_COUNT_SENTINEL)
             .replaceAll(TEMPLATE_ENTRIES, ENTRIES_SENTINEL);
         expandedTemplate = (await expandSillyTavernMacros(protectedTemplate))
@@ -512,13 +521,31 @@ async function buildPendingBakeContent(entries, settings, prompt, userPromptInde
               selected.map((entry) => entry.block),
           )
         : settings.appendOnlyInjectEmptySystemBlock
-          ? await expandSillyTavernMacros(String(settings.appendOnlyEmptySystemBlockTemplate))
+          ? await expandSillyTavernMacros(
+                applyUserRollMode(
+                    String(settings.appendOnlyEmptySystemBlockTemplate),
+                    settings.appendOnlyUserRollMode,
+                ),
+            )
           : '';
     if ((await countTextTokens(content)).count > settings.bakedWorldInfoTokenBudget) {
         debug('WI bake skipped: system block template exceeds the available token budget');
         return { content: '', selected: [] };
     }
     return { content, selected };
+}
+
+function applyUserRollMode(template, mode) {
+    const formula =
+        APPEND_ONLY_USER_ROLL_FORMULAS[mode] ??
+        APPEND_ONLY_USER_ROLL_FORMULAS[APPEND_ONLY_USER_ROLL_MODES.STANDARD];
+    if (formula === APPEND_ONLY_USER_ROLL_FORMULAS[APPEND_ONLY_USER_ROLL_MODES.STANDARD]) {
+        return template;
+    }
+    return template.replace(
+        USER_ROLL_MACRO_PATTERN,
+        (_match, label) => `${label}${STANDARD_USER_ROLL_MACRO.replace('1d20', formula)}`,
+    );
 }
 
 function hasCurrentTurnBake(chat) {

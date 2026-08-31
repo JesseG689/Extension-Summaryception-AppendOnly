@@ -21,6 +21,7 @@ function installBakeContext({
     appendOnlySystemBlockTemplate,
     appendOnlyEmptySystemBlockTemplate,
     appendOnlyInjectEmptySystemBlock = false,
+    appendOnlyUserRollMode = 'standard',
 } = {}) {
     const runtime = installSummaryContext({
         chat: chat || [
@@ -39,6 +40,7 @@ function installBakeContext({
                 ? {}
                 : { appendOnlyEmptySystemBlockTemplate }),
             appendOnlyInjectEmptySystemBlock,
+            appendOnlyUserRollMode,
         },
         extensionPrompts: {
             customWIOutlet_sc_bake: { value: outlet },
@@ -139,6 +141,78 @@ describe('world info bake', () => {
         ).toHaveLength(7);
         expect(prompt.at(-2).content).toBe(runtime.chat.at(-2).mes);
         expect(prompt.at(-2).content).not.toContain('{{roll::1d20}}');
+    });
+
+    it.each([
+        ['standard', '{{roll::1d20}}', 1, 7],
+        ['heroic', '{{roll::1d13+7}}', 8, 6],
+        ['superhero', '{{roll::1d11+9}}', 10, 6],
+    ])(
+        'uses the %s User range without changing Assistant or Chekhov dice',
+        async (mode, userMacro, expectedUser, standardMacroCount) => {
+            context.expandSillyTavernMacros.mockClear();
+            const runtime = installBakeContext({ appendOnlyUserRollMode: mode });
+            context.expandSillyTavernMacros.mockImplementation(async (template) =>
+                template
+                    .replaceAll('{{roll::1d13+7}}', '8')
+                    .replaceAll('{{roll::1d11+9}}', '10')
+                    .replaceAll('{{roll::1d20}}', '1'),
+            );
+            const prompt = [
+                { role: 'assistant', content: 'assistant reply' },
+                { role: 'user', content: 'latest user' },
+            ];
+            activateBakeEntries();
+
+            expect(await injectPendingWorldInfoBake({ chat: prompt })).toBe(true);
+
+            const expandedInput = context.expandSillyTavernMacros.mock.calls[0][0];
+            expect(expandedInput).toContain(`User: ${userMacro}`);
+            expect(expandedInput.match(/{{roll::1d20}}/g)).toHaveLength(standardMacroCount);
+            expect(expandedInput).toContain('Assistant: {{roll::1d20}}');
+            expect(prompt.at(-2)?.content).toContain(
+                `Rolls - User: ${expectedUser} | Assistant: 1 | Chekhov: 1, 1, 1, 1, 1`,
+            );
+            expect(prompt.at(-2)?.content).toBe(runtime.chat.at(-2)?.mes);
+        },
+    );
+
+    it('applies Superhero mode to the standard empty dice block', async () => {
+        installBakeContext({
+            appendOnlyInjectEmptySystemBlock: true,
+            appendOnlyUserRollMode: 'superhero',
+        });
+        context.expandSillyTavernMacros.mockImplementation(async (template) =>
+            template.replaceAll('{{roll::1d11+9}}', '10').replaceAll('{{roll::1d20}}', '1'),
+        );
+        const prompt = [
+            { role: 'assistant', content: 'assistant reply' },
+            { role: 'user', content: 'latest user' },
+        ];
+
+        expect(await injectPendingWorldInfoBake({ chat: prompt })).toBe(true);
+        expect(prompt.at(-2)?.content).toBe(
+            'Rolls - User: 10 | Assistant: 1 | Chekhov: 1, 1, 1, 1, 1',
+        );
+    });
+
+    it('leaves a custom User dice formula under template control', async () => {
+        context.expandSillyTavernMacros.mockClear();
+        installBakeContext({
+            appendOnlySystemBlockTemplate:
+                'Rolls - User: {{roll::2d10}} | Assistant: {{roll::1d20}}\n{{entries}}',
+            appendOnlyUserRollMode: 'superhero',
+        });
+        const prompt = [
+            { role: 'assistant', content: 'assistant reply' },
+            { role: 'user', content: 'latest user' },
+        ];
+        activateBakeEntries();
+
+        expect(await injectPendingWorldInfoBake({ chat: prompt })).toBe(true);
+        const expandedInput = context.expandSillyTavernMacros.mock.calls[0][0];
+        expect(expandedInput).toContain('User: {{roll::2d10}}');
+        expect(expandedInput).not.toContain('{{roll::1d11+9}}');
     });
 
     it('uses escaped entry comments and numbered title fallbacks', async () => {
@@ -248,7 +322,11 @@ describe('world info bake', () => {
     });
 
     it('does not reroll or duplicate the current user turn block', async () => {
-        const runtime = installBakeContext();
+        context.expandSillyTavernMacros.mockClear();
+        context.expandSillyTavernMacros.mockImplementation(async (template) =>
+            template.replaceAll('{{roll::1d11+9}}', '14').replaceAll('{{roll::1d20}}', '6'),
+        );
+        const runtime = installBakeContext({ appendOnlyUserRollMode: 'superhero' });
         const prompt = [
             { role: 'assistant', content: 'assistant reply' },
             { role: 'user', content: 'latest user' },
@@ -259,6 +337,8 @@ describe('world info bake', () => {
         activateBakeEntries();
         expect(await injectPendingWorldInfoBake({ chat: prompt })).toBe(false);
         expect(prompt.at(-2).content).toBe(firstContent);
+        expect(firstContent).toContain('User: 14 | Assistant: 6');
+        expect(context.expandSillyTavernMacros).toHaveBeenCalledTimes(1);
         expect(runtime.chat.filter((message) => message.extra?.sc_wi)).toHaveLength(1);
     });
 
