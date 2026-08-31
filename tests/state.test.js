@@ -8,6 +8,8 @@ import {
     MEMORY_MODE_PRESETS,
     MEMORY_MODES,
     UI_MODES,
+    UNWRAPPED_APPEND_ONLY_EMPTY_SYSTEM_BLOCK_TEMPLATE,
+    UNWRAPPED_APPEND_ONLY_SYSTEM_BLOCK_TEMPLATE,
     applyMemoryModePreset,
     defaultSettings,
 } from '../src/foundation/constants.js';
@@ -51,12 +53,18 @@ describe('getSettings', () => {
         expect(settings.enabled).toBe(true);
     });
 
-    it('keeps rolls visible above the collapsed memory details in the default template', () => {
+    it('labels rolls for the next user message above collapsed memory details', () => {
         const rollsIndex = DEFAULT_APPEND_ONLY_SYSTEM_BLOCK_TEMPLATE.indexOf('Rolls - User:');
         const detailsIndex = DEFAULT_APPEND_ONLY_SYSTEM_BLOCK_TEMPLATE.indexOf('<details>');
 
-        expect(rollsIndex).toBe(0);
+        expect(DEFAULT_APPEND_ONLY_SYSTEM_BLOCK_TEMPLATE).toMatch(
+            /^<summaryception_rolls applies_to="next_user_message">/,
+        );
+        expect(rollsIndex).toBeGreaterThan(0);
         expect(detailsIndex).toBeGreaterThan(rollsIndex);
+        expect(DEFAULT_APPEND_ONLY_SYSTEM_BLOCK_TEMPLATE).toContain(
+            '</summaryception_rolls>\n<details>',
+        );
         expect(DEFAULT_APPEND_ONLY_SYSTEM_BLOCK_TEMPLATE).toContain('{{entries}}');
     });
 
@@ -67,13 +75,43 @@ describe('getSettings', () => {
             LEGACY_APPEND_ONLY_SYSTEM_BLOCK_TEMPLATE.replace('Rolls - User:', 'Rolls — User:'),
             'Rolls — User:',
         ],
+        ['visible hyphen', UNWRAPPED_APPEND_ONLY_SYSTEM_BLOCK_TEMPLATE, 'Rolls - User:'],
+        [
+            'visible em dash',
+            UNWRAPPED_APPEND_ONLY_SYSTEM_BLOCK_TEMPLATE.replace('Rolls - User:', 'Rolls — User:'),
+            'Rolls — User:',
+        ],
     ])('migrates the bundled %s Append Only template', (_name, legacy, rolls) => {
         installSillyTavernStub({
             settings: { appendOnlySystemBlockTemplate: legacy },
         });
 
-        expect(getSettings().appendOnlySystemBlockTemplate.startsWith(rolls)).toBe(true);
+        expect(getSettings().appendOnlySystemBlockTemplate).toMatch(
+            /^<summaryception_rolls applies_to="next_user_message">/,
+        );
+        expect(getSettings().appendOnlySystemBlockTemplate).toContain(rolls);
         expect(getSettings().appendOnlySystemBlockTemplate.indexOf('<details>')).toBeGreaterThan(0);
+    });
+
+    it.each([
+        ['hyphen', UNWRAPPED_APPEND_ONLY_EMPTY_SYSTEM_BLOCK_TEMPLATE, 'Rolls - User:'],
+        [
+            'em dash',
+            UNWRAPPED_APPEND_ONLY_EMPTY_SYSTEM_BLOCK_TEMPLATE.replace(
+                'Rolls - User:',
+                'Rolls — User:',
+            ),
+            'Rolls — User:',
+        ],
+    ])('migrates the bundled %s empty Append Only template', (_name, legacy, rolls) => {
+        installSillyTavernStub({
+            settings: { appendOnlyEmptySystemBlockTemplate: legacy },
+        });
+
+        expect(getSettings().appendOnlyEmptySystemBlockTemplate).toMatch(
+            /^<summaryception_rolls applies_to="next_user_message">/,
+        );
+        expect(getSettings().appendOnlyEmptySystemBlockTemplate).toContain(rolls);
     });
 
     it('preserves a customized Append Only system block template', () => {

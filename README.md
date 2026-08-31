@@ -96,6 +96,8 @@ Append Only is for stricter providers. They only give a useful cache hit when th
 
 To keep that chain intact, Summaryception leaves its memory prefix alone between flushes and bakes newly activated lore into the chat tail. It is fussy, but on providers with a deep cached-input discount it is often the cheapest mode.
 
+Each persisted dice block is labeled as applying to the next user message, so models can interpret the rolls correctly even after edits, retries, or regenerations make the transcript harder to follow.
+
 Select Append Only and use your lorebooks normally. Summaryception automatically routes active dynamic entries through its bake outlet during each lore scan. Saved lorebooks are never modified, cloned, or reassociated. Constant entries and entries already assigned to another outlet keep their normal behavior.
 
 When a previously baked entry's content, title, or depth changes, its new revision is appended the next time the entry activates during a normal generation. The older revision remains in the cached prefix until the next summary flush because removing it early would break Append Only cache continuity. Deleting or disabling an entry likewise prevents future activation without rewriting existing prompt history.
@@ -175,6 +177,8 @@ Append only presets:
 If u keep debug enabled, F12 log shows if your preset breaks append only cache and where it happens.
 
 ## Version history
+
+- **23.0.1-ao.1:** Labels each persisted dice block as applying to the next user message, reducing transcript ambiguity for Kimi and similar models without changing message roles, ordering, or roll values. Bundled hyphen and em-dash templates migrate automatically; customized templates remain untouched.
 
 - **23.0.0-ao.1:** Makes Append Only lorebook baking fully automatic without source-book clones or Quick Replies. Active dynamic entries from character, global, chat, and persona lore are routed through transient scan copies; edited content, titles, and depths rebake on their next activation. Legacy `SC -` selections resolve to their current originals, disabled and unsupported modes remain untouched, and dice rolls now stay visible above collapsed memory details.
 

@@ -10,6 +10,8 @@ import {
     MEMORY_ROLES,
     MODULE_NAME,
     REQUEST_TIMEOUT,
+    UNWRAPPED_APPEND_ONLY_EMPTY_SYSTEM_BLOCK_TEMPLATE,
+    UNWRAPPED_APPEND_ONLY_SYSTEM_BLOCK_TEMPLATE,
     UI_MODES,
     defaultSettings,
 } from './constants.js';
@@ -225,23 +227,37 @@ function normalizeMemorySettings(settings) {
         settings.appendOnlyEmptySystemBlockTemplate =
             defaultSettings.appendOnlyEmptySystemBlockTemplate;
         changed = true;
+    } else {
+        const migratedTemplate = migrateBundledAppendOnlyTemplate(
+            settings.appendOnlyEmptySystemBlockTemplate,
+            [UNWRAPPED_APPEND_ONLY_EMPTY_SYSTEM_BLOCK_TEMPLATE],
+            defaultSettings.appendOnlyEmptySystemBlockTemplate,
+        );
+        if (migratedTemplate !== settings.appendOnlyEmptySystemBlockTemplate) {
+            settings.appendOnlyEmptySystemBlockTemplate = migratedTemplate;
+            changed = true;
+        }
     }
     return changed;
 }
 
 function migrateBundledAppendOnlySystemBlockTemplate(template) {
-    if (template === LEGACY_APPEND_ONLY_SYSTEM_BLOCK_TEMPLATE) {
-        return defaultSettings.appendOnlySystemBlockTemplate;
-    }
-    const legacyEmDashTemplate = LEGACY_APPEND_ONLY_SYSTEM_BLOCK_TEMPLATE.replace(
-        'Rolls - User:',
-        'Rolls — User:',
+    return migrateBundledAppendOnlyTemplate(
+        template,
+        [LEGACY_APPEND_ONLY_SYSTEM_BLOCK_TEMPLATE, UNWRAPPED_APPEND_ONLY_SYSTEM_BLOCK_TEMPLATE],
+        defaultSettings.appendOnlySystemBlockTemplate,
     );
-    if (template === legacyEmDashTemplate) {
-        return defaultSettings.appendOnlySystemBlockTemplate.replace(
-            'Rolls - User:',
-            'Rolls — User:',
-        );
+}
+
+function migrateBundledAppendOnlyTemplate(template, legacyTemplates, defaultTemplate) {
+    for (const legacyTemplate of legacyTemplates) {
+        if (template === legacyTemplate) {
+            return defaultTemplate;
+        }
+        const legacyEmDashTemplate = legacyTemplate.replace('Rolls - User:', 'Rolls — User:');
+        if (template === legacyEmDashTemplate) {
+            return defaultTemplate.replace('Rolls - User:', 'Rolls — User:');
+        }
     }
     return template;
 }
